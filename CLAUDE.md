@@ -4,7 +4,7 @@ This project uses [marketingskills](https://github.com/coreyhaines31/marketingsk
 
 ## Setup
 
-All skills are installed in `.agents/skills/`. The foundational product context is at `.agents/product-marketing-context.md` — fill this out first so all skills can reference your product, audience, and positioning.
+All skills are installed in `.claude-plugin/skills/`. The foundational product context is at `.agents/product-marketing-context.md` — fill this out first so all skills can reference your product, audience, and positioning.
 
 ## Available Skills
 

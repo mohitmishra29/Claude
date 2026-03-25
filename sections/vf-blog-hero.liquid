@@ -1,0 +1,655 @@
+{%- comment -%}
+Vettofit — Blog Hero (Article / Featured)
+Dawn 15.2 / Online Store 2.0
+Priority:
+1) If "Use current article content" is enabled AND we're on an article → use that article
+2) Else, if a "Featured article" is selected → use that article
+3) Else → use manual overrides only
+- Heading + Subtitle are richtext so you can style words, add links, etc.
+- If richtext fields are empty, we fall back to article title/excerpt.
+UPDATED: Fully clickable hero, UX-enhanced hover effects, CTA button, SEO JSON-LD schema.
+{%- endcomment -%}
+
+{%- assign s = section.settings -%}
+
+{%- comment -%} Decide which article to use {%- endcomment -%}
+{%- assign target_article = nil -%}
+{%- if s.use_article_data and article -%}
+  {%- assign target_article = article -%}
+{%- elsif s.featured_article != blank -%}
+  {%- assign target_article = s.featured_article -%}
+{%- endif -%}
+
+{%- comment -%} Determine article URL {%- endcomment -%}
+{%- assign article_url = nil -%}
+{%- if target_article -%}
+  {%- assign article_url = target_article.url -%}
+{%- endif -%}
+
+{%- comment -%} Handle richtext heading/subtitle {%- endcomment -%}
+{%- assign heading_rich_raw = s.heading -%}
+{%- assign heading_rich_plain = heading_rich_raw | strip_html | strip -%}
+{%- assign subtitle_rich_raw = s.subtitle -%}
+{%- assign subtitle_rich_plain = subtitle_rich_raw | strip_html | strip -%}
+
+{%- comment -%} Plain hero title string {%- endcomment -%}
+{%- assign hero_title = blank -%}
+{%- if heading_rich_plain != blank -%}
+  {%- assign hero_title = heading_rich_plain -%}
+{%- elsif target_article and target_article.title != blank -%}
+  {%- assign hero_title = target_article.title -%}
+{%- else -%}
+  {%- assign hero_title = 'Blog article title' -%}
+{%- endif -%}
+
+{%- comment -%} Plain subtitle from article excerpt {%- endcomment -%}
+{%- assign hero_subtitle = blank -%}
+{%- if target_article and target_article.excerpt != blank -%}
+  {%- assign hero_subtitle = target_article.excerpt | strip_html | strip -%}
+{%- endif -%}
+
+{%- comment -%} Hero image {%- endcomment -%}
+{%- assign hero_image = s.hero_image -%}
+{%- if hero_image == blank and target_article and target_article.image -%}
+  {%- assign hero_image = target_article.image -%}
+{%- endif -%}
+
+{%- comment -%} Hero image URL for JSON-LD {%- endcomment -%}
+{%- assign hero_image_url = blank -%}
+{%- if hero_image != blank -%}
+  {%- assign hero_image_url = hero_image | image_url: width: 1200 -%}
+{%- endif -%}
+
+{%- comment -%} Author {%- endcomment -%}
+{%- assign author_name = s.author_name | strip -%}
+{%- if author_name == blank and target_article and target_article.author != blank -%}
+  {%- assign author_name = target_article.author -%}
+{%- endif -%}
+{%- assign author_title = s.author_title | strip -%}
+
+{%- comment -%} Published date for SEO {%- endcomment -%}
+{%- assign published_date_iso = blank -%}
+{%- assign published_date_display = blank -%}
+{%- if target_article and target_article.published_at -%}
+  {%- assign published_date_iso = target_article.published_at | date: "%Y-%m-%dT%H:%M:%SZ" -%}
+  {%- assign published_date_display = target_article.published_at | date: "%B %d, %Y" -%}
+{%- endif -%}
+
+{%- comment -%} Estimated reading time (avg 200 words/min) {%- endcomment -%}
+{%- assign reading_time = 0 -%}
+{%- if target_article and target_article.content != blank -%}
+  {%- assign word_count = target_article.content | strip_html | split: ' ' | size -%}
+  {%- assign reading_time = word_count | divided_by: 200 -%}
+  {%- if reading_time < 1 -%}{%- assign reading_time = 1 -%}{%- endif -%}
+{%- endif -%}
+
+{%- comment -%} SEO: JSON-LD Article Schema {%- endcomment -%}
+{%- if target_article -%}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": {{ hero_title | json }},
+  {%- if hero_subtitle != blank -%}
+  "description": {{ hero_subtitle | truncate: 200 | json }},
+  {%- endif -%}
+  {%- if hero_image_url != blank -%}
+  "image": "https:{{ hero_image_url }}",
+  {%- endif -%}
+  {%- if article_url != blank -%}
+  "url": "{{ shop.url }}{{ article_url }}",
+  {%- endif -%}
+  {%- if published_date_iso != blank -%}
+  "datePublished": "{{ published_date_iso }}",
+  "dateModified": "{{ published_date_iso }}",
+  {%- endif -%}
+  {%- if author_name != blank -%}
+  "author": {
+    "@type": "Person",
+    "name": {{ author_name | json }}
+  },
+  {%- endif -%}
+  "publisher": {
+    "@type": "Organization",
+    "name": {{ shop.name | json }},
+    "url": "{{ shop.url }}"
+  }
+}
+</script>
+{%- endif -%}
+
+<section
+  id="vf-blog-hero-{{ section.id }}"
+  class="vf-blog-hero section"
+  itemscope
+  itemtype="https://schema.org/Article"
+>
+
+  {%- comment -%} Hidden SEO metadata {%- endcomment -%}
+  {%- if published_date_iso != blank -%}
+    <meta itemprop="datePublished" content="{{ published_date_iso }}">
+  {%- endif -%}
+  {%- if hero_subtitle != blank -%}
+    <meta itemprop="description" content="{{ hero_subtitle | truncate: 200 | escape }}">
+  {%- endif -%}
+
+  {%- comment -%} ===== TOP: Heading + Meta ===== {%- endcomment -%}
+  <div class="vf-blog-hero__top">
+    <div class="vf-blog-hero__inner page-width">
+      <header class="vf-blog-hero__header" role="banner">
+
+        {%- comment -%} TITLE column {%- endcomment -%}
+        <div class="vf-blog-hero__title-wrap">
+          {%- if heading_rich_plain != blank -%}
+            {%- if article_url != blank -%}
+              <a href="{{ article_url }}" class="vf-blog-hero__heading-link" title="{{ hero_title | escape }}" itemprop="url">
+                <div class="vf-blog-hero__heading rte" itemprop="name">{{ heading_rich_raw }}</div>
+              </a>
+            {%- else -%}
+              <div class="vf-blog-hero__heading rte" itemprop="name">{{ heading_rich_raw }}</div>
+            {%- endif -%}
+          {%- else -%}
+            {%- if article_url != blank -%}
+              <a href="{{ article_url }}" class="vf-blog-hero__heading-link" title="{{ hero_title | escape }}" itemprop="url">
+                <h1 class="vf-blog-hero__heading" itemprop="name">{{ hero_title | escape }}</h1>
+              </a>
+            {%- else -%}
+              <h1 class="vf-blog-hero__heading" itemprop="name">{{ hero_title | escape }}</h1>
+            {%- endif -%}
+          {%- endif -%}
+
+          {%- comment -%} Reading time badge {%- endcomment -%}
+          {%- if reading_time > 0 -%}
+            <p class="vf-blog-hero__reading-time" aria-label="Estimated reading time">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              {{ reading_time }} min read
+            </p>
+          {%- endif -%}
+        </div>
+
+        {%- comment -%} META column {%- endcomment -%}
+        <div class="vf-blog-hero__meta-wrap">
+
+          {%- comment -%} Date {%- endcomment -%}
+          {%- if published_date_display != blank -%}
+            <p class="vf-blog-hero__date">{{ published_date_display }}</p>
+          {%- endif -%}
+
+          {%- comment -%} Subtitle {%- endcomment -%}
+          {%- if subtitle_rich_plain != blank -%}
+            <div class="vf-blog-hero__subtitle rte">{{ subtitle_rich_raw }}</div>
+          {%- elsif hero_subtitle != blank -%}
+            <p class="vf-blog-hero__subtitle">{{ hero_subtitle | truncate: 160 }}</p>
+          {%- endif -%}
+
+          {%- comment -%} Author {%- endcomment -%}
+          {%- if s.show_author and author_name != blank -%}
+            <div class="vf-blog-hero__author" aria-label="Article author" itemprop="author" itemscope itemtype="https://schema.org/Person">
+              {%- if s.author_avatar != blank -%}
+                {{ s.author_avatar
+                  | image_url: width: 96
+                  | image_tag:
+                    class: 'vf-blog-hero__author-avatar',
+                    loading: 'lazy',
+                    widths: '64,96',
+                    alt: author_name
+                }}
+              {%- endif -%}
+              <div class="vf-blog-hero__author-text">
+                <span class="vf-blog-hero__author-name" itemprop="name">{{ author_name }}</span>
+                {%- if author_title != blank -%}
+                  <span class="vf-blog-hero__author-title">{{ author_title }}</span>
+                {%- endif -%}
+              </div>
+            </div>
+          {%- endif -%}
+
+          {%- comment -%} CTA Button {%- endcomment -%}
+          {%- if article_url != blank -%}
+            <a
+              href="{{ article_url }}"
+              class="vf-blog-hero__cta-btn"
+              aria-label="Read full article: {{ hero_title | escape }}"
+            >
+              Read Article
+              <svg class="vf-blog-hero__cta-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="5" y1="12" x2="19" y2="12"/>
+                <polyline points="12 5 19 12 12 19"/>
+              </svg>
+            </a>
+          {%- endif -%}
+
+        </div>
+      </header>
+    </div>
+  </div>
+
+  {%- comment -%} ===== IMAGE with hover effect ===== {%- endcomment -%}
+  {%- if hero_image != blank -%}
+    <div class="vf-blog-hero__image-outer">
+      <div class="page-width">
+        {%- if article_url != blank -%}
+          <a
+            href="{{ article_url }}"
+            class="vf-blog-hero__image-link"
+            aria-label="Read article: {{ hero_title | escape }}"
+            tabindex="-1"
+          >
+            <figure class="vf-blog-hero__image-frame" itemprop="image" itemscope itemtype="https://schema.org/ImageObject">
+              {{ hero_image
+                | image_url: width: 2200
+                | image_tag:
+                  class: 'vf-blog-hero__image',
+                  loading: 'eager',
+                  sizes: '100vw',
+                  widths: '800, 1200, 1600, 2000, 2200',
+                  alt: hero_title,
+                  itemprop: 'url'
+              }}
+              <div class="vf-blog-hero__image-overlay" aria-hidden="true">
+                <span class="vf-blog-hero__image-overlay-badge">
+                  Read Article
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                    <polyline points="12 5 19 12 12 19"/>
+                  </svg>
+                </span>
+              </div>
+            </figure>
+          </a>
+        {%- else -%}
+          <figure class="vf-blog-hero__image-frame" itemprop="image" itemscope itemtype="https://schema.org/ImageObject">
+            {{ hero_image
+              | image_url: width: 2200
+              | image_tag:
+                class: 'vf-blog-hero__image',
+                loading: 'eager',
+                sizes: '100vw',
+                widths: '800, 1200, 1600, 2000, 2200',
+                alt: hero_title,
+                itemprop: 'url'
+            }}
+          </figure>
+        {%- endif -%}
+      </div>
+    </div>
+  {%- endif -%}
+
+</section>
+
+<style>
+  /* ===== BASE ===== */
+  #vf-blog-hero-{{ section.id }} {
+    background: var(--color-background, #ffffff);
+    color: inherit;
+  }
+
+  /* ===== TOP SECTION ===== */
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__top {
+    padding-top: {{ section.settings.padding_top | default: 40 }}px;
+    padding-bottom: {{ section.settings.padding_bottom | default: 28 }}px;
+  }
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__inner {
+    position: relative;
+  }
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__header {
+    display: flex;
+    justify-content: space-between;
+    gap: 3rem;
+    align-items: flex-start;
+  }
+
+  /* ===== TITLE COLUMN ===== */
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__title-wrap {
+    flex: 0 1 55%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__heading-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+  }
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__heading-link:hover .vf-blog-hero__heading,
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__heading-link:focus .vf-blog-hero__heading {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    text-decoration-thickness: 2px;
+  }
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__heading {
+    margin: 0;
+    font-weight: 600;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    font-size: clamp(2.1rem, 3.4vw, 2.9rem);
+    transition: opacity 0.2s ease;
+  }
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__heading.rte p {
+    margin: 0;
+  }
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__heading-link:hover .vf-blog-hero__heading,
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__heading-link:focus .vf-blog-hero__heading {
+    opacity: 0.8;
+  }
+
+  /* Reading time */
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__reading-time {
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.82rem;
+    font-weight: 500;
+    opacity: 0.55;
+    letter-spacing: 0.02em;
+  }
+
+  /* ===== META COLUMN ===== */
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__meta-wrap {
+    flex: 0 1 45%;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  /* Date */
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__date {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 500;
+    opacity: 0.5;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* Subtitle */
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__subtitle {
+    margin: 0;
+    line-height: 1.5;
+    font-size: 0.98rem;
+    opacity: 0.9;
+  }
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__subtitle.rte p {
+    margin: 0;
+  }
+
+  /* Author */
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__author {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__author-avatar {
+    border-radius: 999px;
+    width: 44px;
+    height: 44px;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__author-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__author-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__author-title {
+    font-size: 0.85rem;
+    opacity: 0.8;
+  }
+
+  /* ===== CTA BUTTON ===== */
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__cta-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: var(--color-button, #1a1a1a);
+    color: var(--color-button-text, #ffffff);
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background 0.2s ease, transform 0.2s ease, gap 0.2s ease;
+    align-self: flex-start;
+  }
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__cta-btn:hover,
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__cta-btn:focus {
+    background: var(--color-button-hover, #333333);
+    transform: translateY(-1px);
+    gap: 0.75rem;
+    outline: none;
+  }
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__cta-btn:focus-visible {
+    outline: 2px solid var(--color-button, #1a1a1a);
+    outline-offset: 3px;
+  }
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__cta-arrow {
+    transition: transform 0.2s ease;
+  }
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__cta-btn:hover .vf-blog-hero__cta-arrow,
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__cta-btn:focus .vf-blog-hero__cta-arrow {
+    transform: translateX(4px);
+  }
+
+  /* ===== IMAGE SECTION ===== */
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__image-outer {
+    padding-bottom: 32px;
+  }
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__image-link {
+    display: block;
+    text-decoration: none;
+  }
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__image-link:focus-visible {
+    outline: 3px solid var(--color-button, #1a1a1a);
+    outline-offset: 4px;
+    border-radius: 2px;
+  }
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__image-frame {
+    margin: 0;
+    overflow: hidden;
+    border-radius: 0;
+    position: relative;
+    cursor: pointer;
+  }
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__image {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+    transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__image-link:hover .vf-blog-hero__image,
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__image-link:focus .vf-blog-hero__image {
+    transform: scale(1.03);
+  }
+
+  /* Image overlay on hover */
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__image-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to top,
+      rgba(0, 0, 0, 0.55) 0%,
+      rgba(0, 0, 0, 0.15) 40%,
+      rgba(0, 0, 0, 0) 70%
+    );
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 2.5rem;
+  }
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__image-link:hover .vf-blog-hero__image-overlay,
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__image-link:focus .vf-blog-hero__image-overlay {
+    opacity: 1;
+  }
+
+  /* Overlay pill badge */
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__image-overlay-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.95);
+    color: #1a1a1a;
+    font-size: 0.88rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 0.6rem 1.4rem;
+    border-radius: 999px;
+    transform: translateY(8px);
+    transition: transform 0.35s ease;
+  }
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__image-link:hover .vf-blog-hero__image-overlay-badge,
+  #vf-blog-hero-{{ section.id }} .vf-blog-hero__image-link:focus .vf-blog-hero__image-overlay-badge {
+    transform: translateY(0);
+  }
+
+  /* ===== MOBILE ===== */
+  @media screen and (max-width: 989px) {
+    #vf-blog-hero-{{ section.id }} .vf-blog-hero__header {
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    #vf-blog-hero-{{ section.id }} .vf-blog-hero__title-wrap,
+    #vf-blog-hero-{{ section.id }} .vf-blog-hero__meta-wrap {
+      flex: 1 1 auto;
+    }
+    #vf-blog-hero-{{ section.id }} .vf-blog-hero__heading {
+      font-size: clamp(1.8rem, 6vw, 2.3rem);
+    }
+    #vf-blog-hero-{{ section.id }} .vf-blog-hero__top {
+      padding-top: {{ section.settings.padding_top_mobile | default: 28 }}px;
+      padding-bottom: {{ section.settings.padding_bottom_mobile | default: 20 }}px;
+    }
+    #vf-blog-hero-{{ section.id }} .vf-blog-hero__image-outer {
+      padding-bottom: 24px;
+    }
+    #vf-blog-hero-{{ section.id }} .vf-blog-hero__image-frame {
+      border-radius: 0;
+    }
+    /* Always show overlay on touch devices (no hover state) */
+    @media (hover: none) {
+      #vf-blog-hero-{{ section.id }} .vf-blog-hero__image-overlay {
+        opacity: 1;
+      }
+      #vf-blog-hero-{{ section.id }} .vf-blog-hero__image-overlay-badge {
+        transform: translateY(0);
+      }
+    }
+  }
+</style>
+
+{% schema %}
+{
+  "name": "Vettofit blog hero",
+  "class": "section vf-blog-hero-section",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "use_article_data",
+      "label": "Use current article content (if available)",
+      "default": true
+    },
+    {
+      "type": "article",
+      "id": "featured_article",
+      "label": "Featured article",
+      "info": "Choose a blog post to feature when not using the current article."
+    },
+    {
+      "type": "richtext",
+      "id": "heading",
+      "label": "Heading override (rich text)",
+      "info": "Leave empty to use the chosen article title."
+    },
+    {
+      "type": "richtext",
+      "id": "subtitle",
+      "label": "Subtitle / deck override (rich text)",
+      "info": "Leave empty to use the chosen article excerpt when available."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_author",
+      "label": "Show author row",
+      "default": true
+    },
+    {
+      "type": "image_picker",
+      "id": "author_avatar",
+      "label": "Author avatar"
+    },
+    {
+      "type": "text",
+      "id": "author_name",
+      "label": "Author name",
+      "info": "Leave empty to use the chosen article author."
+    },
+    {
+      "type": "text",
+      "id": "author_title",
+      "label": "Author title / credentials",
+      "default": "DVM"
+    },
+    {
+      "type": "image_picker",
+      "id": "hero_image",
+      "label": "Hero image override",
+      "info": "Leave empty to use the chosen article featured image."
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "Top spacing (desktop)",
+      "min": 0,
+      "max": 80,
+      "step": 4,
+      "unit": "px",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "Bottom spacing above image (desktop)",
+      "min": 0,
+      "max": 80,
+      "step": 4,
+      "unit": "px",
+      "default": 28
+    },
+    {
+      "type": "range",
+      "id": "padding_top_mobile",
+      "label": "Top spacing (mobile)",
+      "min": 0,
+      "max": 60,
+      "step": 4,
+      "unit": "px",
+      "default": 28
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom_mobile",
+      "label": "Bottom spacing above image (mobile)",
+      "min": 0,
+      "max": 60,
+      "step": 4,
+      "unit": "px",
+      "default": 20
+    }
+  ],
+  "presets": [
+    {
+      "name": "Vettofit blog hero",
+      "category": "Blog"
+    }
+  ]
+}
+{% endschema %}

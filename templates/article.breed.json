@@ -1,0 +1,14 @@
+{
+  "sections": {
+    "breed_article": {
+      "type": "vf-breed-article",
+      "settings": {
+        "accent_color": "#00B4C4",
+        "cta_text": "Shop Breed Nutrition",
+        "cta_url": "/collections/all",
+        "show_related": true
+      }
+    }
+  },
+  "order": ["breed_article"]
+}

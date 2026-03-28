@@ -1,0 +1,580 @@
+{%- comment -%}
+Vettofit — Breed Article Section
+vf-breed-article | Dawn OS 2.0
+{%- endcomment -%}
+
+{%- assign s = section.settings -%}
+{%- assign br = article.metafields.breed -%}
+
+{%- assign breed_name = article.title -%}
+{%- assign breed_origin = br.origin | default: s.origin -%}
+{%- assign breed_size = br.size_category | default: s.size_category -%}
+{%- assign breed_lifespan = br.lifespan | default: s.lifespan -%}
+{%- assign breed_type = br.breed_type | default: s.breed_type -%}
+{%- assign energy = br.energy_level | default: s.energy_level | plus: 0 -%}
+{%- assign trainability = br.trainability | default: s.trainability | plus: 0 -%}
+{%- assign shedding = br.shedding_level | default: s.shedding_level | plus: 0 -%}
+{%- assign good_kids = br.good_with_kids | default: s.good_with_kids -%}
+
+{%- assign hero_image = article.image -%}
+{%- assign published_iso = article.published_at | date: "%Y-%m-%dT%H:%M:%SZ" -%}
+{%- assign published_display = article.published_at | date: "%B %d, %Y" -%}
+
+{%- comment -%} JSON-LD: Article + BreadcrumbList {%- endcomment -%}
+<script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": {{ breed_name | json }},
+    "description": {{ article.excerpt | default: article.content | strip_html | truncate: 200 | json }},
+    {%- if hero_image -%}"image": "https:{{ hero_image | image_url: width: 1200 }}",{%- endif -%}
+    "url": "{{ shop.url }}{{ article.url }}",
+    "datePublished": "{{ published_iso }}",
+    "dateModified": "{{ published_iso }}",
+    "author": { "@type": "Person", "name": {{ article.author | json }} },
+    "publisher": { "@type": "Organization", "name": {{ shop.name | json }}, "url": "{{ shop.url }}" }
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "{{ shop.url }}" },
+      { "@type": "ListItem", "position": 2, "name": "Dog Breeds", "item": "{{ shop.url }}/blogs/dog-breeds" },
+      { "@type": "ListItem", "position": 3, "name": {{ breed_name | json }}, "item": "{{ shop.url }}{{ article.url }}" }
+    ]
+  }
+]
+</script>
+
+<div
+  id="vf-breed-article-{{ section.id }}"
+  class="vf-ba"
+  style="--vf-accent: {{ s.accent_color | default: '#00B4C4' }};"
+  itemscope itemtype="https://schema.org/Article"
+>
+
+  {%- comment -%} BREADCRUMBS {%- endcomment -%}
+  <nav class="vf-ba__breadcrumbs page-width" aria-label="Breadcrumb">
+    <ol class="vf-ba__bc-list">
+      <li><a href="/">Home</a></li>
+      <li aria-hidden="true">&#8250;</li>
+      <li><a href="/blogs/dog-breeds">Dog Breeds</a></li>
+      <li aria-hidden="true">&#8250;</li>
+      <li aria-current="page">{{ breed_name }}</li>
+    </ol>
+  </nav>
+
+  {%- comment -%} HERO {%- endcomment -%}
+  <div class="vf-ba__hero">
+    {%- if hero_image -%}
+      {{ hero_image
+        | image_url: width: 2000
+        | image_tag:
+          class: 'vf-ba__hero-img',
+          loading: 'eager',
+          widths: '800,1200,1600,2000',
+          sizes: '100vw',
+          alt: breed_name,
+          itemprop: 'image'
+      }}
+      <div class="vf-ba__hero-overlay" aria-hidden="true"></div>
+    {%- endif -%}
+    <div class="vf-ba__hero-content page-width">
+      {%- if breed_type != blank -%}
+        <span class="vf-ba__hero-eyebrow">{{ breed_type }}</span>
+      {%- endif -%}
+      <h1 class="vf-ba__hero-name" itemprop="name">{{ breed_name }}</h1>
+      {%- if published_display != blank -%}
+        <p class="vf-ba__hero-date"><time datetime="{{ published_iso }}" itemprop="datePublished">{{ published_display }}</time></p>
+      {%- endif -%}
+    </div>
+  </div>
+
+  {%- comment -%} STATS BAR {%- endcomment -%}
+  {%- if breed_origin != blank or breed_size != blank or breed_lifespan != blank or energy > 0 -%}
+  <div class="vf-ba__stats-bar">
+    <div class="page-width vf-ba__stats-inner">
+      {%- if breed_origin != blank -%}
+        <div class="vf-ba__stat">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <span class="vf-ba__stat-label">Origin</span>
+          <span class="vf-ba__stat-value">{{ breed_origin }}</span>
+        </div>
+      {%- endif -%}
+      {%- if breed_size != blank -%}
+        <div class="vf-ba__stat">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          <span class="vf-ba__stat-label">Size</span>
+          <span class="vf-ba__stat-value">{{ breed_size | capitalize }}</span>
+        </div>
+      {%- endif -%}
+      {%- if breed_lifespan != blank -%}
+        <div class="vf-ba__stat">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span class="vf-ba__stat-label">Lifespan</span>
+          <span class="vf-ba__stat-value">{{ breed_lifespan }}</span>
+        </div>
+      {%- endif -%}
+      {%- if energy > 0 -%}
+        <div class="vf-ba__stat">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span class="vf-ba__stat-label">Energy</span>
+          <span class="vf-ba__stat-value">
+            {%- for i in (1..5) -%}<span class="vf-ba__dot{%- if i <= energy %} is-on{%- endif -%}"></span>{%- endfor -%}
+          </span>
+        </div>
+      {%- endif -%}
+    </div>
+  </div>
+  {%- endif -%}
+
+  {%- comment -%} ABOUT {%- endcomment -%}
+  {%- if article.excerpt != blank -%}
+  <div class="vf-ba__about page-width">
+    <p class="vf-ba__about-text" itemprop="description">{{ article.excerpt | strip_html }}</p>
+  </div>
+  {%- endif -%}
+
+  {%- comment -%} CHARACTERISTICS + ARTICLE BODY {%- endcomment -%}
+  <div class="vf-ba__main page-width">
+
+    {%- comment -%} LEFT: article content {%- endcomment -%}
+    <div class="vf-ba__content rte" itemprop="articleBody">
+      {{ article.content }}
+    </div>
+
+    {%- comment -%} RIGHT: characteristics sidebar {%- endcomment -%}
+    <aside class="vf-ba__sidebar">
+
+      {%- if energy > 0 or trainability > 0 or shedding > 0 -%}
+      <div class="vf-ba__traits-card">
+        <h2 class="vf-ba__traits-heading">Breed Characteristics</h2>
+
+        {%- if energy > 0 -%}
+          <div class="vf-ba__trait">
+            <div class="vf-ba__trait-header">
+              <span class="vf-ba__trait-label">Energy Level</span>
+              <span class="vf-ba__trait-score">{{ energy }}/5</span>
+            </div>
+            <div class="vf-ba__bar" role="progressbar" aria-valuenow="{{ energy }}" aria-valuemin="0" aria-valuemax="5" aria-label="Energy level {{ energy }} out of 5">
+              <div class="vf-ba__bar-fill" style="width:{{ energy | times: 20 }}%"></div>
+            </div>
+          </div>
+        {%- endif -%}
+
+        {%- if trainability > 0 -%}
+          <div class="vf-ba__trait">
+            <div class="vf-ba__trait-header">
+              <span class="vf-ba__trait-label">Trainability</span>
+              <span class="vf-ba__trait-score">{{ trainability }}/5</span>
+            </div>
+            <div class="vf-ba__bar" role="progressbar" aria-valuenow="{{ trainability }}" aria-valuemin="0" aria-valuemax="5" aria-label="Trainability {{ trainability }} out of 5">
+              <div class="vf-ba__bar-fill" style="width:{{ trainability | times: 20 }}%"></div>
+            </div>
+          </div>
+        {%- endif -%}
+
+        {%- if shedding > 0 -%}
+          <div class="vf-ba__trait">
+            <div class="vf-ba__trait-header">
+              <span class="vf-ba__trait-label">Shedding</span>
+              <span class="vf-ba__trait-score">{{ shedding }}/5</span>
+            </div>
+            <div class="vf-ba__bar" role="progressbar" aria-valuenow="{{ shedding }}" aria-valuemin="0" aria-valuemax="5" aria-label="Shedding {{ shedding }} out of 5">
+              <div class="vf-ba__bar-fill" style="width:{{ shedding | times: 20 }}%"></div>
+            </div>
+          </div>
+        {%- endif -%}
+
+        {%- if good_kids != blank -%}
+          <div class="vf-ba__badge-row">
+            <span class="vf-ba__badge{%- if good_kids == 'true' or good_kids == true %} vf-ba__badge--yes{%- else %} vf-ba__badge--no{%- endif -%}">
+              {%- if good_kids == 'true' or good_kids == true -%}
+                &#10003; Good with Kids
+              {%- else -%}
+                &#10005; Not ideal for Kids
+              {%- endif -%}
+            </span>
+          </div>
+        {%- endif -%}
+
+      </div>
+      {%- endif -%}
+
+      {%- comment -%} CTA CARD {%- endcomment -%}
+      {%- assign cta_url = s.cta_url | default: '/collections/all' -%}
+      {%- assign cta_text = s.cta_text | default: 'Shop Nutrition for ' | append: breed_name -%}
+      <div class="vf-ba__cta-card">
+        <div class="vf-ba__cta-icon" aria-hidden="true">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </div>
+        <p class="vf-ba__cta-title">Tailored for {{ breed_name }}s</p>
+        <p class="vf-ba__cta-body">Vet-formulated nutrition that matches the unique needs of your {{ breed_name }}.</p>
+        <a href="{{ cta_url }}" class="vf-ba__cta-btn">{{ cta_text }}</a>
+      </div>
+
+    </aside>
+  </div>
+
+  {%- comment -%} RELATED ARTICLES {%- endcomment -%}
+  {%- if s.show_related -%}
+  {%- assign related = blog.articles | where_exp: 'a', 'a.id != article.id' | limit: 4 -%}
+  {%- if related.size > 0 -%}
+  <div class="vf-ba__related">
+    <div class="page-width">
+      <h2 class="vf-ba__related-heading">More Breed Guides</h2>
+      <div class="vf-ba__related-grid">
+        {%- for rel in related -%}
+          <a href="{{ rel.url }}" class="vf-ba__related-card">
+            {%- if rel.image -%}
+              {{ rel.image | image_url: width: 400 | image_tag: class: 'vf-ba__related-img', loading: 'lazy', alt: rel.title }}
+            {%- endif -%}
+            <span class="vf-ba__related-name">{{ rel.title }}</span>
+          </a>
+        {%- endfor -%}
+      </div>
+    </div>
+  </div>
+  {%- endif -%}
+  {%- endif -%}
+
+</div>
+
+<style>
+#vf-breed-article-{{ section.id }} {
+  --accent: var(--vf-accent, #00B4C4);
+  background: #fff;
+  color: #111827;
+}
+
+/* BREADCRUMBS */
+#vf-breed-article-{{ section.id }} .vf-ba__breadcrumbs { padding: 1rem 0; }
+#vf-breed-article-{{ section.id }} .vf-ba__bc-list {
+  list-style: none;
+  margin: 0; padding: 0;
+  display: flex; flex-wrap: wrap; gap: .35rem;
+  font-size: .82rem; color: #9ca3af;
+}
+#vf-breed-article-{{ section.id }} .vf-ba__bc-list a { color: #6b7280; text-decoration: none; }
+#vf-breed-article-{{ section.id }} .vf-ba__bc-list a:hover { color: var(--accent); }
+#vf-breed-article-{{ section.id }} .vf-ba__bc-list [aria-current] { color: #111827; font-weight: 500; }
+
+/* HERO */
+#vf-breed-article-{{ section.id }} .vf-ba__hero {
+  position: relative;
+  min-height: 420px;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+  background: #1a1a2e;
+}
+#vf-breed-article-{{ section.id }} .vf-ba__hero-img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+#vf-breed-article-{{ section.id }} .vf-ba__hero-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,.72) 0%, rgba(0,0,0,.3) 50%, rgba(0,0,0,.05) 100%);
+}
+#vf-breed-article-{{ section.id }} .vf-ba__hero-content {
+  position: relative;
+  z-index: 2;
+  padding: 2.5rem 0;
+  color: #fff;
+}
+#vf-breed-article-{{ section.id }} .vf-ba__hero-eyebrow {
+  display: inline-block;
+  background: var(--accent);
+  color: #fff;
+  font-size: .76rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: .3rem .9rem;
+  border-radius: 999px;
+  margin-bottom: .75rem;
+}
+#vf-breed-article-{{ section.id }} .vf-ba__hero-name {
+  font-size: clamp(2rem,5vw,3.5rem);
+  font-weight: 800;
+  margin: 0 0 .4rem;
+  letter-spacing: -.025em;
+  line-height: 1.05;
+  color: #fff;
+}
+#vf-breed-article-{{ section.id }} .vf-ba__hero-date { margin:0; font-size:.85rem; opacity:.7; }
+
+/* STATS BAR */
+#vf-breed-article-{{ section.id }} .vf-ba__stats-bar {
+  background: #f8f9fa;
+  border-bottom: 1px solid #e5e7eb;
+}
+#vf-breed-article-{{ section.id }} .vf-ba__stats-inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  padding: 0;
+}
+#vf-breed-article-{{ section.id }} .vf-ba__stat {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: 1rem 1.5rem;
+  border-right: 1px solid #e5e7eb;
+  flex: 1;
+  min-width: 140px;
+}
+#vf-breed-article-{{ section.id }} .vf-ba__stat:last-child { border-right: none; }
+#vf-breed-article-{{ section.id }} .vf-ba__stat svg { color: var(--accent); flex-shrink: 0; }
+#vf-breed-article-{{ section.id }} .vf-ba__stat-label {
+  font-size: .75rem;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  display: block;
+}
+#vf-breed-article-{{ section.id }} .vf-ba__stat-value {
+  font-size: .92rem;
+  font-weight: 700;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+#vf-breed-article-{{ section.id }} .vf-ba__dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  display: inline-block;
+}
+#vf-breed-article-{{ section.id }} .vf-ba__dot.is-on { background: var(--accent); }
+
+/* ABOUT */
+#vf-breed-article-{{ section.id }} .vf-ba__about {
+  padding: 2.5rem 0 0;
+}
+#vf-breed-article-{{ section.id }} .vf-ba__about-text {
+  font-size: 1.12rem;
+  line-height: 1.7;
+  color: #374151;
+  margin: 0;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+/* MAIN 2-COL */
+#vf-breed-article-{{ section.id }} .vf-ba__main {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 3rem;
+  padding: 2.5rem 0 3rem;
+  align-items: start;
+}
+@media(max-width:989px){
+  #vf-breed-article-{{ section.id }} .vf-ba__main { grid-template-columns: 1fr; gap: 2rem; }
+}
+
+/* ARTICLE CONTENT */
+#vf-breed-article-{{ section.id }} .vf-ba__content h2 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 2rem 0 .75rem;
+  color: #111827;
+  padding-top: 1.5rem;
+  border-top: 1px solid #f3f4f6;
+}
+#vf-breed-article-{{ section.id }} .vf-ba__content h2:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+#vf-breed-article-{{ section.id }} .vf-ba__content p { line-height: 1.75; color: #374151; margin: 0 0 1rem; }
+#vf-breed-article-{{ section.id }} .vf-ba__content ul, #vf-breed-article-{{ section.id }} .vf-ba__content ol { padding-left: 1.4rem; margin: 0 0 1rem; color: #374151; line-height: 1.7; }
+
+/* SIDEBAR */
+#vf-breed-article-{{ section.id }} .vf-ba__sidebar { display: flex; flex-direction: column; gap: 1.5rem; }
+
+/* TRAITS CARD */
+#vf-breed-article-{{ section.id }} .vf-ba__traits-card {
+  background: #f8f9fa;
+  border-radius: 14px;
+  padding: 1.5rem;
+  border: 1px solid #e5e7eb;
+}
+#vf-breed-article-{{ section.id }} .vf-ba__traits-heading {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 1.25rem;
+  color: #111827;
+}
+#vf-breed-article-{{ section.id }} .vf-ba__trait { margin-bottom: 1rem; }
+#vf-breed-article-{{ section.id }} .vf-ba__trait:last-of-type { margin-bottom: .5rem; }
+#vf-breed-article-{{ section.id }} .vf-ba__trait-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: .4rem;
+}
+#vf-breed-article-{{ section.id }} .vf-ba__trait-label { font-size: .84rem; font-weight: 600; color: #374151; }
+#vf-breed-article-{{ section.id }} .vf-ba__trait-score { font-size: .78rem; color: #9ca3af; font-weight: 500; }
+#vf-breed-article-{{ section.id }} .vf-ba__bar {
+  background: #e5e7eb;
+  border-radius: 999px;
+  height: 7px;
+  overflow: hidden;
+}
+#vf-breed-article-{{ section.id }} .vf-ba__bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width .5s ease;
+}
+#vf-breed-article-{{ section.id }} .vf-ba__badge-row { margin-top: .75rem; }
+#vf-breed-article-{{ section.id }} .vf-ba__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  font-size: .82rem;
+  font-weight: 600;
+  padding: .35rem .9rem;
+  border-radius: 999px;
+}
+#vf-breed-article-{{ section.id }} .vf-ba__badge--yes { background: rgba(0,180,100,.1); color: #047857; }
+#vf-breed-article-{{ section.id }} .vf-ba__badge--no  { background: rgba(220,38,38,.08); color: #b91c1c; }
+
+/* CTA CARD */
+#vf-breed-article-{{ section.id }} .vf-ba__cta-card {
+  background: linear-gradient(135deg, #00B4C4 0%, #0097a7 100%);
+  color: #fff;
+  border-radius: 14px;
+  padding: 1.75rem 1.5rem;
+  text-align: center;
+}
+#vf-breed-article-{{ section.id }} .vf-ba__cta-icon { margin-bottom: .75rem; opacity: .85; }
+#vf-breed-article-{{ section.id }} .vf-ba__cta-title { font-size: 1rem; font-weight: 700; margin: 0 0 .4rem; }
+#vf-breed-article-{{ section.id }} .vf-ba__cta-body  { font-size: .86rem; opacity: .9; margin: 0 0 1.25rem; line-height: 1.5; }
+#vf-breed-article-{{ section.id }} .vf-ba__cta-btn {
+  display: inline-block;
+  background: #fff;
+  color: #00B4C4;
+  font-size: .9rem;
+  font-weight: 700;
+  padding: .7rem 1.5rem;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: opacity .2s;
+}
+#vf-breed-article-{{ section.id }} .vf-ba__cta-btn:hover { opacity: .9; }
+
+/* RELATED */
+#vf-breed-article-{{ section.id }} .vf-ba__related {
+  background: #f8f9fa;
+  padding: 3rem 0;
+  border-top: 1px solid #e5e7eb;
+}
+#vf-breed-article-{{ section.id }} .vf-ba__related-heading { font-size: 1.3rem; font-weight: 700; margin: 0 0 1.5rem; }
+#vf-breed-article-{{ section.id }} .vf-ba__related-grid {
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  gap: 1.25rem;
+}
+@media(max-width:749px){
+  #vf-breed-article-{{ section.id }} .vf-ba__related-grid { grid-template-columns: repeat(2,1fr); }
+}
+#vf-breed-article-{{ section.id }} .vf-ba__related-card {
+  border-radius: 10px;
+  overflow: hidden;
+  text-decoration: none;
+  color: #111827;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+  transition: transform .2s, box-shadow .2s;
+  display: flex;
+  flex-direction: column;
+}
+#vf-breed-article-{{ section.id }} .vf-ba__related-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,.1); }
+#vf-breed-article-{{ section.id }} .vf-ba__related-img { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; }
+#vf-breed-article-{{ section.id }} .vf-ba__related-name { padding: .75rem; font-size: .9rem; font-weight: 600; }
+
+/* MOBILE */
+@media(max-width:749px){
+  #vf-breed-article-{{ section.id }} .vf-ba__hero { min-height: 300px; }
+  #vf-breed-article-{{ section.id }} .vf-ba__stat { border-right: none; border-bottom: 1px solid #e5e7eb; flex: 0 0 50%; }
+  #vf-breed-article-{{ section.id }} .vf-ba__stat:nth-child(even) { border-right: none; }
+}
+</style>
+
+{% schema %}
+{
+  "name": "Vettofit breed article",
+  "class": "section vf-breed-article-section",
+  "settings": [
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent colour",
+      "default": "#00B4C4"
+    },
+    {
+      "type": "header",
+      "content": "Breed details (fallback if metafields not set)"
+    },
+    { "type": "text", "id": "origin", "label": "Origin country" },
+    { "type": "text", "id": "lifespan", "label": "Lifespan", "placeholder": "e.g. 10\u201312 years" },
+    {
+      "type": "select",
+      "id": "size_category",
+      "label": "Size category",
+      "options": [
+        { "value": "", "label": "-- Select --" },
+        { "value": "small", "label": "Small" },
+        { "value": "medium", "label": "Medium" },
+        { "value": "large", "label": "Large" },
+        { "value": "giant", "label": "Giant" }
+      ],
+      "default": ""
+    },
+    { "type": "text", "id": "breed_type", "label": "Breed type", "placeholder": "e.g. Working Dog" },
+    {
+      "type": "range", "id": "energy_level", "label": "Energy level",
+      "min": 0, "max": 5, "step": 1, "default": 0
+    },
+    {
+      "type": "range", "id": "trainability", "label": "Trainability",
+      "min": 0, "max": 5, "step": 1, "default": 0
+    },
+    {
+      "type": "range", "id": "shedding_level", "label": "Shedding level",
+      "min": 0, "max": 5, "step": 1, "default": 0
+    },
+    {
+      "type": "select",
+      "id": "good_with_kids",
+      "label": "Good with kids",
+      "options": [
+        { "value": "", "label": "-- Not set --" },
+        { "value": "true", "label": "Yes" },
+        { "value": "false", "label": "No" }
+      ],
+      "default": ""
+    },
+    {
+      "type": "header",
+      "content": "CTA Strip"
+    },
+    { "type": "text", "id": "cta_text", "label": "CTA button text", "default": "Shop Breed Nutrition" },
+    { "type": "url", "id": "cta_url", "label": "CTA link" },
+    {
+      "type": "checkbox",
+      "id": "show_related",
+      "label": "Show related breed guides",
+      "default": true
+    }
+  ],
+  "presets": [
+    {
+      "name": "Vettofit breed article",
+      "category": "Blog"
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,13 @@
+{
+  "sections": {
+    "breed_listing": {
+      "type": "vf-breed-listing",
+      "settings": {
+        "heading": "Explore Dog Breeds",
+        "subtitle": "Find the perfect breed for your family \u2014 from energetic working dogs to gentle companions.",
+        "accent_color": "#00B4C4"
+      }
+    }
+  },
+  "order": ["breed_listing"]
+}

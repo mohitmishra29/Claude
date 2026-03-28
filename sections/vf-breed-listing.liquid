@@ -17,6 +17,7 @@ Recommended article tags:
 {%- endcomment -%}
 
 {%- assign s = section.settings -%}
+{%- assign size_tags = 'small,medium,large,giant' | split: ',' -%}
 
 {%- paginate blog.articles by 24 -%}
 
@@ -86,7 +87,7 @@ Recommended article tags:
     <div class="page-width">
       <nav class="vf-bl__filters" aria-label="Filter breeds by size or type">
         <a href="{{ blog.url }}" class="vf-bl__pill{%- unless current_tags.size > 0 %} is-active{%- endunless -%}">All Breeds</a>
-        {%- for tag in 'small,medium,large,giant' | split: ',' -%}
+        {%- for tag in size_tags -%}
           <a href="{{ blog.url }}/tagged/{{ tag }}" class="vf-bl__pill{%- if current_tags contains tag %} is-active{%- endif -%}">
             {%- case tag -%}
               {%- when 'small' -%}Small
@@ -207,7 +208,6 @@ Recommended article tags:
 {%- endpaginate -%}
 
 <style>
-/* ── Vettofit Breed Listing ── */
 #vf-breed-listing-{{ section.id }} {
   --accent: var(--vf-accent, #00B4C4);
   --card-radius: 14px;
@@ -215,8 +215,6 @@ Recommended article tags:
   --shadow-hover: 0 8px 32px rgba(0,0,0,0.13);
   background: #fff;
 }
-
-/* HERO */
 #vf-breed-listing-{{ section.id }} .vf-bl__hero {
   background: linear-gradient(135deg,#f0fafb 0%,#e6f7f8 60%,#f8fdfe 100%);
   padding: 64px 0 52px;
@@ -249,8 +247,6 @@ Recommended article tags:
   max-width: 560px;
   line-height: 1.6;
 }
-
-/* SEARCH */
 #vf-breed-listing-{{ section.id }} .vf-bl__search-wrap {
   position: relative;
   max-width: 520px;
@@ -301,8 +297,6 @@ Recommended article tags:
   transition: background .15s;
 }
 #vf-breed-listing-{{ section.id }} .vf-bl__search-clear:hover { background: #d1d5db; }
-
-/* FILTER PILLS BAR */
 #vf-breed-listing-{{ section.id }} .vf-bl__filters-bar {
   border-bottom: 1px solid #f3f4f6;
   background: #fff;
@@ -331,27 +325,11 @@ Recommended article tags:
   transition: border-color .2s, background .2s, color .2s;
   white-space: nowrap;
 }
-#vf-breed-listing-{{ section.id }} .vf-bl__pill:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-#vf-breed-listing-{{ section.id }} .vf-bl__pill.is-active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-}
-#vf-breed-listing-{{ section.id }} .vf-bl__pill--flag.is-active {
-  background: #e8622a;
-  border-color: #e8622a;
-}
-
-/* BODY */
+#vf-breed-listing-{{ section.id }} .vf-bl__pill:hover { border-color: var(--accent); color: var(--accent); }
+#vf-breed-listing-{{ section.id }} .vf-bl__pill.is-active { background: var(--accent); border-color: var(--accent); color: #fff; }
+#vf-breed-listing-{{ section.id }} .vf-bl__pill--flag.is-active { background: #e8622a; border-color: #e8622a; }
 #vf-breed-listing-{{ section.id }} .vf-bl__body { padding: 2rem 0 4rem; }
-#vf-breed-listing-{{ section.id }} .vf-bl__count {
-  font-size: .88rem;
-  color: #6b7280;
-  margin: 0 0 1.5rem;
-}
+#vf-breed-listing-{{ section.id }} .vf-bl__count { font-size: .88rem; color: #6b7280; margin: 0 0 1.5rem; }
 #vf-breed-listing-{{ section.id }} .vf-bl__active-tag {
   display: inline-block;
   background: rgba(0,180,196,.1);
@@ -361,24 +339,14 @@ Recommended article tags:
   font-weight: 600;
   font-size: .8rem;
 }
-
-/* GRID */
 #vf-breed-listing-{{ section.id }} .vf-bl__grid {
   display: grid;
   grid-template-columns: repeat(4,1fr);
   gap: 1.5rem;
 }
-@media(max-width:1199px){
-  #vf-breed-listing-{{ section.id }} .vf-bl__grid { grid-template-columns: repeat(3,1fr); }
-}
-@media(max-width:749px){
-  #vf-breed-listing-{{ section.id }} .vf-bl__grid { grid-template-columns: repeat(2,1fr); gap: 1rem; }
-}
-@media(max-width:480px){
-  #vf-breed-listing-{{ section.id }} .vf-bl__grid { grid-template-columns: 1fr; }
-}
-
-/* CARD */
+@media(max-width:1199px){ #vf-breed-listing-{{ section.id }} .vf-bl__grid { grid-template-columns: repeat(3,1fr); } }
+@media(max-width:749px){ #vf-breed-listing-{{ section.id }} .vf-bl__grid { grid-template-columns: repeat(2,1fr); gap: 1rem; } }
+@media(max-width:480px){ #vf-breed-listing-{{ section.id }} .vf-bl__grid { grid-template-columns: 1fr; } }
 #vf-breed-listing-{{ section.id }} .vf-bl__card {
   border-radius: var(--card-radius);
   overflow: hidden;
@@ -386,161 +354,42 @@ Recommended article tags:
   box-shadow: var(--shadow);
   transition: box-shadow .25s, transform .25s;
 }
-#vf-breed-listing-{{ section.id }} .vf-bl__card:hover {
-  box-shadow: var(--shadow-hover);
-  transform: translateY(-4px);
-}
-#vf-breed-listing-{{ section.id }} .vf-bl__card-inner {
-  display: flex;
-  flex-direction: column;
-  text-decoration: none;
-  color: inherit;
-  height: 100%;
-}
-#vf-breed-listing-{{ section.id }} .vf-bl__card-media {
-  position: relative;
-  overflow: hidden;
-  aspect-ratio: 4/3;
-  background: #f3f4f6;
-}
-#vf-breed-listing-{{ section.id }} .vf-bl__card-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  transition: transform .45s cubic-bezier(.25,.46,.45,.94);
-}
+#vf-breed-listing-{{ section.id }} .vf-bl__card:hover { box-shadow: var(--shadow-hover); transform: translateY(-4px); }
+#vf-breed-listing-{{ section.id }} .vf-bl__card-inner { display: flex; flex-direction: column; text-decoration: none; color: inherit; height: 100%; }
+#vf-breed-listing-{{ section.id }} .vf-bl__card-media { position: relative; overflow: hidden; aspect-ratio: 4/3; background: #f3f4f6; }
+#vf-breed-listing-{{ section.id }} .vf-bl__card-img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .45s cubic-bezier(.25,.46,.45,.94); }
 #vf-breed-listing-{{ section.id }} .vf-bl__card:hover .vf-bl__card-img { transform: scale(1.06); }
-#vf-breed-listing-{{ section.id }} .vf-bl__card-img-fallback {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #d1d5db;
-}
+#vf-breed-listing-{{ section.id }} .vf-bl__card-img-fallback { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #d1d5db; }
 #vf-breed-listing-{{ section.id }} .vf-bl__card-overlay {
-  position: absolute;
-  inset: 0;
+  position: absolute; inset: 0;
   background: linear-gradient(to top,rgba(0,0,0,.5) 0%,rgba(0,0,0,.1) 50%,transparent 100%);
-  opacity: 0;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding-bottom: 1.25rem;
-  transition: opacity .3s;
+  opacity: 0; display: flex; align-items: flex-end; justify-content: center;
+  padding-bottom: 1.25rem; transition: opacity .3s;
 }
 #vf-breed-listing-{{ section.id }} .vf-bl__card:hover .vf-bl__card-overlay { opacity: 1; }
 #vf-breed-listing-{{ section.id }} .vf-bl__card-overlay-pill {
-  background: rgba(255,255,255,.95);
-  color: #111827;
-  font-size: .82rem;
-  font-weight: 700;
-  padding: .4rem 1rem;
-  border-radius: 999px;
-  transform: translateY(6px);
-  transition: transform .3s;
+  background: rgba(255,255,255,.95); color: #111827; font-size: .82rem; font-weight: 700;
+  padding: .4rem 1rem; border-radius: 999px; transform: translateY(6px); transition: transform .3s;
 }
 #vf-breed-listing-{{ section.id }} .vf-bl__card:hover .vf-bl__card-overlay-pill { transform: translateY(0); }
-#vf-breed-listing-{{ section.id }} .vf-bl__card-body {
-  padding: 1rem 1.1rem 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: .5rem;
-  flex: 1;
-}
-#vf-breed-listing-{{ section.id }} .vf-bl__card-name {
-  font-size: 1rem;
-  font-weight: 700;
-  margin: 0;
-  color: #111827;
-  line-height: 1.3;
-}
-#vf-breed-listing-{{ section.id }} .vf-bl__chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .35rem;
-}
-#vf-breed-listing-{{ section.id }} .vf-bl__chip {
-  font-size: .72rem;
-  font-weight: 600;
-  padding: .2rem .65rem;
-  border-radius: 999px;
-  background: #f3f4f6;
-  color: #6b7280;
-}
-#vf-breed-listing-{{ section.id }} .vf-bl__chip--flag {
-  background: rgba(232,98,42,.1);
-  color: #c0472a;
-}
-#vf-breed-listing-{{ section.id }} .vf-bl__card-excerpt {
-  font-size: .84rem;
-  color: #6b7280;
-  line-height: 1.5;
-  margin: 0;
-}
-#vf-breed-listing-{{ section.id }} .vf-bl__card-cta {
-  display: inline-flex;
-  align-items: center;
-  gap: .4rem;
-  font-size: .84rem;
-  font-weight: 700;
-  color: var(--accent);
-  margin-top: auto;
-  padding-top: .25rem;
-  transition: gap .2s;
-}
+#vf-breed-listing-{{ section.id }} .vf-bl__card-body { padding: 1rem 1.1rem 1.25rem; display: flex; flex-direction: column; gap: .5rem; flex: 1; }
+#vf-breed-listing-{{ section.id }} .vf-bl__card-name { font-size: 1rem; font-weight: 700; margin: 0; color: #111827; line-height: 1.3; }
+#vf-breed-listing-{{ section.id }} .vf-bl__chips { display: flex; flex-wrap: wrap; gap: .35rem; }
+#vf-breed-listing-{{ section.id }} .vf-bl__chip { font-size: .72rem; font-weight: 600; padding: .2rem .65rem; border-radius: 999px; background: #f3f4f6; color: #6b7280; }
+#vf-breed-listing-{{ section.id }} .vf-bl__chip--flag { background: rgba(232,98,42,.1); color: #c0472a; }
+#vf-breed-listing-{{ section.id }} .vf-bl__card-excerpt { font-size: .84rem; color: #6b7280; line-height: 1.5; margin: 0; }
+#vf-breed-listing-{{ section.id }} .vf-bl__card-cta { display: inline-flex; align-items: center; gap: .4rem; font-size: .84rem; font-weight: 700; color: var(--accent); margin-top: auto; padding-top: .25rem; transition: gap .2s; }
 #vf-breed-listing-{{ section.id }} .vf-bl__card:hover .vf-bl__card-cta { gap: .65rem; }
-
-/* EMPTY */
 #vf-breed-listing-{{ section.id }} .vf-bl__empty-state,
 #vf-breed-listing-{{ section.id }} .vf-bl__search-no-results {
-  grid-column: 1/-1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  padding: 4rem 1rem;
-  text-align: center;
-  color: #9ca3af;
+  grid-column: 1/-1; display: flex; flex-direction: column; align-items: center;
+  gap: 1rem; padding: 4rem 1rem; text-align: center; color: #9ca3af;
 }
-#vf-breed-listing-{{ section.id }} .vf-bl__reset {
-  background: none;
-  border: none;
-  color: var(--accent);
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: underline;
-  font-size: inherit;
-}
-
-/* PAGINATION */
-#vf-breed-listing-{{ section.id }} .vf-bl__pagination {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  margin-top: 3rem;
-  padding-top: 2rem;
-  border-top: 1px solid #f3f4f6;
-}
-#vf-breed-listing-{{ section.id }} .vf-bl__page-btn {
-  padding: .6rem 1.4rem;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 8px;
-  text-decoration: none;
-  color: #374151;
-  font-weight: 600;
-  font-size: .9rem;
-  transition: border-color .2s, color .2s;
-}
-#vf-breed-listing-{{ section.id }} .vf-bl__page-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
+#vf-breed-listing-{{ section.id }} .vf-bl__reset { background: none; border: none; color: var(--accent); font-weight: 600; cursor: pointer; text-decoration: underline; font-size: inherit; }
+#vf-breed-listing-{{ section.id }} .vf-bl__pagination { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #f3f4f6; }
+#vf-breed-listing-{{ section.id }} .vf-bl__page-btn { padding: .6rem 1.4rem; border: 1.5px solid #e5e7eb; border-radius: 8px; text-decoration: none; color: #374151; font-weight: 600; font-size: .9rem; transition: border-color .2s, color .2s; }
+#vf-breed-listing-{{ section.id }} .vf-bl__page-btn:hover { border-color: var(--accent); color: var(--accent); }
 #vf-breed-listing-{{ section.id }} .vf-bl__page-info { font-size: .88rem; color: #9ca3af; }
-
-/* MOBILE */
 @media(max-width:749px){
   #vf-breed-listing-{{ section.id }} .vf-bl__hero { padding: 40px 0 36px; }
   #vf-breed-listing-{{ section.id }} .vf-bl__filters-bar { position: static; overflow-x: auto; }
@@ -564,7 +413,6 @@ Recommended article tags:
   if (!input || !grid) return;
   var cards = Array.from(grid.querySelectorAll('.vf-bl__card'));
   var resets = document.querySelectorAll('#vf-breed-listing-' + sid + ' .vf-bl__reset');
-
   function filter(q){
     q = q.trim().toLowerCase();
     var n = 0;
@@ -577,7 +425,6 @@ Recommended article tags:
     if(noRes){ noRes.hidden = n>0||!q; if(term) term.textContent='"'+input.value+'"'; }
     if(count) count.style.display = q?'none':'';
   }
-
   input.addEventListener('input', function(){ filter(this.value); });
   if(clear) clear.addEventListener('click', function(){ input.value=''; filter(''); input.focus(); });
   resets.forEach(function(b){ b.addEventListener('click', function(){ input.value=''; filter(''); input.focus(); }); });
@@ -589,30 +436,10 @@ Recommended article tags:
   "name": "Vettofit breed listing",
   "class": "section vf-breed-listing-section",
   "settings": [
-    {
-      "type": "text",
-      "id": "heading",
-      "label": "Page heading",
-      "default": "Explore Dog Breeds"
-    },
-    {
-      "type": "textarea",
-      "id": "subtitle",
-      "label": "Subtitle",
-      "default": "Find the perfect breed for your family — from energetic working dogs to gentle companions."
-    },
-    {
-      "type": "color",
-      "id": "accent_color",
-      "label": "Accent colour",
-      "default": "#00B4C4"
-    }
+    { "type": "text", "id": "heading", "label": "Page heading", "default": "Explore Dog Breeds" },
+    { "type": "textarea", "id": "subtitle", "label": "Subtitle", "default": "Find the perfect breed for your family — from energetic working dogs to gentle companions." },
+    { "type": "color", "id": "accent_color", "label": "Accent colour", "default": "#00B4C4" }
   ],
-  "presets": [
-    {
-      "name": "Vettofit breed listing",
-      "category": "Blog"
-    }
-  ]
+  "presets": [{ "name": "Vettofit breed listing", "category": "Blog" }]
 }
 {% endschema %}

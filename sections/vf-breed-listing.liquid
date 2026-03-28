@@ -1,0 +1,618 @@
+{%- comment -%}
+Vettofit — Dog Breed Listing (Blog Template Section)
+vf-breed-listing | Dawn OS 2.0
+──────────────────────────────────────────────────────
+• Hero banner with live search (client-side JS)
+• Tag-based filter pills → /blogs/[handle]/tagged/[tag]
+• Breed card grid: 4 cols → 3 → 2 → 1 (responsive)
+• Cards: image, breed name (H2), trait chips, excerpt, CTA
+• Empty state for no articles / no search results
+• Pagination (24 per page)
+• SEO: JSON-LD ItemList schema
+──────────────────────────────────────────────────────
+Recommended article tags:
+  Size : small | medium | large | giant
+  Type : indian-breed | foreign-breed
+  Trait: family-friendly | energetic | low-shedding …
+{%- endcomment -%}
+
+{%- assign s = section.settings -%}
+
+{%- paginate blog.articles by 24 -%}
+
+{%- comment -%} ── SEO JSON-LD ItemList ── {%- endcomment -%}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  "name": {{ s.heading | default: 'Dog Breeds Guide' | json }},
+  "description": {{ s.subtitle | default: 'Explore dog breeds to find the perfect match for your family.' | strip_html | truncate: 200 | json }},
+  "url": "{{ shop.url }}{{ blog.url }}",
+  "numberOfItems": {{ blog.articles_count }},
+  "itemListElement": [
+    {%- for article in blog.articles -%}
+    {
+      "@type": "ListItem",
+      "position": {{ paginate.current_offset | plus: forloop.index }},
+      "name": {{ article.title | json }},
+      "url": "{{ shop.url }}{{ article.url }}"
+      {%- if article.image -%},"image": "https:{{ article.image | image_url: width: 600 }}"{%- endif -%}
+    }{%- unless forloop.last -%},{%- endunless -%}
+    {%- endfor -%}
+  ]
+}
+</script>
+
+<section
+  id="vf-breed-listing-{{ section.id }}"
+  class="vf-breed-listing"
+  style="--vf-accent: {{ s.accent_color | default: '#00B4C4' }};"
+>
+
+  {%- comment -%} ═══════ HERO ═══════ {%- endcomment -%}
+  <div class="vf-bl__hero">
+    <div class="page-width vf-bl__hero-inner">
+
+      <div class="vf-bl__hero-eyebrow" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5.172C10 3.782 8.423 2.679 6.5 3c-2.823.47-4.113 6.006-4 7 .08.703 1.725 1.722 3.656 1 1.261-.472 1.96-1.45 2.344-2.5"/><path d="M14.267 5.172c0-1.39 1.577-2.493 3.5-2.172 2.823.47 4.113 6.006 4 7-.08.703-1.725 1.722-3.656 1-1.261-.472-1.96-1.45-2.344-2.5"/><path d="M8 14v.5"/><path d="M16 14v.5"/><path d="M11.25 16.25h1.5L12 17l-.75-.75z"/><path d="M4.42 11.247A13.152 13.152 0 0 0 4 14.556C4 18.728 7.582 21 12 21s8-2.272 8-6.444c0-1.061-.162-2.2-.493-3.309m-9.243-6.082A8.801 8.801 0 0 1 12 5c.78 0 1.5.108 2.161.306"/></svg>
+        {{ blog.articles_count }} Breed Guides
+      </div>
+
+      <h1 class="vf-bl__hero-heading">{{ s.heading | default: 'Explore Dog Breeds' }}</h1>
+
+      {%- if s.subtitle != blank -%}
+        <p class="vf-bl__hero-subtitle">{{ s.subtitle }}</p>
+      {%- endif -%}
+
+      <div class="vf-bl__search-wrap" role="search" aria-label="Search breeds">
+        <svg class="vf-bl__search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input
+          id="vf-breed-search-{{ section.id }}"
+          type="search"
+          class="vf-bl__search-input"
+          placeholder="Search by breed name…"
+          autocomplete="off"
+          aria-label="Search dog breeds"
+          aria-controls="vf-breed-grid-{{ section.id }}"
+        >
+        <button class="vf-bl__search-clear" type="button" aria-label="Clear search" hidden>&#x2715;</button>
+      </div>
+
+    </div>
+  </div>
+
+  {%- comment -%} ═══════ FILTER PILLS ═══════ {%- endcomment -%}
+  <div class="vf-bl__filters-bar">
+    <div class="page-width">
+      <nav class="vf-bl__filters" aria-label="Filter breeds by size or type">
+        <a href="{{ blog.url }}" class="vf-bl__pill{%- unless current_tags.size > 0 %} is-active{%- endunless -%}">All Breeds</a>
+        {%- for tag in 'small,medium,large,giant' | split: ',' -%}
+          <a href="{{ blog.url }}/tagged/{{ tag }}" class="vf-bl__pill{%- if current_tags contains tag %} is-active{%- endif -%}">
+            {%- case tag -%}
+              {%- when 'small' -%}Small
+              {%- when 'medium' -%}Medium
+              {%- when 'large' -%}Large
+              {%- when 'giant' -%}Giant
+            {%- endcase -%}
+          </a>
+        {%- endfor -%}
+        <a href="{{ blog.url }}/tagged/indian-breed" class="vf-bl__pill vf-bl__pill--flag{%- if current_tags contains 'indian-breed' %} is-active{%- endif -%}">&#127470;&#127475; Indian Breeds</a>
+      </nav>
+    </div>
+  </div>
+
+  {%- comment -%} ═══════ GRID ═══════ {%- endcomment -%}
+  <div class="page-width vf-bl__body">
+
+    {%- if blog.articles.size > 0 -%}
+      <p class="vf-bl__count" id="vf-bl-count-{{ section.id }}" aria-live="polite">
+        Showing <strong>{{ blog.articles | size }}</strong> of <strong>{{ blog.articles_count }}</strong> breeds
+        {%- for tag in current_tags -%}
+          &nbsp;&middot; <span class="vf-bl__active-tag">{{ tag | replace: '-', ' ' | capitalize }}</span>
+        {%- endfor -%}
+      </p>
+    {%- endif -%}
+
+    <div class="vf-bl__grid" id="vf-breed-grid-{{ section.id }}" role="list">
+
+      {%- for article in blog.articles -%}
+        <article
+          class="vf-bl__card"
+          role="listitem"
+          data-name="{{ article.title | downcase | escape }}"
+          data-tags="{{ article.tags | join: ' ' | downcase | escape }}"
+        >
+          <a href="{{ article.url }}" class="vf-bl__card-inner" aria-label="Read breed guide: {{ article.title | escape }}">
+
+            <div class="vf-bl__card-media">
+              {%- if article.image -%}
+                {{ article.image
+                  | image_url: width: 560
+                  | image_tag:
+                    class: 'vf-bl__card-img',
+                    loading: 'lazy',
+                    widths: '280, 400, 560',
+                    sizes: '(min-width: 1200px) 260px, (min-width: 990px) calc(25vw - 40px), (min-width: 750px) calc(50vw - 40px), calc(100vw - 32px)',
+                    alt: article.title
+                }}
+              {%- else -%}
+                <div class="vf-bl__card-img-fallback" aria-hidden="true">
+                  <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M10 5.172C10 3.782 8.423 2.679 6.5 3c-2.823.47-4.113 6.006-4 7 .08.703 1.725 1.722 3.656 1 1.261-.472 1.96-1.45 2.344-2.5"/><path d="M14.267 5.172c0-1.39 1.577-2.493 3.5-2.172 2.823.47 4.113 6.006 4 7-.08.703-1.725 1.722-3.656 1-1.261-.472-1.96-1.45-2.344-2.5"/><path d="M8 14v.5"/><path d="M16 14v.5"/><path d="M11.25 16.25h1.5L12 17l-.75-.75z"/><path d="M4.42 11.247A13.152 13.152 0 0 0 4 14.556C4 18.728 7.582 21 12 21s8-2.272 8-6.444c0-1.061-.162-2.2-.493-3.309m-9.243-6.082A8.801 8.801 0 0 1 12 5c.78 0 1.5.108 2.161.306"/></svg>
+                </div>
+              {%- endif -%}
+              <div class="vf-bl__card-overlay" aria-hidden="true">
+                <span class="vf-bl__card-overlay-pill">Read Guide &rarr;</span>
+              </div>
+            </div>
+
+            <div class="vf-bl__card-body">
+              <h2 class="vf-bl__card-name">{{ article.title }}</h2>
+              {%- if article.tags.size > 0 -%}
+                <div class="vf-bl__chips" aria-label="Breed traits">
+                  {%- for tag in article.tags limit: 4 -%}
+                    {%- assign tag_lower = tag | downcase -%}
+                    {%- unless tag_lower == 'indian-breed' or tag_lower == 'foreign-breed' -%}
+                      <span class="vf-bl__chip">{{ tag | replace: '-', ' ' | capitalize }}</span>
+                    {%- endunless -%}
+                  {%- endfor -%}
+                  {%- if article.tags contains 'indian-breed' -%}
+                    <span class="vf-bl__chip vf-bl__chip--flag">&#127470;&#127475; Indian</span>
+                  {%- endif -%}
+                </div>
+              {%- endif -%}
+              {%- if article.excerpt != blank -%}
+                <p class="vf-bl__card-excerpt">{{ article.excerpt | strip_html | truncate: 90 }}</p>
+              {%- endif -%}
+              <span class="vf-bl__card-cta">
+                Read Breed Guide
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </span>
+            </div>
+
+          </a>
+        </article>
+
+      {%- else -%}
+        <div class="vf-bl__empty-state">
+          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><path d="M10 5.172C10 3.782 8.423 2.679 6.5 3c-2.823.47-4.113 6.006-4 7 .08.703 1.725 1.722 3.656 1 1.261-.472 1.96-1.45 2.344-2.5"/><path d="M14.267 5.172c0-1.39 1.577-2.493 3.5-2.172 2.823.47 4.113 6.006 4 7-.08.703-1.725 1.722-3.656 1-1.261-.472-1.96-1.45-2.344-2.5"/><path d="M8 14v.5"/><path d="M16 14v.5"/><path d="M11.25 16.25h1.5L12 17l-.75-.75z"/></svg>
+          <p>No breed guides found yet. Check back soon!</p>
+          {%- if current_tags.size > 0 -%}
+            <a href="{{ blog.url }}" class="vf-bl__pill is-active">View all breeds</a>
+          {%- endif -%}
+        </div>
+      {%- endfor -%}
+    </div>
+
+    <div class="vf-bl__search-no-results" id="vf-bl-no-results-{{ section.id }}" hidden aria-live="polite" role="status">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <p>No breeds match <strong id="vf-bl-term-{{ section.id }}"></strong>. <button class="vf-bl__reset" type="button">Clear search</button></p>
+    </div>
+
+    {%- if paginate.pages > 1 -%}
+      <nav class="vf-bl__pagination" aria-label="Breed pages">
+        {%- if paginate.previous -%}
+          <a href="{{ paginate.previous.url }}" class="vf-bl__page-btn">&larr; Previous</a>
+        {%- endif -%}
+        <span class="vf-bl__page-info">Page {{ paginate.current_page }} of {{ paginate.pages }}</span>
+        {%- if paginate.next -%}
+          <a href="{{ paginate.next.url }}" class="vf-bl__page-btn">Next &rarr;</a>
+        {%- endif -%}
+      </nav>
+    {%- endif -%}
+
+  </div>
+
+</section>
+
+{%- endpaginate -%}
+
+<style>
+/* ── Vettofit Breed Listing ── */
+#vf-breed-listing-{{ section.id }} {
+  --accent: var(--vf-accent, #00B4C4);
+  --card-radius: 14px;
+  --shadow: 0 2px 16px rgba(0,0,0,0.07);
+  --shadow-hover: 0 8px 32px rgba(0,0,0,0.13);
+  background: #fff;
+}
+
+/* HERO */
+#vf-breed-listing-{{ section.id }} .vf-bl__hero {
+  background: linear-gradient(135deg,#f0fafb 0%,#e6f7f8 60%,#f8fdfe 100%);
+  padding: 64px 0 52px;
+  text-align: center;
+  border-bottom: 1px solid rgba(0,180,196,.12);
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: 1rem;
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__hero-heading {
+  font-size: clamp(2rem,4vw,3rem);
+  font-weight: 700;
+  letter-spacing: -.025em;
+  line-height: 1.1;
+  margin: 0 0 .75rem;
+  color: #111827;
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__hero-subtitle {
+  font-size: 1.05rem;
+  color: #6b7280;
+  margin: 0 auto 2rem;
+  max-width: 560px;
+  line-height: 1.6;
+}
+
+/* SEARCH */
+#vf-breed-listing-{{ section.id }} .vf-bl__search-wrap {
+  position: relative;
+  max-width: 520px;
+  margin: 0 auto;
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__search-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  pointer-events: none;
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__search-input {
+  width: 100%;
+  padding: .875rem 3rem .875rem 3rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 999px;
+  font-size: .97rem;
+  background: #fff;
+  color: #111827;
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0,180,196,.12);
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__search-input::placeholder { color: #9ca3af; }
+#vf-breed-listing-{{ section.id }} .vf-bl__search-clear {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #e5e7eb;
+  border: none;
+  border-radius: 999px;
+  width: 24px;
+  height: 24px;
+  font-size: .75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  transition: background .15s;
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__search-clear:hover { background: #d1d5db; }
+
+/* FILTER PILLS BAR */
+#vf-breed-listing-{{ section.id }} .vf-bl__filters-bar {
+  border-bottom: 1px solid #f3f4f6;
+  background: #fff;
+  padding: 1rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__filters {
+  display: flex;
+  gap: .5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  padding: .45rem 1.1rem;
+  border-radius: 999px;
+  border: 1.5px solid #e5e7eb;
+  font-size: .87rem;
+  font-weight: 500;
+  color: #374151;
+  text-decoration: none;
+  transition: border-color .2s, background .2s, color .2s;
+  white-space: nowrap;
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__pill:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__pill.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__pill--flag.is-active {
+  background: #e8622a;
+  border-color: #e8622a;
+}
+
+/* BODY */
+#vf-breed-listing-{{ section.id }} .vf-bl__body { padding: 2rem 0 4rem; }
+#vf-breed-listing-{{ section.id }} .vf-bl__count {
+  font-size: .88rem;
+  color: #6b7280;
+  margin: 0 0 1.5rem;
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__active-tag {
+  display: inline-block;
+  background: rgba(0,180,196,.1);
+  color: var(--accent);
+  padding: .1rem .6rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: .8rem;
+}
+
+/* GRID */
+#vf-breed-listing-{{ section.id }} .vf-bl__grid {
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  gap: 1.5rem;
+}
+@media(max-width:1199px){
+  #vf-breed-listing-{{ section.id }} .vf-bl__grid { grid-template-columns: repeat(3,1fr); }
+}
+@media(max-width:749px){
+  #vf-breed-listing-{{ section.id }} .vf-bl__grid { grid-template-columns: repeat(2,1fr); gap: 1rem; }
+}
+@media(max-width:480px){
+  #vf-breed-listing-{{ section.id }} .vf-bl__grid { grid-template-columns: 1fr; }
+}
+
+/* CARD */
+#vf-breed-listing-{{ section.id }} .vf-bl__card {
+  border-radius: var(--card-radius);
+  overflow: hidden;
+  background: #fff;
+  box-shadow: var(--shadow);
+  transition: box-shadow .25s, transform .25s;
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__card:hover {
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-4px);
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__card-inner {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+  height: 100%;
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__card-media {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4/3;
+  background: #f3f4f6;
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform .45s cubic-bezier(.25,.46,.45,.94);
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__card:hover .vf-bl__card-img { transform: scale(1.06); }
+#vf-breed-listing-{{ section.id }} .vf-bl__card-img-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #d1d5db;
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__card-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top,rgba(0,0,0,.5) 0%,rgba(0,0,0,.1) 50%,transparent 100%);
+  opacity: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 1.25rem;
+  transition: opacity .3s;
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__card:hover .vf-bl__card-overlay { opacity: 1; }
+#vf-breed-listing-{{ section.id }} .vf-bl__card-overlay-pill {
+  background: rgba(255,255,255,.95);
+  color: #111827;
+  font-size: .82rem;
+  font-weight: 700;
+  padding: .4rem 1rem;
+  border-radius: 999px;
+  transform: translateY(6px);
+  transition: transform .3s;
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__card:hover .vf-bl__card-overlay-pill { transform: translateY(0); }
+#vf-breed-listing-{{ section.id }} .vf-bl__card-body {
+  padding: 1rem 1.1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  flex: 1;
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__card-name {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+  color: #111827;
+  line-height: 1.3;
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__chip {
+  font-size: .72rem;
+  font-weight: 600;
+  padding: .2rem .65rem;
+  border-radius: 999px;
+  background: #f3f4f6;
+  color: #6b7280;
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__chip--flag {
+  background: rgba(232,98,42,.1);
+  color: #c0472a;
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__card-excerpt {
+  font-size: .84rem;
+  color: #6b7280;
+  line-height: 1.5;
+  margin: 0;
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__card-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  font-size: .84rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin-top: auto;
+  padding-top: .25rem;
+  transition: gap .2s;
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__card:hover .vf-bl__card-cta { gap: .65rem; }
+
+/* EMPTY */
+#vf-breed-listing-{{ section.id }} .vf-bl__empty-state,
+#vf-breed-listing-{{ section.id }} .vf-bl__search-no-results {
+  grid-column: 1/-1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 4rem 1rem;
+  text-align: center;
+  color: #9ca3af;
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__reset {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  font-size: inherit;
+}
+
+/* PAGINATION */
+#vf-breed-listing-{{ section.id }} .vf-bl__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid #f3f4f6;
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__page-btn {
+  padding: .6rem 1.4rem;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #374151;
+  font-weight: 600;
+  font-size: .9rem;
+  transition: border-color .2s, color .2s;
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__page-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+#vf-breed-listing-{{ section.id }} .vf-bl__page-info { font-size: .88rem; color: #9ca3af; }
+
+/* MOBILE */
+@media(max-width:749px){
+  #vf-breed-listing-{{ section.id }} .vf-bl__hero { padding: 40px 0 36px; }
+  #vf-breed-listing-{{ section.id }} .vf-bl__filters-bar { position: static; overflow-x: auto; }
+  #vf-breed-listing-{{ section.id }} .vf-bl__filters { flex-wrap: nowrap; padding-bottom: .25rem; }
+}
+@media(hover:none){
+  #vf-breed-listing-{{ section.id }} .vf-bl__card-overlay { opacity: 1; }
+  #vf-breed-listing-{{ section.id }} .vf-bl__card-overlay-pill { transform: translateY(0); }
+}
+</style>
+
+<script>
+(function(){
+  var sid = '{{ section.id }}';
+  var input = document.getElementById('vf-breed-search-' + sid);
+  var clear = input && input.closest('.vf-bl__search-wrap').querySelector('.vf-bl__search-clear');
+  var grid  = document.getElementById('vf-breed-grid-' + sid);
+  var noRes = document.getElementById('vf-bl-no-results-' + sid);
+  var term  = document.getElementById('vf-bl-term-' + sid);
+  var count = document.getElementById('vf-bl-count-' + sid);
+  if (!input || !grid) return;
+  var cards = Array.from(grid.querySelectorAll('.vf-bl__card'));
+  var resets = document.querySelectorAll('#vf-breed-listing-' + sid + ' .vf-bl__reset');
+
+  function filter(q){
+    q = q.trim().toLowerCase();
+    var n = 0;
+    cards.forEach(function(c){
+      var match = !q || (c.dataset.name||'').indexOf(q)>-1 || (c.dataset.tags||'').indexOf(q)>-1;
+      c.style.display = match ? '' : 'none';
+      if(match) n++;
+    });
+    if(clear) clear.hidden = !q;
+    if(noRes){ noRes.hidden = n>0||!q; if(term) term.textContent='"'+input.value+'"'; }
+    if(count) count.style.display = q?'none':'';
+  }
+
+  input.addEventListener('input', function(){ filter(this.value); });
+  if(clear) clear.addEventListener('click', function(){ input.value=''; filter(''); input.focus(); });
+  resets.forEach(function(b){ b.addEventListener('click', function(){ input.value=''; filter(''); input.focus(); }); });
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Vettofit breed listing",
+  "class": "section vf-breed-listing-section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Page heading",
+      "default": "Explore Dog Breeds"
+    },
+    {
+      "type": "textarea",
+      "id": "subtitle",
+      "label": "Subtitle",
+      "default": "Find the perfect breed for your family — from energetic working dogs to gentle companions."
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent colour",
+      "default": "#00B4C4"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Vettofit breed listing",
+      "category": "Blog"
+    }
+  ]
+}
+{% endschema %}

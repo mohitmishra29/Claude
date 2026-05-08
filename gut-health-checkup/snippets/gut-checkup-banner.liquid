@@ -1,0 +1,230 @@
+{% comment %}
+  ============================================================================
+  Vettofit — Gut Health Checkup CTA Banner (Snippet)
+  File:    snippets/gut-checkup-banner.liquid
+  Usage:   {% render 'gut-checkup-banner' %}
+  Include on the homepage or any page to promote the free AI Gut Health
+  Checkup. Fully self-contained — no external stylesheet required.
+  ============================================================================
+{% endcomment %}
+
+<style>
+  /* ── Scoped styles — all classes prefixed with ghc-banner- ── */
+
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap');
+
+  .ghc-banner-section {
+    background-color: #E0F7F5;
+    width: 100%;
+    padding: 56px 24px;
+    box-sizing: border-box;
+  }
+
+  .ghc-banner-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 40px;
+  }
+
+  /* ── Left column: text content ── */
+  .ghc-banner-content {
+    flex: 1 1 55%;
+    min-width: 0;
+  }
+
+  /* ── Right column: illustration ── */
+  .ghc-banner-illustration {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ghc-banner-illustration-circle {
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: rgba(9, 209, 199, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 80px;
+    line-height: 1;
+    user-select: none;
+  }
+
+  /* ── NEW pill badge ── */
+  .ghc-banner-badge {
+    display: inline-block;
+    background-color: #09D1C7;
+    color: #ffffff;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 100px;
+    margin-bottom: 16px;
+    line-height: 1.4;
+  }
+
+  /* ── Heading ── */
+  .ghc-banner-heading {
+    font-family: 'Sora', sans-serif;
+    font-weight: 600;
+    font-size: 36px;
+    line-height: 1.25;
+    color: #1A1A2E;
+    margin: 0 0 12px;
+  }
+
+  /* ── Subtext ── */
+  .ghc-banner-subtext {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 400;
+    font-size: 17px;
+    line-height: 1.6;
+    color: #3D3D4E;
+    margin: 0 0 24px;
+    max-width: 540px;
+  }
+
+  /* ── CTA button ── */
+  .ghc-banner-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 48px;
+    padding: 0 24px;
+    background-color: #09D1C7;
+    color: #ffffff;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+    line-height: 1;
+    text-decoration: none;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    white-space: nowrap;
+  }
+
+  .ghc-banner-cta:hover,
+  .ghc-banner-cta:focus-visible {
+    background-color: #07b8af;
+    box-shadow: 0 4px 14px rgba(9, 209, 199, 0.35);
+    color: #ffffff;
+    text-decoration: none;
+  }
+
+  .ghc-banner-cta:active {
+    background-color: #069e96;
+  }
+
+  /* ── Tagline ── */
+  .ghc-banner-tagline {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 500;
+    font-size: 13px;
+    color: #09D1C7;
+    margin-top: 16px;
+    letter-spacing: 0.02em;
+  }
+
+  /* ── Paw icon inside the button ── */
+  .ghc-banner-paw {
+    margin-left: 6px;
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  /* ── Responsive: tablet & below ── */
+  @media screen and (max-width: 860px) {
+    .ghc-banner-inner {
+      flex-direction: column;
+      text-align: center;
+      gap: 32px;
+    }
+
+    .ghc-banner-content {
+      flex: 1 1 auto;
+    }
+
+    .ghc-banner-subtext {
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .ghc-banner-heading {
+      font-size: 30px;
+    }
+
+    .ghc-banner-illustration-circle {
+      width: 140px;
+      height: 140px;
+      font-size: 60px;
+    }
+  }
+
+  /* ── Responsive: mobile ── */
+  @media screen and (max-width: 480px) {
+    .ghc-banner-section {
+      padding: 40px 16px;
+    }
+
+    .ghc-banner-heading {
+      font-size: 24px;
+    }
+
+    .ghc-banner-subtext {
+      font-size: 15px;
+    }
+
+    .ghc-banner-illustration {
+      order: -1;
+    }
+
+    .ghc-banner-illustration-circle {
+      width: 110px;
+      height: 110px;
+      font-size: 48px;
+    }
+  }
+</style>
+
+<section class="ghc-banner-section" aria-label="Gut Health Checkup promotion">
+  <div class="ghc-banner-inner">
+
+    {%- comment %} Text content {% endcomment -%}
+    <div class="ghc-banner-content">
+      <span class="ghc-banner-badge" aria-label="New feature">NEW</span>
+      <h2 class="ghc-banner-heading">Is Your Dog's Gut Healthy?</h2>
+      <p class="ghc-banner-subtext">
+        Take our free 2-minute AI-powered checkup and get personalised
+        vet-backed insights for your furry friend.
+      </p>
+      <a
+        href="/pages/gut-health-checkup"
+        class="ghc-banner-cta"
+        title="Start the free AI Gut Health Checkup"
+      >
+        Start Free Checkup
+        <span class="ghc-banner-paw" aria-hidden="true">&rarr;</span>
+      </a>
+      <p class="ghc-banner-tagline">Care, not just a product.</p>
+    </div>
+
+    {%- comment %} Illustration (paw + dog) {% endcomment -%}
+    <div class="ghc-banner-illustration" aria-hidden="true">
+      <div class="ghc-banner-illustration-circle">
+        &#x1F43E;
+      </div>
+    </div>
+
+  </div>
+</section>

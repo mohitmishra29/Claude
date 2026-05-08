@@ -1,0 +1,1232 @@
+/* ==========================================================================
+   AI Gut Health Checkup — Shopify Feature Stylesheet
+   Brand: Sora + Plus Jakarta Sans | Teal #09D1C7 | Mobile-first
+   ========================================================================== */
+
+/* Google Fonts Import */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&family=Sora:wght@600;700&display=swap');
+
+/* --------------------------------------------------------------------------
+   1. CSS Custom Properties
+   -------------------------------------------------------------------------- */
+:root {
+  /* Colors — Primary */
+  --ghc-teal: #09D1C7;
+  --ghc-teal-hover: #07b8af;
+  --ghc-black: #000000;
+  --ghc-white: #FFFFFF;
+  --ghc-amber: #F2994A;
+  --ghc-coral: #F28B81;
+
+  /* Colors — Backgrounds */
+  --ghc-teal-light: #E0F7F5;
+  --ghc-mist: #F0F1F2;
+  --ghc-border: #E4E4E4;
+
+  /* Colors — Text */
+  --ghc-text-primary: #000000;
+  --ghc-text-body: #333333;
+  --ghc-text-muted: #666666;
+  --ghc-text-hint: #999999;
+
+  /* Colors — Semantic */
+  --ghc-error: #F28B81;
+  --ghc-critical: #D32F2F;
+
+  /* Typography */
+  --ghc-font-heading: 'Sora', sans-serif;
+  --ghc-font-body: 'Plus Jakarta Sans', sans-serif;
+
+  /* Spacing */
+  --ghc-space-4: 4px;
+  --ghc-space-6: 6px;
+  --ghc-space-8: 8px;
+  --ghc-space-10: 10px;
+  --ghc-space-12: 12px;
+  --ghc-space-16: 16px;
+  --ghc-space-20: 20px;
+  --ghc-space-24: 24px;
+  --ghc-space-32: 32px;
+
+  /* Border Radius */
+  --ghc-radius-sm: 4px;
+  --ghc-radius-md: 10px;
+  --ghc-radius-lg: 12px;
+  --ghc-radius-xl: 14px;
+  --ghc-radius-pill: 20px;
+  --ghc-radius-circle: 50%;
+
+  /* Transitions */
+  --ghc-transition-fast: 200ms ease;
+  --ghc-transition-base: 300ms ease;
+  --ghc-transition-slow: 500ms ease;
+}
+
+/* --------------------------------------------------------------------------
+   2. Base Reset (scoped)
+   -------------------------------------------------------------------------- */
+.ghc-app *,
+.ghc-app *::before,
+.ghc-app *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* --------------------------------------------------------------------------
+   3. Container & Layout
+   -------------------------------------------------------------------------- */
+.ghc-app {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 16px;
+  min-height: 100vh;
+  font-family: var(--ghc-font-body);
+  font-weight: 400;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ghc-text-body);
+  background: var(--ghc-white);
+  -webkit-font-smoothing: antialiased;
+}
+
+.ghc-step {
+  display: none;
+  opacity: 0;
+  transition: opacity var(--ghc-transition-base);
+}
+
+.ghc-step.active {
+  display: block;
+  opacity: 1;
+}
+
+/* --------------------------------------------------------------------------
+   4. Header
+   -------------------------------------------------------------------------- */
+.ghc-header {
+  text-align: center;
+  padding: var(--ghc-space-16) 0;
+}
+
+.ghc-logo {
+  max-width: 140px;
+  height: auto;
+  display: inline-block;
+}
+
+.ghc-step-indicator {
+  font-family: var(--ghc-font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ghc-text-hint);
+  margin-top: var(--ghc-space-8);
+}
+
+/* --------------------------------------------------------------------------
+   5. Progress Bar
+   -------------------------------------------------------------------------- */
+.ghc-progress {
+  width: 100%;
+  height: 6px;
+  background: var(--ghc-mist);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: var(--ghc-space-4);
+}
+
+.ghc-progress-fill {
+  height: 100%;
+  background: var(--ghc-teal);
+  border-radius: 3px;
+  transition: width var(--ghc-transition-slow);
+}
+
+.ghc-progress-text {
+  font-size: 12px;
+  color: var(--ghc-text-hint);
+  text-align: right;
+  margin-bottom: var(--ghc-space-16);
+}
+
+/* --------------------------------------------------------------------------
+   6. Welcome Screen
+   -------------------------------------------------------------------------- */
+.ghc-welcome {
+  text-align: center;
+  padding: var(--ghc-space-24) 0;
+}
+
+.ghc-welcome-hero {
+  margin-bottom: var(--ghc-space-24);
+  font-size: 64px;
+  line-height: 1;
+}
+
+.ghc-welcome-title {
+  font-family: var(--ghc-font-heading);
+  font-weight: 700;
+  font-size: 28px;
+  color: var(--ghc-text-primary);
+  margin-bottom: var(--ghc-space-12);
+  line-height: 1.2;
+}
+
+.ghc-welcome-subtitle {
+  font-family: var(--ghc-font-body);
+  font-size: 16px;
+  color: var(--ghc-text-muted);
+  margin-bottom: var(--ghc-space-24);
+  line-height: 1.5;
+}
+
+.ghc-trust-badges {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--ghc-space-16);
+  justify-content: center;
+  margin-bottom: var(--ghc-space-24);
+}
+
+.ghc-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background: var(--ghc-teal-light);
+  border-radius: var(--ghc-radius-lg);
+  padding: var(--ghc-space-12) var(--ghc-space-16);
+  font-size: 13px;
+  color: var(--ghc-text-body);
+  gap: var(--ghc-space-6);
+  min-width: 100px;
+}
+
+/* --------------------------------------------------------------------------
+   7. Form Inputs
+   -------------------------------------------------------------------------- */
+.ghc-form-group {
+  margin-bottom: var(--ghc-space-20);
+}
+
+.ghc-label {
+  display: block;
+  font-family: var(--ghc-font-body);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ghc-text-body);
+  margin-bottom: var(--ghc-space-6);
+}
+
+.ghc-input {
+  width: 100%;
+  height: 48px;
+  font-family: var(--ghc-font-body);
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--ghc-text-body);
+  background: var(--ghc-white);
+  border: 1.5px solid var(--ghc-border);
+  border-radius: var(--ghc-radius-md);
+  padding: 12px 16px;
+  outline: none;
+  transition: border-color var(--ghc-transition-fast), box-shadow var(--ghc-transition-fast);
+}
+
+.ghc-input::placeholder {
+  color: var(--ghc-text-hint);
+}
+
+.ghc-input:focus {
+  border-color: var(--ghc-teal);
+  box-shadow: 0 0 0 3px rgba(9, 209, 199, 0.15);
+}
+
+.ghc-input.error {
+  border-color: var(--ghc-error);
+}
+
+.ghc-input-hint {
+  font-size: 12px;
+  color: var(--ghc-text-hint);
+  margin-top: var(--ghc-space-4);
+}
+
+.ghc-input-error {
+  font-size: 12px;
+  color: var(--ghc-error);
+  margin-top: var(--ghc-space-4);
+}
+
+.ghc-select {
+  width: 100%;
+  height: 48px;
+  font-family: var(--ghc-font-body);
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--ghc-text-body);
+  background: var(--ghc-white);
+  border: 1.5px solid var(--ghc-border);
+  border-radius: var(--ghc-radius-md);
+  padding: 12px 40px 12px 16px;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23999' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  transition: border-color var(--ghc-transition-fast), box-shadow var(--ghc-transition-fast);
+}
+
+.ghc-select:focus {
+  border-color: var(--ghc-teal);
+  box-shadow: 0 0 0 3px rgba(9, 209, 199, 0.15);
+}
+
+.ghc-phone-input {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid var(--ghc-border);
+  border-radius: var(--ghc-radius-md);
+  overflow: hidden;
+  transition: border-color var(--ghc-transition-fast), box-shadow var(--ghc-transition-fast);
+}
+
+.ghc-phone-input:focus-within {
+  border-color: var(--ghc-teal);
+  box-shadow: 0 0 0 3px rgba(9, 209, 199, 0.15);
+}
+
+.ghc-phone-input .ghc-phone-prefix {
+  padding: 12px 12px 12px 16px;
+  font-size: 16px;
+  color: var(--ghc-text-muted);
+  background: var(--ghc-mist);
+  border-right: 1px solid var(--ghc-border);
+  white-space: nowrap;
+}
+
+.ghc-phone-input .ghc-input {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.ghc-phone-input .ghc-input:focus {
+  box-shadow: none;
+}
+
+/* --------------------------------------------------------------------------
+   8. Breed Search
+   -------------------------------------------------------------------------- */
+.ghc-breed-search {
+  position: relative;
+}
+
+.ghc-breed-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--ghc-white);
+  border: 1px solid var(--ghc-border);
+  border-radius: var(--ghc-radius-md);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  margin-top: 4px;
+}
+
+.ghc-breed-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  transition: background var(--ghc-transition-fast);
+}
+
+.ghc-breed-item:hover,
+.ghc-breed-item.highlighted {
+  background: var(--ghc-teal-light);
+}
+
+.ghc-breed-item-name {
+  font-size: 15px;
+  color: var(--ghc-text-body);
+}
+
+.ghc-breed-item-info {
+  font-size: 12px;
+  color: var(--ghc-text-hint);
+  margin-top: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   9. Question Cards (Radio-style options)
+   -------------------------------------------------------------------------- */
+.ghc-question-group {
+  margin-bottom: var(--ghc-space-24);
+}
+
+.ghc-question-icon {
+  font-size: 32px;
+  line-height: 1;
+  margin-bottom: var(--ghc-space-8);
+}
+
+.ghc-question-title {
+  font-family: var(--ghc-font-heading);
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--ghc-text-primary);
+  margin-bottom: var(--ghc-space-4);
+  line-height: 1.3;
+}
+
+.ghc-question-subtitle {
+  font-size: 14px;
+  color: var(--ghc-text-muted);
+  margin-bottom: var(--ghc-space-16);
+}
+
+.ghc-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ghc-space-10);
+}
+
+.ghc-option {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1.5px solid var(--ghc-border);
+  border-radius: var(--ghc-radius-lg);
+  cursor: pointer;
+  min-height: 48px;
+  background: var(--ghc-white);
+  transition: border-color var(--ghc-transition-fast), background var(--ghc-transition-fast);
+}
+
+.ghc-option:hover {
+  border-color: var(--ghc-teal);
+}
+
+.ghc-option.selected {
+  border-color: var(--ghc-teal);
+  background: var(--ghc-teal-light);
+}
+
+.ghc-option-radio {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--ghc-radius-circle);
+  border: 2px solid var(--ghc-border);
+  flex-shrink: 0;
+  margin-right: var(--ghc-space-12);
+  position: relative;
+  transition: border-color var(--ghc-transition-fast);
+}
+
+.ghc-option.selected .ghc-option-radio {
+  border-color: var(--ghc-teal);
+}
+
+.ghc-option-radio::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  width: 10px;
+  height: 10px;
+  border-radius: var(--ghc-radius-circle);
+  background: var(--ghc-teal);
+  transition: transform var(--ghc-transition-fast);
+}
+
+.ghc-option.selected .ghc-option-radio::after {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.ghc-option-content {
+  flex: 1;
+}
+
+.ghc-option-text {
+  font-size: 15px;
+  color: var(--ghc-text-body);
+}
+
+.ghc-option-detail {
+  font-size: 13px;
+  color: var(--ghc-text-muted);
+  margin-top: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   10. Buttons
+   -------------------------------------------------------------------------- */
+.ghc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 14px 28px;
+  border-radius: var(--ghc-radius-md);
+  font-family: var(--ghc-font-body);
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer;
+  border: none;
+  gap: var(--ghc-space-8);
+  text-decoration: none;
+  line-height: 1;
+  transition: background var(--ghc-transition-fast), color var(--ghc-transition-fast);
+}
+
+.ghc-btn-primary {
+  background: var(--ghc-teal);
+  color: var(--ghc-white);
+}
+
+.ghc-btn-primary:hover {
+  background: var(--ghc-teal-hover);
+}
+
+.ghc-btn-primary:disabled {
+  background: var(--ghc-border);
+  color: var(--ghc-text-hint);
+  cursor: not-allowed;
+}
+
+.ghc-btn-secondary {
+  background: var(--ghc-black);
+  color: var(--ghc-white);
+}
+
+.ghc-btn-secondary:hover {
+  background: #222222;
+}
+
+.ghc-btn-outline {
+  background: transparent;
+  border: 1.5px solid var(--ghc-teal);
+  color: var(--ghc-teal);
+}
+
+.ghc-btn-outline:hover {
+  background: var(--ghc-teal-light);
+}
+
+.ghc-btn-amber {
+  background: var(--ghc-amber);
+  color: var(--ghc-white);
+}
+
+.ghc-btn-amber:hover {
+  background: #e08a3e;
+}
+
+.ghc-btn-full {
+  width: 100%;
+}
+
+.ghc-btn-small {
+  min-height: 40px;
+  padding: 10px 20px;
+  font-size: 14px;
+}
+
+/* --------------------------------------------------------------------------
+   11. Navigation
+   -------------------------------------------------------------------------- */
+.ghc-nav {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  margin-top: var(--ghc-space-32);
+  gap: var(--ghc-space-12);
+}
+
+.ghc-nav .ghc-btn {
+  flex: 1;
+}
+
+/* --------------------------------------------------------------------------
+   12. Loading Screen
+   -------------------------------------------------------------------------- */
+@keyframes ghc-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ghc-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  text-align: center;
+  padding: var(--ghc-space-24);
+}
+
+.ghc-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--ghc-border);
+  border-top-color: var(--ghc-teal);
+  border-radius: var(--ghc-radius-circle);
+  animation: ghc-spin 0.8s linear infinite;
+}
+
+.ghc-loading-text {
+  font-size: 16px;
+  color: var(--ghc-text-body);
+  margin-top: var(--ghc-space-24);
+  font-weight: 500;
+}
+
+.ghc-loading-subtext {
+  font-size: 14px;
+  color: var(--ghc-text-hint);
+  margin-top: var(--ghc-space-8);
+}
+
+.ghc-loading-steps {
+  list-style: none;
+  margin-top: var(--ghc-space-24);
+  text-align: left;
+}
+
+.ghc-loading-steps li {
+  font-size: 14px;
+  color: var(--ghc-text-muted);
+  padding: var(--ghc-space-6) 0;
+  display: flex;
+  align-items: center;
+  gap: var(--ghc-space-8);
+}
+
+/* --------------------------------------------------------------------------
+   13. Results Page
+   -------------------------------------------------------------------------- */
+.ghc-results {
+  padding-top: var(--ghc-space-24);
+}
+
+/* Score Section */
+.ghc-score-section {
+  text-align: center;
+  padding: var(--ghc-space-32) 0;
+}
+
+.ghc-score-circle {
+  width: 160px;
+  height: 160px;
+  border-radius: var(--ghc-radius-circle);
+  position: relative;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ghc-score-circle::after {
+  content: '';
+  position: absolute;
+  width: 130px;
+  height: 130px;
+  border-radius: var(--ghc-radius-circle);
+  background: var(--ghc-white);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.ghc-score-value {
+  font-family: var(--ghc-font-heading);
+  font-weight: 700;
+  font-size: 48px;
+  color: var(--ghc-text-primary);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -60%);
+  z-index: 1;
+  line-height: 1;
+}
+
+.ghc-score-label {
+  font-size: 14px;
+  color: var(--ghc-text-muted);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, 50%);
+  z-index: 1;
+}
+
+.ghc-score-bracket {
+  display: inline-block;
+  padding: 6px 16px;
+  border-radius: var(--ghc-radius-pill);
+  font-weight: 600;
+  font-size: 14px;
+  margin-top: var(--ghc-space-16);
+}
+
+.ghc-score-bracket.excellent {
+  background: var(--ghc-teal-light);
+  color: var(--ghc-teal);
+}
+
+.ghc-score-bracket.good {
+  background: #FFF3E0;
+  color: var(--ghc-amber);
+}
+
+.ghc-score-bracket.attention {
+  background: #FFF0EE;
+  color: var(--ghc-coral);
+}
+
+.ghc-score-bracket.critical {
+  background: #FFEBEE;
+  color: var(--ghc-critical);
+}
+
+/* Summary */
+.ghc-summary {
+  background: var(--ghc-mist);
+  border-radius: var(--ghc-radius-lg);
+  padding: var(--ghc-space-20);
+  margin-bottom: var(--ghc-space-24);
+}
+
+.ghc-summary-text {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ghc-text-body);
+}
+
+/* Flagged Areas */
+.ghc-flags {
+  margin-bottom: var(--ghc-space-24);
+}
+
+.ghc-flags-title {
+  font-family: var(--ghc-font-heading);
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--ghc-text-primary);
+  margin-bottom: var(--ghc-space-12);
+}
+
+.ghc-flag-item {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--ghc-space-12);
+  padding: 12px 16px;
+  background: var(--ghc-white);
+  border: 1px solid var(--ghc-border);
+  border-radius: var(--ghc-radius-md);
+  margin-bottom: var(--ghc-space-8);
+}
+
+.ghc-flag-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.ghc-flag-text {
+  font-size: 14px;
+  color: var(--ghc-text-body);
+  line-height: 1.5;
+}
+
+.ghc-flag-severity {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--ghc-radius-circle);
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+
+/* Vet Card */
+.ghc-vet-card {
+  background: var(--ghc-teal-light);
+  border-radius: 16px;
+  padding: var(--ghc-space-24);
+  margin-bottom: var(--ghc-space-24);
+  border-left: 4px solid var(--ghc-teal);
+}
+
+.ghc-vet-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--ghc-space-12);
+  margin-bottom: var(--ghc-space-16);
+}
+
+.ghc-vet-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--ghc-radius-circle);
+  background: var(--ghc-teal);
+  color: var(--ghc-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.ghc-vet-name {
+  font-family: var(--ghc-font-heading);
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--ghc-text-primary);
+}
+
+.ghc-vet-title {
+  font-size: 13px;
+  color: var(--ghc-text-muted);
+}
+
+.ghc-vet-body {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--ghc-text-body);
+}
+
+.ghc-vet-body ul {
+  list-style: disc;
+  padding-left: 20px;
+  margin: 12px 0;
+}
+
+.ghc-vet-body li {
+  margin-bottom: var(--ghc-space-8);
+}
+
+/* Vet Warning */
+.ghc-vet-warning {
+  background: #FFF0EE;
+  border: 1px solid var(--ghc-coral);
+  border-radius: var(--ghc-radius-lg);
+  padding: var(--ghc-space-16);
+  margin-bottom: var(--ghc-space-24);
+  display: flex;
+  gap: var(--ghc-space-12);
+}
+
+.ghc-vet-warning-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.ghc-vet-warning-text {
+  font-size: 14px;
+  color: var(--ghc-text-body);
+  line-height: 1.5;
+}
+
+/* Home Remedies */
+.ghc-remedies {
+  margin-bottom: var(--ghc-space-24);
+}
+
+.ghc-remedies-title {
+  font-family: var(--ghc-font-heading);
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--ghc-text-primary);
+  margin-bottom: var(--ghc-space-12);
+}
+
+.ghc-remedy-category {
+  margin-bottom: var(--ghc-space-16);
+}
+
+.ghc-remedy-category-title {
+  font-family: var(--ghc-font-body);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--ghc-teal);
+  margin-bottom: var(--ghc-space-8);
+}
+
+.ghc-remedy-item {
+  display: flex;
+  flex-direction: row;
+  gap: var(--ghc-space-10);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--ghc-mist);
+  align-items: flex-start;
+}
+
+.ghc-remedy-item:last-child {
+  border-bottom: none;
+}
+
+.ghc-remedy-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.ghc-remedy-text {
+  font-size: 14px;
+  color: var(--ghc-text-body);
+  line-height: 1.5;
+}
+
+/* Product Cards */
+.ghc-products {
+  margin-bottom: var(--ghc-space-24);
+}
+
+.ghc-products-title {
+  font-family: var(--ghc-font-heading);
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--ghc-text-primary);
+  margin-bottom: var(--ghc-space-16);
+}
+
+.ghc-product-card {
+  background: var(--ghc-white);
+  border: 1.5px solid var(--ghc-border);
+  border-radius: var(--ghc-radius-xl);
+  overflow: hidden;
+  margin-bottom: var(--ghc-space-16);
+  transition: border-color var(--ghc-transition-fast);
+}
+
+.ghc-product-card:hover {
+  border-color: var(--ghc-teal);
+}
+
+.ghc-product-header {
+  display: flex;
+  flex-direction: row;
+  gap: var(--ghc-space-16);
+  padding: var(--ghc-space-16);
+}
+
+.ghc-product-image {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: var(--ghc-radius-md);
+  background: var(--ghc-mist);
+  flex-shrink: 0;
+}
+
+.ghc-product-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ghc-product-name {
+  font-family: var(--ghc-font-heading);
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--ghc-text-primary);
+  margin-bottom: var(--ghc-space-4);
+}
+
+.ghc-product-desc {
+  font-size: 13px;
+  color: var(--ghc-text-muted);
+  line-height: 1.4;
+  margin-bottom: var(--ghc-space-8);
+}
+
+.ghc-product-price {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--ghc-space-8);
+  flex-wrap: wrap;
+}
+
+.ghc-product-current-price {
+  font-family: var(--ghc-font-heading);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--ghc-teal);
+}
+
+.ghc-product-original-price {
+  font-size: 14px;
+  color: var(--ghc-text-hint);
+  text-decoration: line-through;
+}
+
+.ghc-product-discount {
+  font-size: 12px;
+  background: #FFF3E0;
+  color: var(--ghc-amber);
+  padding: 2px 8px;
+  border-radius: var(--ghc-radius-sm);
+  font-weight: 600;
+}
+
+.ghc-product-benefits {
+  padding: 0 var(--ghc-space-16) var(--ghc-space-12);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ghc-space-6);
+}
+
+.ghc-product-benefit-tag {
+  font-size: 12px;
+  background: var(--ghc-teal-light);
+  color: var(--ghc-teal);
+  padding: 4px 10px;
+  border-radius: var(--ghc-radius-pill);
+  font-weight: 500;
+}
+
+.ghc-product-actions {
+  padding: 0 var(--ghc-space-16) var(--ghc-space-16);
+}
+
+.ghc-product-btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 14px 28px;
+  border-radius: var(--ghc-radius-md);
+  font-family: var(--ghc-font-body);
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer;
+  border: none;
+  background: var(--ghc-amber);
+  color: var(--ghc-white);
+  transition: background var(--ghc-transition-fast);
+  text-decoration: none;
+  line-height: 1;
+}
+
+.ghc-product-btn:hover {
+  background: #e08a3e;
+}
+
+/* CTA Section */
+.ghc-cta-section {
+  text-align: center;
+  padding: var(--ghc-space-32) 0;
+  border-top: 1px solid var(--ghc-border);
+}
+
+.ghc-cta-title {
+  font-family: var(--ghc-font-heading);
+  font-weight: 600;
+  font-size: 20px;
+  color: var(--ghc-text-primary);
+  margin-bottom: var(--ghc-space-8);
+}
+
+.ghc-cta-subtitle {
+  font-size: 14px;
+  color: var(--ghc-text-muted);
+  margin-bottom: var(--ghc-space-20);
+}
+
+.ghc-cta-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ghc-space-12);
+  justify-content: center;
+}
+
+/* Footer */
+.ghc-footer {
+  text-align: center;
+  padding: var(--ghc-space-24) 0;
+  border-top: 1px solid var(--ghc-border);
+  margin-top: var(--ghc-space-32);
+}
+
+.ghc-tagline {
+  font-size: 14px;
+  color: var(--ghc-text-muted);
+  font-style: italic;
+}
+
+.ghc-hashtag {
+  font-size: 13px;
+  color: var(--ghc-teal);
+  margin-top: var(--ghc-space-4);
+}
+
+/* --------------------------------------------------------------------------
+   14. Utility Classes
+   -------------------------------------------------------------------------- */
+.ghc-text-center {
+  text-align: center;
+}
+
+.ghc-mt-8 {
+  margin-top: var(--ghc-space-8);
+}
+
+.ghc-mt-16 {
+  margin-top: var(--ghc-space-16);
+}
+
+.ghc-mt-24 {
+  margin-top: var(--ghc-space-24);
+}
+
+.ghc-mt-32 {
+  margin-top: var(--ghc-space-32);
+}
+
+.ghc-mb-8 {
+  margin-bottom: var(--ghc-space-8);
+}
+
+.ghc-mb-16 {
+  margin-bottom: var(--ghc-space-16);
+}
+
+.ghc-mb-24 {
+  margin-bottom: var(--ghc-space-24);
+}
+
+.ghc-mb-32 {
+  margin-bottom: var(--ghc-space-32);
+}
+
+.ghc-hidden {
+  display: none;
+}
+
+.ghc-fade-in {
+  opacity: 0;
+  transition: opacity var(--ghc-transition-base);
+}
+
+.ghc-fade-in.active {
+  opacity: 1;
+}
+
+/* --------------------------------------------------------------------------
+   15. Accessibility
+   -------------------------------------------------------------------------- */
+.ghc-btn:focus-visible,
+.ghc-input:focus-visible,
+.ghc-select:focus-visible,
+.ghc-option:focus-visible,
+.ghc-breed-item:focus-visible,
+.ghc-product-card:focus-visible,
+.ghc-product-btn:focus-visible {
+  outline: 2px solid var(--ghc-teal);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   16. Responsive — 480px+
+   -------------------------------------------------------------------------- */
+@media (min-width: 480px) {
+  .ghc-app {
+    padding: 20px 24px;
+  }
+
+  .ghc-welcome-title {
+    font-size: 32px;
+  }
+
+  .ghc-badge {
+    min-width: 120px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   17. Responsive — 768px+ (Tablet / Desktop)
+   -------------------------------------------------------------------------- */
+@media (min-width: 768px) {
+  .ghc-app {
+    padding: 32px;
+  }
+
+  .ghc-logo {
+    max-width: 160px;
+  }
+
+  .ghc-welcome-title {
+    font-size: 36px;
+  }
+
+  .ghc-question-title {
+    font-size: 20px;
+  }
+
+  .ghc-products-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--ghc-space-16);
+  }
+
+  .ghc-products-grid .ghc-product-card {
+    margin-bottom: 0;
+  }
+
+  .ghc-cta-buttons {
+    flex-direction: row;
+  }
+
+  .ghc-nav .ghc-btn {
+    flex: none;
+    min-width: 140px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   18. Responsive — 1024px+ (Large Desktop)
+   -------------------------------------------------------------------------- */
+@media (min-width: 1024px) {
+  .ghc-app {
+    padding: 40px;
+  }
+
+  .ghc-score-circle {
+    width: 180px;
+    height: 180px;
+  }
+
+  .ghc-score-circle::after {
+    width: 148px;
+    height: 148px;
+  }
+
+  .ghc-score-value {
+    font-size: 56px;
+  }
+}

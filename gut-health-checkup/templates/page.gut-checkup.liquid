@@ -1,0 +1,156 @@
+{% comment %}
+  ============================================================================
+  Vettofit AI Gut Health Checkup — Page Template
+  Template:  page.gut-checkup
+  Usage:     Assign this template to a Shopify page with handle
+             "gut-health-checkup" via Admin > Pages > Theme template.
+  ============================================================================
+{% endcomment %}
+
+{% comment %} ── Page title override ── {% endcomment %}
+{% assign page_title = "Free AI Gut Health Checkup for Dogs | Vettofit" %}
+{% assign page_description = "Take our free 2-minute AI-powered gut health assessment for your dog. Get personalised insights, home remedies, and vet-backed supplement recommendations." %}
+
+{% comment %} ── SEO Meta Tags ── {% endcomment %}
+{% comment %}
+  Shopify injects content_for_header in the theme layout's <head>.
+  The following meta/og/canonical tags are rendered inside the content
+  area wrapped in a <div style="display:none"> so crawlers still parse
+  them even though they sit outside <head>. For best results, also set
+  the page SEO title & description in Shopify Admin.
+{% endcomment %}
+
+<div data-gut-checkup-seo style="display:none;">
+  <meta name="description" content="{{ page_description }}">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="{{ shop.url }}{{ page.url }}">
+
+  {%- comment %} Open Graph {% endcomment -%}
+  <meta property="og:title" content="{{ page_title }}">
+  <meta property="og:description" content="{{ page_description }}">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="{{ shop.url }}{{ page.url }}">
+  <meta property="og:site_name" content="{{ shop.name }}">
+  <meta property="og:image" content="{{ 'gut-checkup-og.jpg' | asset_url }}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Vettofit AI Gut Health Checkup for Dogs">
+
+  {%- comment %} Twitter Card {% endcomment -%}
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ page_title }}">
+  <meta name="twitter:description" content="{{ page_description }}">
+  <meta name="twitter:image" content="{{ 'gut-checkup-og.jpg' | asset_url }}">
+</div>
+
+{% comment %} ── Preconnect Hints ── {% endcomment %}
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://unpkg.com" crossorigin>
+
+{% comment %} ── Stylesheet ── {% endcomment %}
+{{ 'gut-checkup-styles.css' | asset_url | stylesheet_tag }}
+
+{% comment %} ── FAQ Schema Markup (JSON-LD) ── {% endcomment %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is the AI Gut Health Checkup?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "It’s a free, 2-minute assessment that evaluates your dog’s gut health based on 21 key factors including diet, digestion, medical history, and lifestyle. You’ll receive a personalised score, vet-backed advice, and supplement recommendations."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is this checkup really free?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, completely free! We built this tool to help pet parents understand their dog’s gut health and provide actionable insights."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How accurate is the gut health score?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Our algorithm is designed by veterinarians with 20+ years of experience. While it’s not a replacement for a vet visit, it provides reliable directional insights about your dog’s gut health."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What data do you collect?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "We collect your name, email, and your dog’s health information to provide personalised results. We never share your data with third parties."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Will I receive my results via email?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes! After completing the checkup, you’ll receive a detailed report via email with your dog’s gut health score, recommendations, and exclusive offers."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "My dog scored low — should I be worried?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "A lower score indicates areas that could benefit from attention, but it’s not a diagnosis. We recommend consulting your veterinarian and considering our vet-backed supplements to support your dog’s gut health."
+      }
+    }
+  ]
+}
+</script>
+
+{% comment %} ── WebApplication Schema (bonus rich result) ── {% endcomment %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Vettofit AI Gut Health Checkup",
+  "url": "{{ shop.url }}{{ page.url }}",
+  "applicationCategory": "HealthApplication",
+  "operatingSystem": "Web",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "INR"
+  },
+  "description": "{{ page_description }}"
+}
+</script>
+
+{% comment %} ── Main Content Area ── {% endcomment %}
+<div class="page-width gut-checkup-page" data-page-handle="{{ page.handle }}">
+
+  {% comment %} ── Noscript Fallback ── {% endcomment %}
+  <noscript>
+    <div style="text-align:center;padding:3rem 1rem;">
+      <h1>AI Gut Health Checkup for Dogs</h1>
+      <p style="max-width:540px;margin:1rem auto;">
+        This interactive checkup requires JavaScript. Please enable JavaScript
+        in your browser to take the free 2-minute gut health assessment for
+        your dog.
+      </p>
+    </div>
+  </noscript>
+
+  {% comment %} ── React Mount Point ── {% endcomment %}
+  <div id="gut-health-checkup-root" aria-label="AI Gut Health Checkup Quiz"></div>
+
+</div>
+
+{% comment %} ── CDN Scripts (React 18 + htm) ── {% endcomment %}
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/htm@3/dist/htm.js" crossorigin></script>
+
+{% comment %} ── Application Script ── {% endcomment %}
+{{ 'gut-checkup-app.js' | asset_url | script_tag }}

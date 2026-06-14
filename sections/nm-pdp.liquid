@@ -227,7 +227,8 @@ NM PDP v6.0 — Complete Visual Redesign
 #nm-{{ section.id }} .stage img,
 #nm-{{ section.id }} .stage video{
   display:block;width:100%!important;height:100%!important;
-  object-fit:cover!important;object-position:center!important;
+  object-fit:{% if s.gallery_fit == 'cover' %}cover{% else %}contain{% endif %}!important;
+  object-position:center!important;
   background:#fff;
 }
 #nm-{{ section.id }} .navBtn{
@@ -1348,6 +1349,19 @@ NM PDP v6.0 — Complete Visual Redesign
     { "type": "color", "id": "btn_text",     "label": "Add btn text",      "default": "#ffffff" },
     { "type": "color", "id": "buy_bg",       "label": "Buy btn background","default": "#100146" },
     { "type": "color", "id": "buy_text",     "label": "Buy btn text",      "default": "#ffffff" },
+
+    { "type": "header", "content": "Gallery" },
+    {
+      "type": "select",
+      "id": "gallery_fit",
+      "label": "Image fit",
+      "options": [
+        { "value": "contain", "label": "Contain — show full image (best for product shots)" },
+        { "value": "cover",   "label": "Cover — fill & crop (best for lifestyle shots)" }
+      ],
+      "default": "contain",
+      "info": "Use Contain for bottles, boxes, and packshots. Use Cover for scene/lifestyle images."
+    },
 
     { "type": "header", "content": "Shape & Spacing" },
     { "type": "range", "id": "radius",       "min": 8,  "max": 28,   "step": 1,  "unit": "px", "label": "Corner radius",    "default": 18 },

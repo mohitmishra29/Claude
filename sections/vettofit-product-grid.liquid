@@ -1,0 +1,821 @@
+{% comment %}
+Vettofit Product Grid (Neomorphic) — v2.1
+- Fix: Add to Cart button now disabled (Sold out) when inventory is 0 and tracking enabled
+- Fix: removed invalid parentheses in Liquid IF (toolbar now renders)
+- Fix: keep filters & sort as separate toggles
+- Fix: desktop buttons aligned; mobile Amazon-style list
+- Depth tokens applied to cards
+{% endcomment %}
+
+{%- liquid
+  assign s = section.settings
+  assign coll = s.collection
+  assign cols_d = s.cols_desktop | default: 4
+  assign cols_t = s.cols_tablet  | default: 3
+  assign enable_hover = s.enable_hover_image
+  assign low_stock_threshold = s.low_stock_threshold | default: 5
+
+  assign min_cents = 999999999
+  assign max_cents = 0
+  if coll
+    for p in coll.products
+      if p.price < min_cents
+        assign min_cents = p.price
+      endif
+      if p.price > max_cents
+        assign max_cents = p.price
+      endif
+    endfor
+  endif
+  assign min_ru = min_cents | divided_by: 100
+  assign max_ru = max_cents | divided_by: 100
+
+  comment
+    Build unique vendor/type lists safely (no filters inside contains).
+  endcomment
+  assign vendor_set = ''
+  assign type_set = ''
+  if coll
+    for p in coll.products limit: s.index_scan_limit
+      if p.vendor != blank
+        assign vtoken = ',' | append: p.vendor | append: ','
+        unless vendor_set contains vtoken
+          assign vendor_set = vendor_set | append: vtoken
+        endunless
+      endif
+      if p.type != blank
+        assign ttoken = ',' | append: p.type | append: ','
+        unless type_set contains ttoken
+          assign type_set = type_set | append: ttoken
+        endunless
+      endif
+    endfor
+  endif
+  assign vendors = vendor_set | replace: ',,', ',' | strip | split: ',' | uniq
+  assign types = type_set | replace: ',,', ',' | strip | split: ',' | uniq
+
+  assign all_tags = coll.all_tags
+-%}
+
+<section class="vf-grid nm-coll{% if s.full_width %} nm-fw{% endif %} depth-{{ s.depth | replace: '.', '-' }}{% if s.m_title_bold %} is-mh-bold{% endif %}{% if s.m_title_italic %} is-mh-italic{% endif %}{% if s.m_title_underline %} is-mh-underline{% endif %}"
+  data-section-id="{{ section.id }}"
+  data-min-price="{{ min_ru }}"
+  data-max-price="{{ max_ru }}"
+  style="--pt: {{ s.pad_top | default: 0 }}px; --pb: {{ s.pad_bottom | default: 0 }}px; --m-title-w: {{ s.m_title_weight | default: 700 }}; --chip_bg: {{ s.chip_bg | default: '#ffffff' }}; --chip_bd: {{ s.chip_bd | default: '#e6e6e6' }};">
+  <!-- hidden iframe for silent fallback adds (prevents navigation) -->
+  <iframe name="nm-silent-{{ section.id }}" class="nm-silent" title="silent cart add" style="display:none;width:0;height:0;border:0;"></iframe>
+
+  <div class="nm-wrap">
+    {%- if s.heading != blank -%}
+      <div class="nm-head">
+        <div class="nm-title rte">{{ s.heading }}</div>
+        {%- if s.subheading != blank -%}<div class="nm-sub rte">{{ s.subheading }}</div>{%- endif -%}
+      </div>
+    {%- endif -%}
+
+    {%- if coll != blank -%}
+      {%- if s.show_filters or s.show_sort_by -%}
+      <div class="vf-toolbar" role="toolbar" aria-label="Product filters and sorting">
+        {%- if s.show_filters -%}
+        <div class="vf-chips" {% if s.sticky_chips_mobile %}data-sticky="1"{% endif %}>
+          <!-- Availability -->
+          <button class="chip" data-key="avail" data-val="1" aria-pressed="false">In stock</button>
+          <!-- Discount -->
+          <button class="chip" data-key="disc" data-val="1" aria-pressed="false">Discount</button>
+
+          <!-- Rating -->
+          <details class="chip-dd">
+            <summary class="chip">Rating</summary>
+            <div class="dd-body">
+              <button type="button" class="opt" data-key="rating" data-val="4">4★ & up</button>
+              <button type="button" class="opt" data-key="rating" data-val="4.5">4.5★ & up</button>
+              <button type="button" class="opt" data-key="rating" data-val="0">Any</button>
+            </div>
+          </details>
+
+          <!-- Vendors -->
+          {%- if vendors.size > 0 -%}
+          <details class="chip-dd">
+            <summary class="chip">Vendors</summary>
+            <div class="dd-body">
+              {%- for vname in vendors -%}
+                {%- assign vclean = vname | strip -%}
+                {%- if vclean != '' -%}
+                <label class="ck"><input type="checkbox" class="vf-vendor" value="{{ vclean | escape }}"> <span>{{ vclean }}</span></label>
+                {%- endif -%}
+              {%- endfor -%}
+            </div>
+          </details>
+          {%- endif -%}
+
+          <!-- Types -->
+          {%- if types.size > 0 -%}
+          <details class="chip-dd">
+            <summary class="chip">Types</summary>
+            <div class="dd-body">
+              {%- for tname in types -%}
+                {%- assign tclean = tname | strip -%}
+                {%- if tclean != '' -%}
+                <label class="ck"><input type="checkbox" class="vf-type" value="{{ tclean | escape }}"> <span>{{ tclean }}</span></label>
+                {%- endif -%}
+              {%- endfor -%}
+            </div>
+          </details>
+          {%- endif -%}
+
+          <!-- Tags -->
+          {%- if all_tags and all_tags.size > 0 -%}
+          <details class="chip-dd">
+            <summary class="chip">Tags</summary>
+            <div class="dd-body">
+              {%- for tg in all_tags limit: s.tags_limit -%}
+              <label class="ck"><input type="checkbox" class="vf-tag" value="{{ tg | escape }}"> <span>{{ tg }}</span></label>
+              {%- endfor -%}
+            </div>
+          </details>
+          {%- endif -%}
+
+          <!-- Price -->
+          <details class="chip-dd">
+            <summary class="chip">Price</summary>
+            <div class="dd-body price">
+              <div class="row">
+                <label>Min ₹ <input type="number" class="vf-price-min" min="0" value="{{ min_ru }}"></label>
+                <label>Max ₹ <input type="number" class="vf-price-max" min="0" value="{{ max_ru }}"></label>
+              </div>
+              <button type="button" class="btn-apply-price">Apply</button>
+            </div>
+          </details>
+
+          <button class="chip clear" data-clear="1" aria-pressed="false">Clear all</button>
+        </div>
+        {%- endif -%}
+
+        {%- if s.show_sort_by -%}
+        <div class="vf-sort">
+          <label for="vf-sort-{{ section.id }}" class="sr-only">Sort by</label>
+          <select id="vf-sort-{{ section.id }}" class="vf-sort-select">
+            <option value="best">Best-selling</option>
+            <option value="featured">Featured</option>
+            <option value="new">Newest</option>
+            <option value="price_asc">Price: Low to High</option>
+            <option value="price_desc">Price: High to Low</option>
+          </select>
+        </div>
+        {%- endif -%}
+      </div>
+      {%- endif -%}
+    {%- endif -%}
+
+    {%- if coll == blank -%}
+      <div class="nm-note">Select a collection in the section settings and Save.</div>
+    {%- elsif coll.products_count == 0 -%}
+      <div class="nm-note">"{{ coll.title }}" has no published products.</div>
+    {%- else -%}
+      <div class="nm-grid" style="--cols-d:{{ cols_d }};--cols-t:{{ cols_t }};">
+        {%- for product in coll.products limit: s.limit -%}
+
+          {%- comment -%}
+            Pick the first truly available variant.
+            product.available already accounts for inventory_management + inventory_policy,
+            so if it is false every variant is out of stock (or inventory tracked to 0 with
+            "deny" policy). Never fall back to variants.first — that would hand an
+            out-of-stock variant ID to the ATC form.
+          {%- endcomment -%}
+          {%- assign v = product.variants | where: 'available', true | first -%}
+          {%- assign variant_id = v.id | default: product.selected_or_first_available_variant.id -%}
+
+          {%- comment -%}
+            is_sold_out is the single source of truth for button state.
+            product.available returns false when ALL variants have qty ≤ 0
+            and inventory_policy = "deny" (i.e. tracking enabled, no overselling).
+          {%- endcomment -%}
+          {%- assign is_sold_out = false -%}
+          {%- unless product.available -%}
+            {%- assign is_sold_out = true -%}
+          {%- endunless -%}
+          {%- if v == nil -%}
+            {%- assign is_sold_out = true -%}
+          {%- endif -%}
+
+          {%- assign price = product.price -%}
+          {%- assign compare = product.compare_at_price -%}
+          {%- assign has_disc = false -%}{% if compare and compare > price and compare > 0 %}{% assign has_disc = true %}{% endif %}
+
+          {%- assign rating_val = nil -%}
+          {%- assign rating_count = nil -%}
+          {%- if product.metafields.reviews.rating.value and product.metafields.reviews.rating.value.rating -%}
+            {%- assign rating_val = product.metafields.reviews.rating.value.rating -%}
+          {%- elsif product.metafields.reviews.rating -%}
+            {%- assign rating_val = product.metafields.reviews.rating -%}
+          {%- endif -%}
+          {%- if product.metafields.reviews.rating_count.value -%}
+            {%- assign rating_count = product.metafields.reviews.rating_count.value -%}
+          {%- elsif product.metafields.reviews.rating_count -%}
+            {%- assign rating_count = product.metafields.reviews.rating_count -%}
+          {%- endif -%}
+
+          {%- assign subtitle = product.metafields.custom.subtitle | default: product.vendor -%}
+
+          {%- assign total_avail = 0 -%}
+          {%- for v2 in product.variants -%}
+            {%- if v2.available and v2.inventory_quantity -%}
+              {%- assign total_avail = total_avail | plus: v2.inventory_quantity -%}
+            {%- endif -%}
+          {%- endfor -%}
+
+          <article
+            class="nm-card vf-card depth-{{ s.depth | replace: '.', '-' }}"
+            itemscope itemtype="https://schema.org/Product"
+            data-vendor="{{ product.vendor | strip | downcase }}"
+            data-type="{{ product.type | strip | downcase }}"
+            data-tags="{{ product.tags | join: ',' | downcase }}"
+            data-price="{{ price | divided_by: 100 }}"
+            data-avail="{% if is_sold_out %}0{% else %}1{% endif %}"
+            data-disc="{% if has_disc %}1{% else %}0{% endif %}"
+            data-rating="{{ rating_val | default: 0 }}"
+            data-published="{{ product.published_at | date: '%s' }}"
+          >
+            <a href="{{ product.url }}" class="nm-media" aria-label="{{ product.title | escape }}">
+              <div class="nm-imgbox ratio-{{ s.img_ratio | default: '1-1' }}">
+                {%- if product.featured_media -%}
+                  {{ product.featured_media
+                    | image_url: width: 1200
+                    | image_tag:
+                      class: 'nm-img nm-img-main',
+                      loading: 'lazy',
+                      sizes: '(min-width:1200px) 25vw, (min-width:750px) 33vw, 50vw',
+                      alt: product.featured_media.alt | default: product.title,
+                      style: 'max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;object-position:center center;display:block;' }}
+                  {%- if enable_hover and product.media.size > 1 -%}
+                    {{ product.media[1]
+                      | image_url: width: 1200
+                      | image_tag:
+                        class: 'nm-img nm-img-alt',
+                        loading: 'lazy',
+                        sizes: '(min-width:1200px) 25vw, (min-width:750px) 33vw, 50vw',
+                        alt: product.media[1].alt | default: product.title,
+                        style: 'max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;object-position:center center;display:block;' }}
+                  {%- endif -%}
+                {%- else -%}
+                  <div class="nm-ph"></div>
+                {%- endif -%}
+              </div>
+            </a>
+
+            <div class="vf-badges">
+              {%- if has_disc and s.enable_sale_badge -%}
+                {%- assign disc_pct = 0 -%}
+                {%- if compare > 0 -%}
+                  {%- assign disc_pct = compare | minus: price | times: 100 | divided_by: compare | round -%}
+                {%- endif -%}
+                <span class="vf-badge sale">-{{ disc_pct }}%</span>
+              {%- endif -%}
+
+              {%- if s.enable_lowstock_badge and total_avail > 0 and total_avail <= low_stock_threshold -%}
+                <span class="vf-badge low">Low stock</span>
+              {%- endif -%}
+
+              {%- if s.enable_new_badge and product.published_at -%}
+                {%- assign show_new = false -%}
+                {%- if s.new_badge_tag and s.new_badge_tag != '' and product.tags contains s.new_badge_tag -%}
+                  {%- assign show_new = true -%}
+                {%- else -%}
+                  {%- assign now_s = 'now' | date: '%s' -%}
+                  {%- assign published_s = product.published_at | date: '%s' -%}
+                  {%- assign diff = now_s | minus: published_s -%}
+                  {%- assign days_old = diff | divided_by: 86400 -%}
+                  {%- if days_old <= s.new_badge_days -%}{%- assign show_new = true -%}{%- endif -%}
+                {%- endif -%}
+                {%- if show_new -%}<span class="vf-badge new">New</span>{%- endif -%}
+              {%- endif -%}
+
+              {%- if s.enable_bestseller_badge -%}
+                {%- assign is_bestseller = false -%}
+                {%- assign handles_raw = s.bestseller_handles | default: '' -%}
+                {%- assign tags_raw = s.bestseller_tags | default: 'bestseller' -%}
+                {%- assign handles = handles_raw | split: ',' -%}
+                {%- assign tags_list = tags_raw | split: ',' -%}
+                {%- assign ph = product.handle | downcase -%}
+
+                {%- for h in handles -%}
+                  {%- assign h_clean = h | strip | downcase -%}
+                  {%- if h_clean != '' and ph == h_clean -%}{%- assign is_bestseller = true -%}{%- endif -%}
+                {%- endfor -%}
+
+                {%- if is_bestseller == false and tags_list != blank -%}
+                  {%- for pt in product.tags -%}
+                    {%- assign pt_l = pt | strip | downcase -%}
+                    {%- for tg in tags_list -%}
+                      {%- assign tg_l = tg | strip | downcase -%}
+                      {%- if tg_l != '' and pt_l == tg_l -%}{%- assign is_bestseller = true -%}{%- endif -%}
+                    {%- endfor -%}
+                  {%- endfor -%}
+                {%- endif -%}
+
+                {%- if is_bestseller -%}<span class="vf-badge best">Bestseller</span>{%- endif -%}
+              {%- endif -%}
+            </div>
+
+            <div class="nm-foot">
+              <a href="{{ product.url }}" class="nm-h5" itemprop="name">{{ product.title }}</a>
+              {%- if subtitle != blank -%}<div class="nm-subline">{{ subtitle }}</div>{%- endif -%}
+
+              {%- if s.show_rating and rating_val and rating_val != 0 -%}
+                <div class="nm-stars">
+                  {%- assign full = rating_val | round: 0 -%}
+                  {%- for i in (1..5) -%}<span class="star">{% if i <= full %}★{% else %}☆{% endif %}</span>{%- endfor -%}
+                  <span class="nm-pill">{{ rating_val | round: 1 }}</span>
+                  {%- if rating_count != blank -%}<span class="nm-rcount">{{ rating_count }}</span>{%- endif -%}
+                </div>
+              {%- endif -%}
+
+              <div class="nm-priceRow">
+                <div class="nm-price">
+                  <span class="now">{{ price | money }}</span>
+                  {%- if s.show_compare and has_disc -%}<span class="was">{{ compare | money }}</span>{%- endif -%}
+                </div>
+
+                {%- if is_sold_out -%}
+                  <!-- Sold out: no form rendered, button is purely decorative/disabled -->
+                  <button type="button" class="btn btn-neo btn-sold-out" disabled aria-disabled="true" aria-label="Sold out">
+                    <span class="lbl">{{ s.sold_out_label | default: 'Sold out' }}</span>
+                  </button>
+                {%- else -%}
+                  <form class="nm-atc" method="post" action="/cart/add" target="nm-silent-{{ section.id }}">
+                    <input type="hidden" name="id" value="{{ variant_id }}">
+                    <input type="hidden" name="quantity" value="1">
+                    <button type="submit" class="btn btn-neo btn-primary">
+                      <svg class="ico" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                        <path fill="currentColor" d="M7 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm10 0a2 2 0 1 0 .001 4.001A2 2 0 0 0 17 18ZM3 4h2l2.4 10.01a2 2 0 0 0 1.962 1.59H17a2 2 0 0 0 1.962-1.61L20 8H7.42l-.35-1.5H21V4H6.24L5.62 2.22A2 2 0 0 0 3.73 1H1v3h2Z"/>
+                      </svg>
+                      <span class="lbl">{{ s.add_label | default: 'Add to cart' }}</span>
+                    </button>
+                  </form>
+                {%- endif -%}
+              </div>
+            </div>
+          </article>
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+  </div>
+</section>
+
+<style>
+/* ===== Tokens ===== */
+.nm-coll{
+  --surface: {{ s.surface | default: '#eef1f6' }};
+  --hi: {{ s.highlight | default: '#ffffff' }};
+  --shadow: {{ s.shadow | default: '#c6c9d3' }};
+  --text: {{ s.text | default: '#111111' }};
+  --muted: #687385;
+  --primary: {{ s.primary | default: '#09d1c7' }};
+  --ghost: {{ s.ghost | default: '#100146' }};
+  --radius: {{ s.radius | default: 16 }}px;
+  --pad: {{ s.pad | default: 14 }}px;
+  --gap: {{ s.gap | default: 16 }}px;
+  --title: {{ s.title_size | default: 18 }}px;
+  padding-top: var(--pt); padding-bottom: var(--pb);
+}
+.nm-wrap{max-width:{{ s.max_width | default: 1140 }}px;margin:0 auto;padding:0 12px}
+.nm-coll.nm-fw .nm-wrap{max-width:none;padding-inline:min(4vw,24px)}
+.nm-head{margin:0 0 .75rem}
+.nm-sub{opacity:.9}
+
+/* Filter toolbar */
+.vf-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0 16px}
+.vf-chips{display:flex;flex-wrap:wrap;gap:8px}
+.vf-chips[data-sticky="1"]{position:sticky;top:0.5rem;z-index:3}
+.chip{appearance:none;border:1px solid var(--chip_bd,#e6e6e6);background:var(--chip_bg,#fff);border-radius:999px;padding:.45rem .8rem;font-weight:600;font-size:13px;cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,.06)}
+.chip[aria-pressed="true"]{border-color:var(--primary);box-shadow:inset 0 0 0 1px var(--primary)}
+.chip.clear{background:#fff3f3;border-color:#ffd3d3}
+.chip-dd{position:relative}
+.chip-dd > summary{list-style:none}
+.chip-dd[open] > summary{border-color:var(--primary);box-shadow:inset 0 0 0 1px var(--primary)}
+.chip-dd .dd-body{position:absolute;min-width:220px;top:calc(100% + 6px);left:0;background:#fff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.08);padding:8px;display:grid;gap:6px;z-index:5}
+.chip-dd .dd-body.price .row{display:flex;gap:8px}
+.ck{display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:8px}
+.ck:hover{background:#f6f7fb}
+.opt{appearance:none;border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:.35rem .6rem;font-size:13px;cursor:pointer}
+.vf-sort-select{border:1px solid #e6e6e6;border-radius:10px;padding:.4rem .6rem;font-weight:600}
+
+/* Grid */
+.nm-grid{display:grid;gap:var(--gap);align-items:stretch}
+@media (max-width:749px){.nm-grid{grid-template-columns:1fr;gap:12px}}
+@media (min-width:750px) and (max-width:1199px){.nm-grid{grid-template-columns:repeat(var(--cols-t,3),minmax(0,1fr))}}
+@media (min-width:1200px){.nm-grid{grid-template-columns:repeat(var(--cols-d,4),minmax(0,1fr))}}
+
+/* Card */
+.nm-card{
+  background:var(--surface);
+  border-radius:var(--radius);
+  padding:var(--pad);
+  box-shadow: -10px -10px 20px rgba(255,255,255,0.9), 10px 10px 24px rgba(0,0,0,0.12);
+  transition: transform .18s ease, box-shadow .25s ease;
+  display:flex;flex-direction:column;height:100%; position:relative;
+}
+.nm-card:hover{ transform:translateY(-2px); box-shadow: -12px -12px 24px rgba(255,255,255,0.95), 12px 12px 28px rgba(0,0,0,0.16); }
+.nm-card.depth-0{box-shadow:none}
+.nm-card.depth-0-5{box-shadow:-6px -6px 14px rgba(255,255,255,.86), 6px 6px 14px rgba(0,0,0,.10)}
+.nm-card.depth-1{box-shadow:-10px -10px 20px rgba(255,255,255,.9), 10px 10px 24px rgba(0,0,0,.12)}
+.nm-card.depth-1-5{box-shadow:-12px -12px 24px rgba(255,255,255,.95), 12px 12px 28px rgba(0,0,0,.16)}
+.nm-card.depth-2{box-shadow:-14px -14px 28px rgba(255,255,255,.98), 14px 14px 32px rgba(0,0,0,.2)}
+
+/* ===== MEDIA ===== */
+.nm-media{display:block;border-radius:calc(var(--radius) - 6px);overflow:hidden;position:relative}
+.nm-imgbox{position:relative;width:100%;background:transparent;margin-bottom:12px}
+.nm-imgbox.ratio-1-1{aspect-ratio:1/1}
+.nm-imgbox.ratio-4-5{aspect-ratio:4/5}
+.nm-imgbox.ratio-3-4{aspect-ratio:3/4}
+.nm-imgbox img.nm-img{max-width:100%!important;max-height:100%!important;width:auto!important;height:auto!important;object-fit:contain!important;object-position:center center!important;display:block!important}
+.nm-imgbox .nm-img-alt{position:absolute;inset:0;opacity:0;transition:opacity .24s ease}
+.nm-media:hover .nm-img-alt{opacity:1}
+.nm-media:hover .nm-img-main{opacity:0}
+.nm-ph{width:70%;height:70%;background:#e6e9f2;border-radius:12px}
+
+/* Badges */
+.vf-badges{position:absolute;top:10px;left:10px;display:flex;gap:6px;flex-wrap:wrap;z-index:2}
+.vf-badge{font-size:12px;font-weight:700;border-radius:999px;padding:.15rem .5rem;background:#fff;border:1px solid rgba(0,0,0,.07);box-shadow:0 2px 6px rgba(0,0,0,.08)}
+.vf-badge.sale{background:#ffe8e8;color:#b42318}
+.vf-badge.low{background:#fff6e5;color:#8a5700}
+.vf-badge.new{background:#eaf7ff;color:#0b68a6}
+.vf-badge.best{background:#eef2ff;color:#334155}
+
+/* Footer & Title */
+.nm-foot{position:relative;display:flex;flex-direction:column;gap:.45rem;padding:14px 14px 92px;border-top:0;background:transparent;flex:1;height:100%}
+.nm-h5{display:block;color:var(--text);text-decoration:none;font-size:var(--title);font-weight:700;line-height:1.25;margin:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:calc(var(--title) * 2.5)}
+.nm-subline{font-size:13px;color:#687385;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Stars row */
+.nm-stars{display:flex;align-items:center;gap:.4rem;margin-top:.1rem;flex-wrap:wrap}
+.star{color:#f5a623;font-size:14px;line-height:1}
+.nm-pill{background:#eef2ff;color:#334155;border-radius:999px;font-weight:600;font-size:12px;padding:.15rem .45rem}
+.nm-rcount{background:#f5f7ff;color:#4b5563;border-radius:999px;font-weight:600;font-size:12px;padding:.15rem .45rem}
+
+/* Price + ATC (Desktop aligned) */
+.nm-priceRow{
+  position:absolute; left:14px; right:14px; bottom:14px;
+  display:flex; align-items:center; justify-content:space-between; gap:.6rem; margin:0;
+}
+.nm-price{min-width:0;white-space:nowrap}
+.nm-price .now{font-weight:800}
+.nm-price .was{opacity:.6;text-decoration:line-through;margin-left:.4rem}
+
+/* Button (neomorphic) */
+.btn{display:inline-flex;align-items:center;gap:.5rem;border:none;cursor:pointer;text-decoration:none;font-weight:700;letter-spacing:.2px;transition: transform .12s ease, box-shadow .18s ease, filter .18s ease;position:relative;overflow:hidden;white-space:nowrap}
+.btn .ico{width:16px;height:16px;flex:0 0 16px}
+.btn .lbl{display:inline-block;white-space:nowrap}
+.btn-neo{--btn-bg: var(--primary);--btn-hi: color-mix(in srgb, var(--btn-bg), #ffffff 26%);--btn-sh: color-mix(in srgb, var(--btn-bg), #000000 10%);--btn-border: rgba(255,255,255,.65);background:linear-gradient(145deg, var(--btn-hi) 0%, var(--btn-bg) 55%, color-mix(in srgb, var(--btn-bg), #000 8%) 100%);color:#fff;border-radius:999px;padding:.68rem 1.05rem;min-height:44px;box-shadow:-8px -8px 16px rgba(255,255,255,.60),8px  8px 16px rgba(0,0,0,.18),inset 0 0 0 1px var(--btn-border)}
+.btn-neo::after{content:"";position:absolute;inset:0;background: radial-gradient(120px 60px at -20% -20%, rgba(255,255,255,.55), transparent 60%);pointer-events:none;transform: translate3d(0,0,0);transition: transform .35s ease, opacity .35s ease;opacity:.8}
+.btn-neo:hover{transform: translateY(-1px);box-shadow:-10px -10px 20px rgba(255,255,255,.70),10px 10px 20px rgba(0,0,0,.22),inset 0 0 0 1px var(--btn-border)}
+.btn-neo:hover::after{ transform: translate3d(8%,8%,0); opacity:1 }
+.btn-neo:active{transform: translateY(0);box-shadow:inset 6px 6px 12px rgba(0,0,0,.18),inset -6px -6px 12px rgba(255,255,255,.75),0 0 0 1px var(--btn-border);filter: saturate(1.05)}
+
+/* Sold-out button — disabled, muted, no hover interaction */
+.btn-sold-out{
+  --btn-bg: #9ca3af;
+  cursor: not-allowed;
+  opacity: .72;
+  pointer-events: none;
+}
+.btn-sold-out:hover{ transform: none; box-shadow: -8px -8px 16px rgba(255,255,255,.60), 8px 8px 16px rgba(0,0,0,.18), inset 0 0 0 1px rgba(255,255,255,.65); }
+.btn-sold-out::after{ display: none; }
+
+/* Mobile Amazon-style list */
+@media (max-width: 749px){
+  .vf-toolbar{gap:6px; flex-wrap:wrap}
+  .nm-grid{ grid-template-columns: 1fr; gap: 12px; }
+  .nm-card{ display: grid; grid-template-columns: 120px 1fr; column-gap: 12px; align-items: center; padding: 12px; border-radius: 14px; background: #fff; border: 1px solid var(--chip_bd, #e6e6e6); box-shadow: -6px -6px 12px rgba(255,255,255,.6), 6px 6px 12px rgba(0,0,0,.08); }
+  .nm-media{ grid-column: 1; grid-row: 1 / span 4; border-radius: 12px; overflow: hidden; }
+  .nm-imgbox{ margin: 0; aspect-ratio: 1/1; display:flex; align-items:center; justify-content:center; background: transparent; }
+  .nm-foot{ grid-column: 2; grid-row: 1 / span 4; padding: 0; background: transparent; }
+  .nm-h5{ font-size: 15px; line-height: 1.3; min-height: auto; -webkit-line-clamp: 3; }
+  .nm-subline{ font-size: 12px; }
+  .nm-stars{ margin: 4px 0; }
+  .nm-priceRow{ position: static; margin-top: 6px; display: grid; grid-template-columns: 1fr; gap: 8px; }
+  .nm-price .was{ display: inline !important; }
+  .btn.btn-neo{ width: 100%; min-height: 40px; justify-content: center; }
+}
+
+/* Mobile title B/I/U + weight */
+@media (max-width: 749px){
+  .nm-coll.is-mh-bold{ --m-title-w-bold: 800; }
+  .nm-h5{ font-weight: var(--m-title-w-bold, var(--m-title-w, 700)); }
+  .nm-coll.is-mh-italic .nm-h5{ font-style: italic; }
+  .nm-coll.is-mh-underline .nm-h5{ text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1.5px; }
+}
+
+/* Notes */
+.nm-note{padding:.7rem .9rem;border:1px dashed #e8b800;background:#fffbea;border-radius:10px;font-size:13px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+</style>
+
+<script>
+(() => {
+  const root = document.currentScript.closest('.nm-coll');
+  if (!root) return;
+
+  /* ---------- Add to cart ---------- */
+  async function addToCartJSON(variantId, qty) {
+    const res = await fetch('/cart/add.js', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ id: Number(variantId), quantity: Number(qty || 1) }),
+      credentials: 'same-origin'
+    });
+    if (!res.ok) throw new Error('add.js failed');
+    return res.json();
+  }
+
+  async function refreshCartUI() {
+    const opener = document.querySelector('button[name="cart"], [data-cart-toggle]');
+    const drawer = document.querySelector('cart-drawer');
+    const notification = document.querySelector('cart-notification');
+
+    if (opener) { try { opener.click(); } catch(e){} }
+    if (drawer && drawer.open) { try { drawer.open(); } catch(e){} }
+    if (notification && notification.renderContents) {
+      try {
+        const cart = await fetch('/cart.js').then(r=>r.json());
+        document.body.dispatchEvent(new CustomEvent('cart:refresh', { detail: cart }));
+      } catch(e){}
+    } else {
+      try {
+        const cart = await fetch('/cart.js').then(r=>r.json());
+        const bubble = document.querySelector('[data-cart-count], .cart-count-bubble, .header__icon--cart .cart-count-bubble, #cart-icon-bubble .cart-count-bubble');
+        if (bubble) bubble.textContent = cart.item_count;
+      } catch(e){}
+    }
+  }
+
+  const silentTarget = `nm-silent-${root.getAttribute('data-section-id')}`;
+  root.querySelectorAll('form.nm-atc').forEach((form) => {
+    form.addEventListener('submit', async (ev) => {
+      ev.preventDefault(); ev.stopPropagation(); if (ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+      form.setAttribute('target', silentTarget);
+      const btn = form.querySelector('button[type="submit"]');
+      const label = btn?.querySelector('.lbl');
+      const orig = label?.textContent || '';
+      const id = form.querySelector('input[name="id"]')?.value;
+      const qty = form.querySelector('input[name="quantity"]')?.value || 1;
+      if (btn) btn.disabled = true; if (label) label.textContent = 'Adding...';
+      try { await addToCartJSON(id, qty); if (label) label.textContent = 'Added ✓'; await refreshCartUI(); setTimeout(()=>{ if (label) label.textContent = orig; if (btn) btn.disabled = false; }, 900); }
+      catch (e) { try { form.submit(); if (label) label.textContent = 'Added ✓'; await refreshCartUI(); setTimeout(()=>{ if (label) label.textContent = orig; if (btn) btn.disabled = false; }, 900);} catch(_) { if (btn) btn.disabled = false; if (label) label.textContent = orig; } }
+    }, true);
+  });
+
+  /* ---------- Filters + Sort (client-side with URL sync) ---------- */
+  const hasFilters = !!root.querySelector('.vf-chips');
+  const sortSel = root.querySelector('.vf-sort-select');
+  const minP = Number(root.dataset.minPrice || 0);
+  const maxP = Number(root.dataset.maxPrice || 0);
+  const priceMinEl = root.querySelector('.vf-price-min');
+  const priceMaxEl = root.querySelector('.vf-price-max');
+
+  function parseQuery() {
+    const q = new URLSearchParams(location.search);
+    const obj = {};
+    q.forEach((v,k)=>{ obj[k]=v; });
+    ['tags','vendor','type'].forEach(k=>{
+      if (obj[k]) obj[k] = obj[k].split(',').map(s=>s.trim()).filter(Boolean);
+      else obj[k] = [];
+    });
+    obj.avail = q.get('avail')==='1';
+    obj.disc  = q.get('disc')==='1';
+    obj.rating = Number(q.get('rating')||0);
+    obj.price_min = Number(q.get('price_min')||minP);
+    obj.price_max = Number(q.get('price_max')||maxP);
+    obj.sort = q.get('sort')||'featured';
+    return obj;
+  }
+
+  function writeQuery(state){
+    const q = new URLSearchParams();
+    if (state.avail) q.set('avail','1');
+    if (state.disc) q.set('disc','1');
+    if (state.rating>0) q.set('rating', String(state.rating));
+    if (state.tags.length) q.set('tags', state.tags.join(','));
+    if (state.vendor.length) q.set('vendor', state.vendor.join(','));
+    if (state.type.length) q.set('type', state.type.join(','));
+    if (state.price_min>minP) q.set('price_min', String(state.price_min));
+    if (state.price_max<maxP) q.set('price_max', String(state.price_max));
+    if (state.sort && state.sort!=='featured') q.set('sort', state.sort);
+    const url = location.pathname + (q.toString()?`?${q.toString()}`:'');
+    history.replaceState(null,'',url);
+  }
+
+  function getStateFromUI(){
+    const st = parseQuery();
+    if (hasFilters){
+      st.vendor = Array.from(root.querySelectorAll('input.vf-vendor:checked')).map(i=>i.value);
+      st.type   = Array.from(root.querySelectorAll('input.vf-type:checked')).map(i=>i.value);
+      st.tags   = Array.from(root.querySelectorAll('input.vf-tag:checked')).map(i=>i.value);
+      st.avail  = root.querySelector('.chip[data-key="avail"]')?.getAttribute('aria-pressed')==='true';
+      st.disc   = root.querySelector('.chip[data-key="disc"]')?.getAttribute('aria-pressed')==='true';
+      st.price_min = Number(priceMinEl?.value || minP);
+      st.price_max = Number(priceMaxEl?.value || maxP);
+    }
+    st.sort = sortSel?.value || 'featured';
+    return st;
+  }
+
+  function applyFilters(){
+    const st = parseQuery();
+
+    if (hasFilters){
+      const setPressed = (key,val)=>{ const el=root.querySelector(`.chip[data-key="${key}"]`); if (el) el.setAttribute('aria-pressed', val?'true':'false'); };
+      setPressed('avail', st.avail); setPressed('disc', st.disc);
+      if (priceMinEl) priceMinEl.value = st.price_min || minP;
+      if (priceMaxEl) priceMaxEl.value = st.price_max || maxP;
+
+      ['vendor','type','tags'].forEach(k=>{
+        const cls = k==='tags'?'vf-tag':`vf-${k}`;
+        st[k].forEach(v=>{
+          const cb = Array.from(root.querySelectorAll(`input.${cls}`)).find(i => (i.value||'').toLowerCase()===v.toLowerCase());
+          if (cb) cb.checked = true;
+        });
+      });
+    }
+
+    if (sortSel) sortSel.value = st.sort;
+
+    const cards = Array.from(root.querySelectorAll('.vf-card'));
+    cards.forEach(card=>{
+      let ok = true;
+      if (hasFilters){
+        const c_vendor = (card.dataset.vendor||'').toLowerCase();
+        const c_type   = (card.dataset.type||'').toLowerCase();
+        const c_tags   = (card.dataset.tags||'').split(',').map(s=>s.trim());
+        const c_price  = Number(card.dataset.price||0);
+        const c_avail  = card.dataset.avail==='1';
+        const c_disc   = card.dataset.disc==='1';
+        const c_rating = Number(card.dataset.rating||0);
+
+        if (st.vendor.length) ok = ok && st.vendor.some(v=>v.toLowerCase()===c_vendor);
+        if (st.type.length)   ok = ok && st.type.some(t=>t.toLowerCase()===c_type);
+        if (st.tags.length)   ok = ok && st.tags.some(t=>c_tags.map(x=>x.toLowerCase()).includes(t.toLowerCase()));
+        if (st.avail)         ok = ok && c_avail;
+        if (st.disc)          ok = ok && c_disc;
+        if (st.rating>0)      ok = ok && (c_rating>=st.rating);
+        if (st.price_min)     ok = ok && (c_price>=st.price_min);
+        if (st.price_max)     ok = ok && (c_price<=st.price_max);
+      }
+      card.style.display = ok ? '' : 'none';
+    });
+
+    const grid = root.querySelector('.nm-grid');
+    if (!grid) return;
+    const visible = cards.filter(c=>c.style.display!=='none');
+
+    // Client-side sorts: price asc/desc, newest. "best" and "featured" keep initial order.
+    if (st.sort==='price_asc' || st.sort==='price_desc' || st.sort==='new'){
+      visible.sort((a,b)=>{
+        if (st.sort==='new'){
+          return Number(b.dataset.published||0) - Number(a.dataset.published||0);
+        }
+        const pa = Number(a.dataset.price||0), pb = Number(b.dataset.price||0);
+        return st.sort==='price_asc' ? (pa-pb) : (pb-pa);
+      });
+      visible.forEach(el=>grid.appendChild(el));
+    }
+  }
+
+  function initEvents(){
+    if (root.querySelector('.vf-chips')){
+      root.querySelectorAll('.chip[data-key]').forEach(ch=>{
+        if (ch.closest('details')) return;
+        ch.addEventListener('click', ()=>{
+          const pressed = ch.getAttribute('aria-pressed')==='true';
+          ch.setAttribute('aria-pressed', pressed?'false':'true');
+          writeQuery(getStateFromUI()); applyFilters();
+        });
+      });
+
+      root.querySelectorAll('.chip-dd .opt[data-key="rating"]').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const st = getStateFromUI();
+          st.rating = Number(btn.dataset.val||0);
+          writeQuery(st); applyFilters();
+          btn.closest('details')?.removeAttribute('open');
+        });
+      });
+
+      ['vendor','type','tag'].forEach(kind=>{
+        root.querySelectorAll(`input.vf-${kind}`).forEach(cb=>{
+          cb.addEventListener('change', ()=>{ writeQuery(getStateFromUI()); applyFilters(); });
+        });
+      });
+
+      root.querySelector('.btn-apply-price')?.addEventListener('click', ()=>{
+        writeQuery(getStateFromUI()); applyFilters();
+        root.querySelector('.chip-dd .dd-body.price')?.closest('details')?.removeAttribute('open');
+      });
+
+      root.querySelector('.chip.clear')?.addEventListener('click', ()=>{
+        const url = location.pathname;
+        history.replaceState(null,'',url);
+        root.querySelectorAll('input[type="checkbox"]').forEach(i=>i.checked=false);
+        root.querySelectorAll('.chip[aria-pressed]').forEach(c=>c.setAttribute('aria-pressed','false'));
+        if (document.getElementById('vf-sort-{{ section.id }}')) document.getElementById('vf-sort-{{ section.id }}').value = 'featured';
+        if (root.querySelector('.vf-price-min')) root.querySelector('.vf-price-min').value = root.dataset.minPrice||0;
+        if (root.querySelector('.vf-price-max')) root.querySelector('.vf-price-max').value = root.dataset.maxPrice||0;
+        applyFilters();
+      });
+    }
+
+    document.getElementById('vf-sort-{{ section.id }}')?.addEventListener('change', ()=>{
+      writeQuery(getStateFromUI()); applyFilters();
+    });
+
+    applyFilters();
+  }
+
+  initEvents();
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Vettofit Product Grid",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    { "type": "collection", "id": "collection", "label": "Collection" },
+
+    { "type": "richtext", "id": "heading", "label": "Heading", "default": "<h2>Shop Vettofit</h2>" },
+    { "type": "richtext", "id": "subheading", "label": "Subheading", "default": "<p>Science-backed pet wellness.</p>" },
+
+    { "type": "range", "id": "limit", "label": "Products to show", "min": 2, "max": 50, "step": 1, "default": 12 },
+
+    { "type": "checkbox", "id": "show_rating", "label": "Show rating (if available)", "default": true },
+    { "type": "checkbox", "id": "show_compare", "label": "Show compare-at price", "default": true },
+
+    { "type": "select", "id": "img_ratio", "label": "Image ratio", "default": "1-1", "options": [
+      { "value": "1-1", "label": "1:1" },
+      { "value": "4-5", "label": "4:5" },
+      { "value": "3-4", "label": "3:4" }
+    ] },
+
+    { "type": "select", "id": "depth", "label": "Neumorphism depth", "default": "1", "options": [
+      { "value": "0", "label": "0 (flat)" },
+      { "value": "0.5", "label": "0.5" },
+      { "value": "1", "label": "1" },
+      { "value": "1.5", "label": "1.5" },
+      { "value": "2", "label": "2" }
+    ] },
+
+    { "type": "checkbox", "id": "enable_hover_image", "label": "Enable hover 2nd image", "default": true },
+
+    { "type": "checkbox", "id": "full_width", "label": "Make section full width", "default": false },
+
+    { "type": "range", "id": "radius", "label": "Card radius (px)", "min": 8, "max": 28, "step": 1, "default": 16 },
+    { "type": "range", "id": "pad", "label": "Card padding (px)", "min": 8, "max": 22, "step": 1, "default": 14 },
+    { "type": "range", "id": "gap", "label": "Grid gap (px)", "min": 8, "max": 28, "step": 1, "default": 16 },
+    { "type": "range", "id": "title_size", "label": "Title font size (px)", "min": 14, "max": 24, "step": 1, "default": 18 },
+    { "type": "range", "id": "max_width", "label": "Max container width (px)", "min": 900, "max": 1600, "step": 20, "default": 1140 },
+
+    { "type": "color", "id": "surface", "label": "Surface", "default": "#eef1f6" },
+    { "type": "color", "id": "highlight", "label": "Highlight", "default": "#ffffff" },
+    { "type": "color", "id": "shadow", "label": "Shadow", "default": "#c6c9d3" },
+    { "type": "color", "id": "text", "label": "Text", "default": "#111111" },
+    { "type": "color", "id": "primary", "label": "ATC Button (primary)", "default": "#09d1c7" },
+    { "type": "color", "id": "ghost", "label": "Secondary (ghost)", "default": "#100146" },
+    { "type": "color", "id": "chip_bg", "label": "Chip background", "default": "#ffffff" },
+    { "type": "color", "id": "chip_bd", "label": "Chip border", "default": "#e6e6e6" },
+
+    { "type": "checkbox", "id": "enable_sale_badge", "label": "Show Sale % badge", "default": true },
+    { "type": "checkbox", "id": "enable_lowstock_badge", "label": "Show Low stock badge", "default": true },
+    { "type": "checkbox", "id": "enable_new_badge", "label": "Show New badge", "default": true },
+
+    { "type": "checkbox", "id": "enable_bestseller_badge", "label": "Show Bestseller badge (by handles/tags)", "default": true },
+    { "type": "text", "id": "bestseller_handles", "label": "Bestseller handles (comma-separated)" },
+    { "type": "text", "id": "bestseller_tags", "label": "Bestseller tags (comma-separated)", "default": "bestseller" },
+    { "type": "text", "id": "new_badge_tag", "label": "Optional New tag (overrides days when present)" },
+    { "type": "range", "id": "new_badge_days", "label": "New badge window (days)", "min": 3, "max": 60, "step": 1, "default": 21 },
+    { "type": "range", "id": "low_stock_threshold", "label": "Low stock threshold (qty)", "min": 1, "max": 50, "step": 1, "default": 5 },
+
+    { "type": "text", "id": "add_label", "label": "Add to cart label", "default": "Add to cart" },
+    { "type": "text", "id": "sold_out_label", "label": "Sold out label", "default": "Sold out" },
+
+    { "type": "checkbox", "id": "show_filters", "label": "Show Filters bar", "default": true },
+    { "type": "checkbox", "id": "show_sort_by", "label": "Show Sort by", "default": true },
+    { "type": "checkbox", "id": "sticky_chips_mobile", "label": "Make chips sticky on mobile", "default": true },
+    { "type": "range", "id": "tags_limit", "label": "Max tags to list", "min": 4, "max": 30, "step": 1, "default": 12 },
+    { "type": "range", "id": "index_scan_limit", "label": "Scan first N products for vendors/types", "min": 8, "max": 50, "step": 1, "default": 20 },
+
+    { "type": "range", "id": "m_title_weight", "label": "Mobile title weight", "min": 400, "max": 900, "step": 50, "default": 700 },
+    { "type": "checkbox", "id": "m_title_bold", "label": "Mobile title B (bold)", "default": false },
+    { "type": "checkbox", "id": "m_title_italic", "label": "Mobile title I (italic)", "default": false },
+    { "type": "checkbox", "id": "m_title_underline", "label": "Mobile title U (underline)", "default": false },
+
+    { "type": "range", "id": "pad_top", "label": "Top padding (px)", "min": 0, "max": 100, "step": 1, "default": 0 },
+    { "type": "range", "id": "pad_bottom", "label": "Bottom padding (px)", "min": 0, "max": 100, "step": 1, "default": 0 },
+
+    { "type": "range", "id": "cols_desktop", "label": "Columns (Desktop)", "min": 2, "max": 6, "step": 1, "default": 4 },
+    { "type": "range", "id": "cols_tablet", "label": "Columns (Tablet)", "min": 2, "max": 4, "step": 1, "default": 3 }
+  ],
+  "blocks": [],
+  "presets": [ { "name": "Vettofit Product Grid" } ]
+}
+{% endschema %}

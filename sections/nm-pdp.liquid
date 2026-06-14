@@ -204,20 +204,20 @@ NM PDP v6.0 — Complete Visual Redesign
 /* ─── Gallery ───────────────────────────────────────────────────────────────── */
 #nm-{{ section.id }} .stage{
   position:relative;
+  display:block;
   width:100%;
-  /* Constrained height — no towering images on large screens */
-  height:clamp(340px, 42vw, 510px);
+  /* aspect-ratio keeps stage square (or chosen ratio) — no side gaps.
+     max-height prevents it growing too large on very wide desktops.
+     margin:auto centres the stage when max-height constrains the width. */
+  aspect-ratio:{{ s.gallery_ratio | default: '1 / 1' }};
+  max-height:{{ s.gallery_max_height | default: 560 }}px;
+  margin:0 auto;
   border-radius:var(--radius);
   overflow:hidden;
   background:#fff;
   box-shadow:var(--card-shadow);
 }
-@media (max-width:768px){
-  #nm-{{ section.id }} .stage{
-    height:auto;
-    aspect-ratio:1/1; /* square on mobile */
-  }
-}
+/* aspect-ratio handles mobile too — no override needed */
 #nm-{{ section.id }} .slide{
   position:absolute;inset:0;
   opacity:0;transition:opacity .28s ease;
@@ -1361,6 +1361,26 @@ NM PDP v6.0 — Complete Visual Redesign
       ],
       "default": "contain",
       "info": "Use Contain for bottles, boxes, and packshots. Use Cover for scene/lifestyle images."
+    },
+    {
+      "type": "select",
+      "id": "gallery_ratio",
+      "label": "Stage aspect ratio",
+      "options": [
+        { "value": "1 / 1", "label": "1:1 Square (recommended)" },
+        { "value": "4 / 5", "label": "4:5 Portrait" },
+        { "value": "3 / 4", "label": "3:4 Portrait (tall)" }
+      ],
+      "default": "1 / 1",
+      "info": "Controls the shape of the image area. Square works for most products. Portrait gives more height for tall packshots."
+    },
+    {
+      "type": "range",
+      "id": "gallery_max_height",
+      "min": 320, "max": 680, "step": 10, "unit": "px",
+      "label": "Max gallery height",
+      "default": 560,
+      "info": "Caps the stage size on large desktop screens. 520–580 px suits most layouts."
     },
 
     { "type": "header", "content": "Shape & Spacing" },

@@ -812,7 +812,7 @@ NM PDP v6.0 — Complete Visual Redesign
 
     {%- if s.show_icons_snippet -%}{%- render 'icons-neumorphic' -%}{%- endif -%}
 
-    {% if s.show_banner and (s.banner_img_desktop != blank or s.banner_img_mobile != blank) %}
+    {% if s.show_banner %}{% if s.banner_img_desktop != blank or s.banner_img_mobile != blank %}
       <section class="nm-banner">
         <a href="{{ s.banner_link | default: '#' }}"
           {% if s.banner_new_tab %}target="_blank" rel="noopener"{% endif %}
@@ -825,7 +825,7 @@ NM PDP v6.0 — Complete Visual Redesign
           {% endif %}
         </a>
       </section>
-    {% endif %}
+    {% endif %}{% endif %}
 
     {%- comment -%}── Description — always open ──{%- endcomment -%}
     {% if s.show_desc %}

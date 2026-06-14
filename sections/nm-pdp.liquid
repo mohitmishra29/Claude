@@ -669,9 +669,9 @@ NM PDP v6.0 — Complete Visual Redesign
 
       {% if show_gallery %}
       <section>
-        <div class="stage" data-stage>
+        <div class="stage" data-stage{%- if product.featured_media.preview_image.width > 0 and product.featured_media.preview_image.height > 0 %} style="aspect-ratio:{{ product.featured_media.preview_image.width }}/{{ product.featured_media.preview_image.height }}"{% endif %}>
           {% for m in product.media limit: 12 %}
-            <div class="slide {% if forloop.first %}active{% endif %}">
+            <div class="slide {% if forloop.first %}active{% endif %}"{% if m.media_type == 'image' and m.preview_image.width > 0 and m.preview_image.height > 0 %} data-w="{{ m.preview_image.width }}" data-h="{{ m.preview_image.height }}"{% endif %}>
               {% if m.media_type == 'image' %}
                 {{ m | image_url: width: 1400 | image_tag: widths: '360,540,720,960,1200,1400', sizes: '(max-width:768px) 100vw, (max-width:1200px) 50vw, 560px', loading: 'lazy', alt: m.alt | escape }}
               {% else %}
@@ -1013,6 +1013,7 @@ NM PDP v6.0 — Complete Visual Redesign
     idx=(n+slides.length)%slides.length;
     slides.forEach((s,i)=>s.classList.toggle('active',i===idx));
     thumbs.forEach((t,i)=>t?.classList.toggle('active',i===idx));
+    if(stage){const w=slides[idx]?.dataset.w,h=slides[idx]?.dataset.h;if(w&&h)stage.style.aspectRatio=`${w}/${h}`;}
   };
   thumbs.forEach((t,i)=>t.addEventListener('click',()=>show(i)));
   prev?.addEventListener('click',()=>show(idx-1));

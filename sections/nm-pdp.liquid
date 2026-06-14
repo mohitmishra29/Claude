@@ -205,13 +205,13 @@ NM PDP v6.0 — Complete Visual Redesign
 #nm-{{ section.id }} .stage{
   position:relative;
   width:100%;
-  /* Stage always fills its column — aspect-ratio sets the height proportionally.
-     No max-height: that was centering the stage inside a wider column and
-     creating white gaps on both sides. Column width is the only size limiter. */
+  /* max-height caps stage so large square/landscape images don't overflow.
+     background matches column so any contain-gaps are invisible, not white. */
+  max-height:clamp(340px,44vw,500px);
   aspect-ratio:{{ s.gallery_ratio | default: '1 / 1' }};
   border-radius:var(--radius);
   overflow:hidden;
-  background:#fff;
+  background:var(--bg);
   box-shadow:var(--card-shadow);
 }
 #nm-{{ section.id }} .slide{
@@ -225,7 +225,7 @@ NM PDP v6.0 — Complete Visual Redesign
   display:block;width:100%!important;height:100%!important;
   object-fit:{% if s.gallery_fit == 'cover' %}cover{% else %}contain{% endif %}!important;
   object-position:center!important;
-  background:#fff;
+  background:var(--bg);
 }
 #nm-{{ section.id }} .navBtn{
   position:absolute;top:50%;transform:translateY(-50%);

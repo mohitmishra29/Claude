@@ -447,10 +447,6 @@ NM PDP v6.0 — Complete Visual Redesign
   color:#c0392b;font-size:12px;font-weight:700;line-height:1.4;
 }
 #nm-{{ section.id }} .nm-oos-msg.visible{display:block}
-#nm-{{ section.id }} .nm-cart-hint{
-  margin:4px 0 0;font-size:12px;font-weight:600;
-  color:var(--brand);opacity:.8;
-}
 
 /* ─── Benefits ──────────────────────────────────────────────────────────────── */
 #nm-{{ section.id }} .nm-benefits-card{
@@ -764,7 +760,6 @@ NM PDP v6.0 — Complete Visual Redesign
               <button type="button" aria-label="Increase">+</button>
             </div>
           </div>
-          <p class="nm-cart-hint" hidden></p>
 
           <div class="nm-cta-grid">
             <button class="btn nm-btn-add" type="submit" name="add"
@@ -1058,16 +1053,10 @@ NM PDP v6.0 — Complete Visual Redesign
   }
 
   function updateAvailability(avail){
+    currAvail=avail;
     const msg=root.querySelector('.nm-oos-msg');
-    const adds=[...root.querySelectorAll('button[name="add"],#nm-sticky-add-{{ section.id }}')];
-    const buys=[...root.querySelectorAll('[data-buy],#nm-sticky-buy-{{ section.id }}')];
-    adds.forEach(b=>{
-      b.disabled=!avail;b.setAttribute('aria-disabled',avail?'false':'true');
-      const inner=b.querySelector('.rte-inline');
-      if(inner) inner.innerHTML=avail?ADD_LABEL:OOS_LABEL;
-    });
-    buys.forEach(b=>{b.disabled=!avail;b.setAttribute('aria-disabled',avail?'false':'true');});
     if(msg) msg.classList.toggle('visible',!avail);
+    applyBtnState();
   }
 
   function setVariant(){
@@ -1096,7 +1085,7 @@ NM PDP v6.0 — Complete Visual Redesign
   /* ── Cart limit ── */
   const CART_LIMIT=10;
   let cartInCount=0;
-  const cartHint=root.querySelector('.nm-cart-hint');
+  let currAvail={% if curr_available %}true{% else %}false{% endif %};
 
   async function getCartQty(vid){
     try{
@@ -1108,6 +1097,26 @@ NM PDP v6.0 — Complete Visual Redesign
     }catch(_){return 0;}
   }
 
+  /* Single source of truth for Add/Buy button state */
+  function applyBtnState(){
+    const limited=cartInCount>=CART_LIMIT;
+    const adds=[...root.querySelectorAll('button[name="add"],#nm-sticky-add-{{ section.id }}')];
+    const buys=[...root.querySelectorAll('[data-buy],#nm-sticky-buy-{{ section.id }}')];
+    adds.forEach(b=>{
+      const dis=!currAvail||limited;
+      b.disabled=dis;b.setAttribute('aria-disabled',dis?'true':'false');
+      const inner=b.querySelector('.rte-inline');
+      if(inner) inner.innerHTML=!currAvail?OOS_LABEL:(limited?'Limit Reached':ADD_LABEL);
+    });
+    buys.forEach(b=>{b.disabled=!currAvail;b.setAttribute('aria-disabled',!currAvail?'true':'false');});
+    /* grey the stepper + button when nothing more can be added */
+    if(stepper){
+      const inc=stepper.querySelectorAll('button')[1];
+      const remaining=Math.max(0,CART_LIMIT-cartInCount);
+      if(inc) inc.disabled=remaining<=0;
+    }
+  }
+
   function syncStepperLimit(){
     if(!stepper) return;
     const inp=stepper.querySelector('input[name="quantity"]');
@@ -1116,23 +1125,67 @@ NM PDP v6.0 — Complete Visual Redesign
       const cur=Math.max(1,Math.min(remaining||1,parseInt(inp.value)||1));
       inp.value=remaining>0?cur:'1';
     }
-    if(cartHint){
-      if(cartInCount>0&&cartInCount<CART_LIMIT){
-        cartHint.textContent=`${cartInCount} already in cart · ${CART_LIMIT-cartInCount} more allowed`;
-        cartHint.hidden=false;
-      } else if(cartInCount>=CART_LIMIT){
-        cartHint.textContent=`Cart limit of ${CART_LIMIT} reached for this product`;
-        cartHint.hidden=false;
-      } else {
-        cartHint.hidden=true;
-      }
-    }
+    applyBtnState();
   }
 
   async function refreshCartCount(vid){
     cartInCount=await getCartQty(vid);
     syncStepperLimit();
   }
+
+  /* ── Cart minus = delete when qty is 1 ── */
+  async function removeCartItem(key,isLine){
+    try{
+      const body=isLine?{line:key,quantity:0}:{id:key,quantity:0};
+      const res=await fetch('/cart/change.js',{method:'POST',credentials:'same-origin',
+        headers:{'Content-Type':'application/json','Accept':'application/json'},
+        body:JSON.stringify(body)});
+      if(!res.ok) return;
+      /* re-render cart sections */
+      try{
+        const r=await fetch('/?sections=cart-drawer,cart-icon-bubble,cart-notification',{credentials:'same-origin'});
+        safeRenderCart({sections:await r.json()});
+      }catch(_){}
+      const vid=root.querySelector('#nm-variant-{{ section.id }}')?.value||'{{ product.selected_or_first_available_variant.id }}';
+      refreshCartCount(vid);
+    }catch(_){}
+  }
+
+  function bindCartMinusDelete(container){
+    if(!container||container.dataset.nmMinusBound) return;
+    container.dataset.nmMinusBound='1';
+    container.addEventListener('click',async function(e){
+      const btn=e.target.closest('button[name="minus"],[data-decrease-quantity],.quantity__button--minus,.cart-item__quantity-minus,[aria-label*="ecrease" i]');
+      if(!btn) return;
+      const scope=btn.closest('[data-variant-id],[data-index],.cart-item,[class*="cart__item"],[class*="cart-item"]')||btn.parentElement;
+      const qtyInp=scope?.querySelector('input[type="number"],input[name^="updates"],input[name="quantity"]');
+      if(!qtyInp||parseInt(qtyInp.value)!==1) return;
+      e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+      const varId=scope?.dataset?.variantId;
+      const lineMatch=qtyInp?.name?.match(/updates\[(\d+)\]/);
+      if(varId) await removeCartItem(Number(varId),false);
+      else if(lineMatch) await removeCartItem(parseInt(lineMatch[1])+1,true);
+    },true);
+  }
+
+  /* patch existing + watch for future cart drawer injections */
+  document.querySelectorAll('cart-drawer,cart-notification,[id*="CartDrawer"]').forEach(bindCartMinusDelete);
+  new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(n=>{
+    if(n.nodeType!==1)return;
+    ['cart-drawer','cart-notification'].forEach(tag=>{
+      if(n.matches&&n.matches(tag))bindCartMinusDelete(n);
+      n.querySelectorAll&&n.querySelectorAll(tag).forEach(bindCartMinusDelete);
+    });
+  }))).observe(document.body,{childList:true,subtree:true});
+
+  /* ── Global cart sync: re-check count whenever cart icon bubble updates ── */
+  (function(){
+    const bubble=document.querySelector('cart-icon-bubble,.cart-count-bubble,[id*="cart-icon-bubble"]');
+    if(bubble) new MutationObserver(()=>{
+      const vid=root.querySelector('#nm-variant-{{ section.id }}')?.value||'{{ product.selected_or_first_available_variant.id }}';
+      refreshCartCount(vid);
+    }).observe(bubble,{childList:true,subtree:true,characterData:true});
+  })();
 
   /* ── Qty stepper ── */
   const stepper=root.querySelector('.stepper');
@@ -1194,9 +1247,8 @@ NM PDP v6.0 — Complete Visual Redesign
       const vid=sel?.value||String({{ product.selected_or_first_available_variant.id }});
       const requested=qtyInp?Math.max(1,parseInt(qtyInp.value||'1',10)):1;
       const remaining=Math.max(0,CART_LIMIT-cartInCount);
-      if(remaining<=0){toast(`Cart limit of ${CART_LIMIT} reached for this product.`);return false;}
+      if(remaining<=0){toast('Limit reached');return false;}
       const qty=Math.min(requested,remaining);
-      if(qty<requested) toast(`Only ${remaining} more allowed — adding ${qty}.`);
       safeRenderCart(await addToCartWithSections(vid,qty));
       cartInCount+=qty;syncStepperLimit();
     }catch(err){console.error(err);toast(err.message||'Couldn\'t add. Try again.');}
@@ -1267,9 +1319,8 @@ NM PDP v6.0 — Complete Visual Redesign
         if(!vid) vid=String({{ product.selected_or_first_available_variant.id }});
         const requested=qtyInp?Math.max(1,parseInt(qtyInp.value||'1',10)):1;
         const remaining=Math.max(0,CART_LIMIT-cartInCount);
-        if(remaining<=0){toast(`Cart limit of ${CART_LIMIT} reached for this product.`);return;}
+        if(remaining<=0){toast('Limit reached');return;}
         const qty=Math.min(requested,remaining);
-        if(qty<requested) toast(`Only ${remaining} more allowed — adding ${qty}.`);
         const now=Date.now();
         if(window.__NM_LAST_ADD.id===vid&&(now-window.__NM_LAST_ADD.t)<1200) return;
         safeRenderCart(await addToCartWithSections(vid,qty));

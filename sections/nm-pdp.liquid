@@ -447,6 +447,10 @@ NM PDP v6.0 — Complete Visual Redesign
   color:#c0392b;font-size:12px;font-weight:700;line-height:1.4;
 }
 #nm-{{ section.id }} .nm-oos-msg.visible{display:block}
+#nm-{{ section.id }} .nm-cart-hint{
+  margin:4px 0 0;font-size:12px;font-weight:600;
+  color:var(--brand);opacity:.8;
+}
 
 /* ─── Benefits ──────────────────────────────────────────────────────────────── */
 #nm-{{ section.id }} .nm-benefits-card{
@@ -760,6 +764,7 @@ NM PDP v6.0 — Complete Visual Redesign
               <button type="button" aria-label="Increase">+</button>
             </div>
           </div>
+          <p class="nm-cart-hint" hidden></p>
 
           <div class="nm-cta-grid">
             <button class="btn nm-btn-add" type="submit" name="add"
@@ -1076,6 +1081,7 @@ NM PDP v6.0 — Complete Visual Redesign
       select.value=String(match.id);
       select.dispatchEvent(new Event('change',{bubbles:true}));
       updateAvailability(!!match.available);
+      refreshCartCount(match.id);
     }
     updateLabels();
   }
@@ -1087,12 +1093,53 @@ NM PDP v6.0 — Complete Visual Redesign
     setVariant();
   }));
 
+  /* ── Cart limit ── */
+  const CART_LIMIT=10;
+  let cartInCount=0;
+  const cartHint=root.querySelector('.nm-cart-hint');
+
+  async function getCartQty(vid){
+    try{
+      const r=await fetch('/cart.js',{credentials:'same-origin',headers:{'Accept':'application/json'}});
+      if(!r.ok) return 0;
+      const c=await r.json();
+      const it=(c.items||[]).find(i=>String(i.variant_id)===String(vid));
+      return it?it.quantity:0;
+    }catch(_){return 0;}
+  }
+
+  function syncStepperLimit(){
+    if(!stepper) return;
+    const inp=stepper.querySelector('input[name="quantity"]');
+    const remaining=Math.max(0,CART_LIMIT-cartInCount);
+    if(inp){
+      const cur=Math.max(1,Math.min(remaining||1,parseInt(inp.value)||1));
+      inp.value=remaining>0?cur:'1';
+    }
+    if(cartHint){
+      if(cartInCount>0&&cartInCount<CART_LIMIT){
+        cartHint.textContent=`${cartInCount} already in cart · ${CART_LIMIT-cartInCount} more allowed`;
+        cartHint.hidden=false;
+      } else if(cartInCount>=CART_LIMIT){
+        cartHint.textContent=`Cart limit of ${CART_LIMIT} reached for this product`;
+        cartHint.hidden=false;
+      } else {
+        cartHint.hidden=true;
+      }
+    }
+  }
+
+  async function refreshCartCount(vid){
+    cartInCount=await getCartQty(vid);
+    syncStepperLimit();
+  }
+
   /* ── Qty stepper ── */
   const stepper=root.querySelector('.stepper');
   if(stepper){
     const inp=stepper.querySelector('input[name="quantity"]');
     const [dec,inc]=stepper.querySelectorAll('button');
-    const clamp=n=>Math.max(1,Math.min(99,n|0||1));
+    const clamp=n=>Math.max(1,Math.min(Math.max(1,CART_LIMIT-cartInCount),n|0||1));
     dec.addEventListener('click',()=>inp.value=clamp(+inp.value-1));
     inc.addEventListener('click',()=>inp.value=clamp(+inp.value+1));
     inp.addEventListener('input',()=>inp.value=inp.value.replace(/[^0-9]/g,''));
@@ -1145,8 +1192,13 @@ NM PDP v6.0 — Complete Visual Redesign
       const sel=root.querySelector('#nm-variant-{{ section.id }}');
       const qtyInp=root.querySelector('input[name="quantity"]');
       const vid=sel?.value||String({{ product.selected_or_first_available_variant.id }});
-      const qty=qtyInp?Math.max(1,parseInt(qtyInp.value||'1',10)):1;
+      const requested=qtyInp?Math.max(1,parseInt(qtyInp.value||'1',10)):1;
+      const remaining=Math.max(0,CART_LIMIT-cartInCount);
+      if(remaining<=0){toast(`Cart limit of ${CART_LIMIT} reached for this product.`);return false;}
+      const qty=Math.min(requested,remaining);
+      if(qty<requested) toast(`Only ${remaining} more allowed — adding ${qty}.`);
       safeRenderCart(await addToCartWithSections(vid,qty));
+      cartInCount+=qty;syncStepperLimit();
     }catch(err){console.error(err);toast(err.message||'Couldn\'t add. Try again.');}
     return false;
   }
@@ -1213,10 +1265,15 @@ NM PDP v6.0 — Complete Visual Redesign
         let vid=sel?.value;
         if(!vid&&sel){const f=sel.querySelector('option:not([disabled])');if(f){vid=f.value;sel.value=f.value;}}
         if(!vid) vid=String({{ product.selected_or_first_available_variant.id }});
-        const qty=qtyInp?Math.max(1,parseInt(qtyInp.value||'1',10)):1;
+        const requested=qtyInp?Math.max(1,parseInt(qtyInp.value||'1',10)):1;
+        const remaining=Math.max(0,CART_LIMIT-cartInCount);
+        if(remaining<=0){toast(`Cart limit of ${CART_LIMIT} reached for this product.`);return;}
+        const qty=Math.min(requested,remaining);
+        if(qty<requested) toast(`Only ${remaining} more allowed — adding ${qty}.`);
         const now=Date.now();
         if(window.__NM_LAST_ADD.id===vid&&(now-window.__NM_LAST_ADD.t)<1200) return;
         safeRenderCart(await addToCartWithSections(vid,qty));
+        cartInCount+=qty;syncStepperLimit();
         window.__NM_LAST_ADD={id:vid,t:now};
       }catch(e){console.error(e);toast(e.message||'Couldn\'t add. Try again.');}
       finally{
@@ -1278,6 +1335,9 @@ NM PDP v6.0 — Complete Visual Redesign
   const faqBar=root.querySelector('.nm-faq-head-row');
   faqBar?.querySelector('[data-expand]')?.addEventListener('click',()=>faqContainer?.querySelectorAll('.faq-card').forEach(c=>c.classList.add('open')));
   faqBar?.querySelector('[data-collapse]')?.addEventListener('click',()=>faqContainer?.querySelectorAll('.faq-card').forEach(c=>c.classList.remove('open')));
+
+  /* ── Init: fetch cart count for default variant ── */
+  refreshCartCount({{ product.selected_or_first_available_variant.id }});
 })();
 </script>
 

@@ -69,8 +69,11 @@ NM PDP v6.0 — Complete Visual Redesign
     endif
   endif
 
+  {%- comment -%}Section setting (HTML editor) takes priority; metafield is fallback for per-product override{%- endcomment -%}
   assign benefits_html = ''
-  if prod.metafields.custom and prod.metafields.custom.benefits
+  if s.benefits_html != blank
+    assign benefits_html = s.benefits_html
+  elsif prod.metafields.custom and prod.metafields.custom.benefits
     if prod.metafields.custom.benefits.value
       assign benefits_html = prod.metafields.custom.benefits | metafield_tag
     else
@@ -1480,7 +1483,8 @@ NM PDP v6.0 — Complete Visual Redesign
     { "type": "header", "content": "Benefits & Badge" },
     { "type": "checkbox", "id": "show_benefits",   "label": "Show benefits box", "default": true },
     { "type": "text",     "id": "benefits_title",  "label": "Benefits heading",  "default": "Benefits" },
-    { "type": "richtext", "id": "benefits_rich",   "label": "Benefits text",     "default": "<ul><li>Vet-formulated • 100% natural</li><li>ISO 22000 &amp; GMP-certified facility</li><li>Skin &amp; coat support (Omega 3, Biotin)</li><li>Joint, heart &amp; gut health blend</li></ul>" },
+    { "type": "html",     "id": "benefits_html",   "label": "Benefits HTML (primary — edit here)",     "info": "Enter HTML directly, e.g. <ul><li>Point 1</li></ul>. Overrides the rich-text field and product metafield below." },
+    { "type": "richtext", "id": "benefits_rich",   "label": "Benefits rich-text (fallback)",     "default": "<ul><li>Vet-formulated • 100% natural</li><li>ISO 22000 &amp; GMP-certified facility</li><li>Skin &amp; coat support (Omega 3, Biotin)</li><li>Joint, heart &amp; gut health blend</li></ul>" },
     { "type": "checkbox", "id": "badge_show_default", "label": "Show default badge", "default": true },
     { "type": "richtext", "id": "badge_rich",         "label": "Badge text",         "default": "<p>Best seller</p>" },
     { "type": "color",    "id": "badge_bg",            "label": "Badge background",   "default": "#fff3e6" },

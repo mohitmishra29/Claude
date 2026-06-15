@@ -69,7 +69,7 @@ NM PDP v6.0 — Complete Visual Redesign
     endif
   endif
 
-  {%- comment -%}Section setting (HTML editor) takes priority; metafield is fallback for per-product override{%- endcomment -%}
+  # Section HTML editor takes priority; metafield is per-product fallback
   assign benefits_html = ''
   if s.benefits_html != blank
     assign benefits_html = s.benefits_html

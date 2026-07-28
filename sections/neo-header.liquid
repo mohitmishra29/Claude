@@ -49,7 +49,7 @@
 
         <div class="neo-header-left">
           <a
-            class="neo-logo-link neo-clickable"
+            class="neo-logo-link"
             href="{{ routes.root_url }}"
             aria-label="{{ shop.name | escape }}"
           >
@@ -332,11 +332,19 @@
   }
 
   /* ---------- Logo ---------- */
+  /* Mobile: logo centered in the bar; desktop restores normal left-aligned flow */
+  #shopify-section-{{ section.id }} .neo-header-inner {
+    position: relative;
+  }
   #shopify-section-{{ section.id }} .neo-header-left {
     display: flex;
     align-items: center;
     min-width: 0;
-    margin-right: auto;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 55%;
   }
   #shopify-section-{{ section.id }} .neo-logo-link {
     text-decoration: none;
@@ -719,6 +727,12 @@
     }
     #shopify-section-{{ section.id }} .neo-logo-img {
       max-height: calc(44px * var(--logo-scale));
+    }
+    #shopify-section-{{ section.id }} .neo-header-left {
+      position: static;
+      transform: none;
+      margin-right: auto;
+      max-width: none;
     }
     #shopify-section-{{ section.id }} .neo-header-center {
       display: flex;

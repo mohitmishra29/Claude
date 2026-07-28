@@ -1,0 +1,1191 @@
+{%- comment -%}
+  Neomorphic Header — Premium Redesign
+  - Soft-neo / glass hybrid card with refined shadows
+  - Smart sticky: hides on scroll down, reveals on scroll up, frosted blur when stuck
+  - Fluid typography (clamp), safe-area aware, reduced-motion friendly
+  - Mobile drawer: staggered reveal, scroll lock, focus trap, animated hamburger
+{%- endcomment -%}
+
+<section
+  id="neo-header-{{ section.id }}"
+  class="neo-header-wrapper"
+  style="
+    --txt-scale-mobile: {{ section.settings.mobile_text_scale | default: 1 }};
+    --txt-scale-desktop: {{ section.settings.desktop_text_scale | default: 1 }};
+    --icon-scale-mobile: {{ section.settings.mobile_icon_scale | default: 1 }};
+    --icon-scale-desktop: {{ section.settings.desktop_icon_scale | default: 1 }};
+    --mobile-pad-scale: {{ section.settings.mobile_header_pad_scale | default: 1 }};
+    --logo-scale: {{ section.settings.logo_scale | default: 1 }};
+    --neo-bg: {{ section.settings.header_bg_color | default: '#eef0f4' }};
+    --outer-bg: {{ section.settings.outer_bg_color | default: 'transparent' }};
+    --neo-accent: {{ section.settings.accent_color | default: '#1a1a1a' }};
+    --depth-card: {{ section.settings.header_card_shadow_depth | default: 1 }};
+    --depth-item: {{ section.settings.item_shadow_depth | default: 1 }};
+    --depth-bg: {{ section.settings.outer_bg_shadow_depth | default: 0 }};
+  "
+>
+  <div class="neo-header-stickzone" data-neo-stickzone>
+    <header
+      class="neo-header-shell"
+      role="banner"
+      style="max-width:{% if section.settings.enable_full_width %}100%{% else %}1440px{% endif %};"
+    >
+      <div class="neo-header-inner">
+        {%- comment -%} Hamburger sits left on mobile (thumb-friendly, standard pattern) {%- endcomment -%}
+        <button
+          class="neo-icon-btn neo-clickable neo-hamburger-btn"
+          type="button"
+          aria-label="Open menu"
+          aria-haspopup="dialog"
+          aria-expanded="false"
+          data-neo-menu-toggle
+        >
+          <span class="neo-burger" aria-hidden="true">
+            <span class="neo-burger-line"></span>
+            <span class="neo-burger-line"></span>
+            <span class="neo-burger-line"></span>
+          </span>
+        </button>
+
+        <div class="neo-header-left">
+          <a
+            class="neo-logo-link neo-clickable"
+            href="{{ routes.root_url }}"
+            aria-label="{{ shop.name | escape }}"
+          >
+            {%- if section.settings.logo_image != blank -%}
+              <img
+                src="{{ section.settings.logo_image | image_url: width: 400 }}"
+                srcset="{{ section.settings.logo_image | image_url: width: 200 }} 200w, {{ section.settings.logo_image | image_url: width: 400 }} 400w"
+                sizes="200px"
+                alt="{{ shop.name | escape }}"
+                class="neo-logo-img"
+                width="{{ section.settings.logo_image.width }}"
+                height="{{ section.settings.logo_image.height }}"
+              >
+            {%- else -%}
+              <span class="neo-logo-text">{{ shop.name }}</span>
+            {%- endif -%}
+          </a>
+        </div>
+
+        <nav class="neo-header-center" aria-label="Main navigation">
+          {%- if section.settings.menu != blank -%}
+            <ul class="neo-nav-list">
+              {%- for link in linklists[section.settings.menu].links -%}
+                <li class="neo-nav-item">
+                  <a
+                    class="neo-nav-link neo-clickable neo-nav-text{% if link.active %} is-active{% endif %}"
+                    href="{{ link.url }}"
+                    {% if link.active %}aria-current="page"{% endif %}
+                  >
+                    {{ link.title }}
+                  </a>
+                </li>
+              {%- endfor -%}
+            </ul>
+          {%- endif -%}
+        </nav>
+
+        <div class="neo-header-right">
+          {%- if section.settings.cta_label != blank and section.settings.cta_link != blank -%}
+            <a class="neo-cta-pill" href="{{ section.settings.cta_link }}">
+              <span>{{ section.settings.cta_label }}</span>
+              <svg class="neo-cta-arrow" viewBox="0 0 24 24" fill="none" aria-hidden="true"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </a>
+          {%- endif -%}
+
+          <a class="neo-icon-btn neo-clickable" href="{{ routes.search_url }}" aria-label="Search">
+            <span class="neo-icon-imgwrap" aria-hidden="true">
+              {%- if section.settings.search_icon_image != blank -%}
+                <img src="{{ section.settings.search_icon_image | image_url: width: 64 }}" alt="" class="neo-icon-img" loading="lazy">
+              {%- else -%}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="7"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+              {%- endif -%}
+            </span>
+          </a>
+
+          <a class="neo-icon-btn neo-clickable neo-account-btn" href="{{ routes.account_url }}" aria-label="Account">
+            <span class="neo-icon-imgwrap" aria-hidden="true">
+              {%- if section.settings.account_icon_image != blank -%}
+                <img src="{{ section.settings.account_icon_image | image_url: width: 64 }}" alt="" class="neo-icon-img" loading="lazy">
+              {%- else -%}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-3-3.87"></path>
+                  <path d="M4 21v-2a4 4 0 0 1 3-3.87"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+              {%- endif -%}
+            </span>
+          </a>
+
+          <a class="neo-icon-btn neo-clickable neo-cart-btn" href="{{ routes.cart_url }}" aria-label="Cart">
+            <span class="neo-icon-imgwrap" aria-hidden="true">
+              {%- if section.settings.cart_icon_image != blank -%}
+                <img src="{{ section.settings.cart_icon_image | image_url: width: 64 }}" alt="" class="neo-icon-img" loading="lazy">
+              {%- else -%}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                  <line x1="3" y1="6" x2="21" y2="6"></line>
+                  <path d="M16 10a4 4 0 0 1-8 0"></path>
+                </svg>
+              {%- endif -%}
+            </span>
+            {%- if section.settings.enable_cart_count -%}
+              <span class="neo-cart-count{% if cart.item_count == 0 %} is-empty{% endif %}" aria-live="polite" data-neo-cart-count>
+                {{- cart.item_count -}}
+              </span>
+            {%- endif -%}
+          </a>
+        </div>
+      </div>
+    </header>
+  </div>
+
+  <div class="neo-header-spacer" aria-hidden="true" data-neo-stick-spacer></div>
+
+  <div class="neo-mobile-overlay" data-neo-menu-overlay hidden></div>
+
+  <aside
+    class="neo-mobile-drawer"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Mobile navigation"
+    data-neo-menu-panel
+    hidden
+  >
+    <div class="neo-mobile-header">
+      <span class="neo-mobile-title">
+        {{ section.settings.mobile_menu_heading | default: 'Menu' }}
+      </span>
+      <button
+        class="neo-icon-btn neo-clickable neo-mobile-close"
+        type="button"
+        aria-label="Close menu"
+        data-neo-menu-close
+      >
+        <span class="neo-icon-imgwrap" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </span>
+      </button>
+    </div>
+
+    <nav class="neo-mobile-nav" aria-label="Mobile navigation links">
+      {%- if section.settings.menu != blank -%}
+        <ul class="neo-mobile-nav-list">
+          {%- for link in linklists[section.settings.menu].links -%}
+            <li class="neo-mobile-nav-item" style="--stagger: {{ forloop.index }};">
+              <a
+                class="neo-mobile-nav-link{% if link.active %} is-active{% endif %}"
+                href="{{ link.url }}"
+                {% if link.active %}aria-current="page"{% endif %}
+              >
+                <span>{{ link.title }}</span>
+                <svg class="neo-mobile-nav-chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+              </a>
+            </li>
+          {%- endfor -%}
+        </ul>
+      {%- endif -%}
+    </nav>
+
+    <div class="neo-mobile-footer">
+      {%- if section.settings.cta_label != blank and section.settings.cta_link != blank -%}
+        <a class="neo-cta-pill neo-mobile-cta" href="{{ section.settings.cta_link }}">
+          <span>{{ section.settings.cta_label }}</span>
+          <svg class="neo-cta-arrow" viewBox="0 0 24 24" fill="none" aria-hidden="true"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </a>
+      {%- endif -%}
+
+      <div class="neo-mobile-icons">
+        <a class="neo-mobile-icon-chip" href="{{ routes.search_url }}">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="7"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <span>Search</span>
+        </a>
+        <a class="neo-mobile-icon-chip" href="{{ routes.account_url }}">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M4 21v-2a4 4 0 0 1 3-3.87"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          <span>Account</span>
+        </a>
+        <a class="neo-mobile-icon-chip" href="{{ routes.cart_url }}">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <path d="M16 10a4 4 0 0 1-8 0"></path>
+          </svg>
+          <span>Cart</span>
+          {%- if section.settings.enable_cart_count -%}
+            <span class="neo-cart-count neo-cart-count--inline{% if cart.item_count == 0 %} is-empty{% endif %}" data-neo-cart-count>
+              {{- cart.item_count -}}
+            </span>
+          {%- endif -%}
+        </a>
+      </div>
+    </div>
+  </aside>
+</section>
+
+{% style %}
+  #shopify-section-{{ section.id }} {
+    --neo-txt: #16181d;
+    --neo-txt-soft: rgba(22, 24, 29, 0.62);
+    --neo-radius: 1.25rem;
+    --neo-radius-sm: 0.85rem;
+    --neo-ease: cubic-bezier(0.32, 0.72, 0, 1);
+    --neo-shadow-out:
+      calc(-4px * var(--depth-card)) calc(-4px * var(--depth-card)) calc(10px * var(--depth-card)) rgba(255, 255, 255, 0.85),
+      calc(5px * var(--depth-card)) calc(6px * var(--depth-card)) calc(14px * var(--depth-card)) rgba(22, 24, 29, 0.10),
+      0 1px 0 rgba(255, 255, 255, 0.7) inset;
+    --neo-shadow-in:
+      inset calc(3px * var(--depth-item)) calc(3px * var(--depth-item)) calc(7px * var(--depth-item)) rgba(22, 24, 29, 0.12),
+      inset calc(-3px * var(--depth-item)) calc(-3px * var(--depth-item)) calc(7px * var(--depth-item)) rgba(255, 255, 255, 0.85);
+    font-family: inherit;
+    color: var(--neo-txt);
+    position: relative;
+  }
+
+  /* ---------- Outer strip / sticky zone ---------- */
+  #shopify-section-{{ section.id }} .neo-header-stickzone {
+    background: var(--outer-bg);
+    padding: 0.6rem clamp(0.6rem, 2vw, 1.25rem);
+    padding-left: max(clamp(0.6rem, 2vw, 1.25rem), env(safe-area-inset-left));
+    padding-right: max(clamp(0.6rem, 2vw, 1.25rem), env(safe-area-inset-right));
+    box-shadow:
+      calc(-5px * var(--depth-bg)) calc(-5px * var(--depth-bg)) calc(10px * var(--depth-bg)) rgba(255, 255, 255, 0.9),
+      calc(6px * var(--depth-bg)) calc(6px * var(--depth-bg)) calc(14px * var(--depth-bg)) rgba(22, 24, 29, 0.10);
+    position: relative;
+    width: 100%;
+    z-index: 170;
+    transition: transform 0.35s var(--neo-ease);
+  }
+  #shopify-section-{{ section.id }} .neo-header-stickzone.is-fixed {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+  }
+  #shopify-section-{{ section.id }} .neo-header-stickzone.is-hidden {
+    transform: translateY(-110%);
+  }
+  #shopify-section-{{ section.id }} .neo-header-spacer {
+    width: 100%;
+    height: 0;
+    pointer-events: none;
+  }
+
+  /* ---------- Header card ---------- */
+  #shopify-section-{{ section.id }} .neo-header-shell {
+    background: var(--neo-bg);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    border-radius: var(--neo-radius);
+    box-shadow: var(--neo-shadow-out);
+    padding: calc(0.55rem * var(--mobile-pad-scale)) clamp(0.6rem, 2vw, 1.1rem);
+    width: 100%;
+    margin: 0 auto;
+    position: relative;
+    z-index: 175;
+    transition: box-shadow 0.35s var(--neo-ease), background-color 0.35s var(--neo-ease);
+  }
+  /* Frosted glass treatment once stuck */
+  #shopify-section-{{ section.id }} .is-fixed .neo-header-shell {
+    background: color-mix(in srgb, var(--neo-bg) 78%, transparent);
+    -webkit-backdrop-filter: blur(14px) saturate(1.4);
+    backdrop-filter: blur(14px) saturate(1.4);
+    box-shadow:
+      0 10px 30px -12px rgba(22, 24, 29, 0.22),
+      0 1px 0 rgba(255, 255, 255, 0.65) inset;
+  }
+  @supports not (backdrop-filter: blur(1px)) {
+    #shopify-section-{{ section.id }} .is-fixed .neo-header-shell {
+      background: var(--neo-bg);
+    }
+  }
+
+  #shopify-section-{{ section.id }} .neo-header-inner {
+    display: flex;
+    align-items: center;
+    gap: clamp(0.35rem, 1.5vw, 1rem);
+    color: var(--neo-txt);
+  }
+
+  /* ---------- Logo ---------- */
+  #shopify-section-{{ section.id }} .neo-header-left {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    margin-right: auto;
+  }
+  #shopify-section-{{ section.id }} .neo-logo-link {
+    text-decoration: none;
+    color: var(--neo-txt);
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.5rem;
+    border-radius: var(--neo-radius-sm);
+  }
+  #shopify-section-{{ section.id }} .neo-logo-img {
+    max-height: calc(34px * var(--logo-scale));
+    width: auto;
+    display: block;
+  }
+  #shopify-section-{{ section.id }} .neo-logo-text {
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    font-size: clamp(1.05rem, 0.9rem + 0.8vw, 1.3rem);
+    white-space: nowrap;
+  }
+
+  /* ---------- Desktop nav ---------- */
+  #shopify-section-{{ section.id }} .neo-header-center {
+    display: none;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+  }
+  #shopify-section-{{ section.id }} .neo-nav-list {
+    margin: 0;
+    padding: 0.3rem;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+    border-radius: 999px;
+    box-shadow: var(--neo-shadow-in);
+  }
+  #shopify-section-{{ section.id }} .neo-nav-text {
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+    text-decoration: none;
+    letter-spacing: 0.01em;
+    font-size: calc(var(--txt-scale-desktop) * clamp(0.82rem, 0.76rem + 0.25vw, 0.95rem));
+  }
+  #shopify-section-{{ section.id }} .neo-nav-link {
+    color: var(--neo-txt-soft);
+    padding: 0.5rem 0.95rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    transition: color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  #shopify-section-{{ section.id }} .neo-nav-link:hover {
+    color: var(--neo-txt);
+  }
+  #shopify-section-{{ section.id }} .neo-nav-link.is-active {
+    color: var(--neo-txt);
+    background: var(--neo-bg);
+    box-shadow:
+      calc(-2px * var(--depth-item)) calc(-2px * var(--depth-item)) calc(5px * var(--depth-item)) rgba(255, 255, 255, 0.9),
+      calc(3px * var(--depth-item)) calc(3px * var(--depth-item)) calc(7px * var(--depth-item)) rgba(22, 24, 29, 0.12);
+  }
+
+  /* ---------- Right cluster ---------- */
+  #shopify-section-{{ section.id }} .neo-header-right {
+    display: flex;
+    align-items: center;
+    gap: clamp(0.15rem, 0.8vw, 0.4rem);
+    flex-shrink: 0;
+  }
+  #shopify-section-{{ section.id }} .neo-icon-btn {
+    border: 0;
+    background: transparent;
+    text-decoration: none;
+    cursor: pointer;
+    border-radius: 999px;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    line-height: 0;
+    color: var(--neo-txt);
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: box-shadow 0.2s ease, transform 0.15s ease, color 0.2s ease;
+  }
+  #shopify-section-{{ section.id }} .neo-icon-imgwrap svg,
+  #shopify-section-{{ section.id }} .neo-icon-imgwrap img {
+    display: block;
+    width: calc(var(--icon-scale-mobile) * 1.25rem);
+    height: calc(var(--icon-scale-mobile) * 1.25rem);
+    object-fit: contain;
+    stroke: currentColor;
+    color: currentColor;
+  }
+
+  /* Soft-press interaction (replaces heavy hover halo) */
+  @media (hover: hover) {
+    #shopify-section-{{ section.id }} .neo-clickable:hover {
+      box-shadow:
+        calc(-2px * var(--depth-item)) calc(-2px * var(--depth-item)) calc(6px * var(--depth-item)) rgba(255, 255, 255, 0.9),
+        calc(3px * var(--depth-item)) calc(3px * var(--depth-item)) calc(8px * var(--depth-item)) rgba(22, 24, 29, 0.12);
+    }
+  }
+  #shopify-section-{{ section.id }} .neo-clickable:active {
+    transform: scale(0.96);
+    box-shadow: var(--neo-shadow-in);
+  }
+  #shopify-section-{{ section.id }} .neo-clickable {
+    -webkit-tap-highlight-color: transparent;
+  }
+  #shopify-section-{{ section.id }} a:focus-visible,
+  #shopify-section-{{ section.id }} button:focus-visible {
+    outline: 2px solid var(--neo-accent);
+    outline-offset: 3px;
+    border-radius: 999px;
+  }
+
+  /* ---------- CTA pill ---------- */
+  #shopify-section-{{ section.id }} .neo-cta-pill {
+    display: none;
+    align-items: center;
+    gap: 0.45rem;
+    text-decoration: none;
+    background: var(--neo-accent);
+    color: #fff;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    font-size: calc(var(--txt-scale-desktop) * 0.85rem);
+    padding: 0.6rem 1.15rem;
+    border-radius: 999px;
+    white-space: nowrap;
+    box-shadow:
+      0 6px 16px -6px color-mix(in srgb, var(--neo-accent) 65%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    transition: transform 0.2s var(--neo-ease), box-shadow 0.2s ease;
+  }
+  #shopify-section-{{ section.id }} .neo-cta-pill:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      0 10px 22px -8px color-mix(in srgb, var(--neo-accent) 75%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
+  #shopify-section-{{ section.id }} .neo-cta-pill:active {
+    transform: translateY(0) scale(0.97);
+  }
+  #shopify-section-{{ section.id }} .neo-cta-arrow {
+    width: 0.9em;
+    height: 0.9em;
+    transition: transform 0.2s var(--neo-ease);
+  }
+  #shopify-section-{{ section.id }} .neo-cta-pill:hover .neo-cta-arrow {
+    transform: translateX(3px);
+  }
+
+  /* ---------- Cart badge ---------- */
+  #shopify-section-{{ section.id }} .neo-cart-count {
+    position: absolute;
+    top: 0.1rem;
+    right: 0.05rem;
+    min-width: 1.15rem;
+    height: 1.15rem;
+    background: var(--neo-accent);
+    color: #fff;
+    font-size: 0.68rem;
+    line-height: 1.15rem;
+    font-weight: 700;
+    border-radius: 999px;
+    text-align: center;
+    padding: 0 0.28rem;
+    border: 2px solid var(--neo-bg);
+    box-sizing: content-box;
+    transition: transform 0.2s var(--neo-ease), opacity 0.2s ease;
+  }
+  #shopify-section-{{ section.id }} .neo-cart-count.is-empty {
+    transform: scale(0);
+    opacity: 0;
+  }
+  #shopify-section-{{ section.id }} .neo-cart-count.is-bumping {
+    animation: neo-badge-pop-{{ section.id | replace: '-', '' }} 0.4s var(--neo-ease);
+  }
+  @keyframes neo-badge-pop-{{ section.id | replace: '-', '' }} {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.35); }
+    100% { transform: scale(1); }
+  }
+  #shopify-section-{{ section.id }} .neo-cart-count--inline {
+    position: static;
+    border: 0;
+    margin-left: auto;
+  }
+
+  /* ---------- Animated hamburger ---------- */
+  #shopify-section-{{ section.id }} .neo-hamburger-btn {
+    display: inline-flex;
+  }
+  #shopify-section-{{ section.id }} .neo-burger {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    width: calc(var(--icon-scale-mobile) * 1.2rem);
+  }
+  #shopify-section-{{ section.id }} .neo-burger-line {
+    display: block;
+    height: 2px;
+    width: 100%;
+    border-radius: 2px;
+    background: currentColor;
+    transition: transform 0.3s var(--neo-ease), opacity 0.2s ease;
+    transform-origin: center;
+  }
+  #shopify-section-{{ section.id }} .neo-hamburger-btn[aria-expanded="true"] .neo-burger-line:nth-child(1) {
+    transform: translateY(6px) rotate(45deg);
+  }
+  #shopify-section-{{ section.id }} .neo-hamburger-btn[aria-expanded="true"] .neo-burger-line:nth-child(2) {
+    opacity: 0;
+  }
+  #shopify-section-{{ section.id }} .neo-hamburger-btn[aria-expanded="true"] .neo-burger-line:nth-child(3) {
+    transform: translateY(-6px) rotate(-45deg);
+  }
+
+  /* ---------- Overlay & drawer ---------- */
+  #shopify-section-{{ section.id }} .neo-mobile-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(16, 18, 24, 0.35);
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+    z-index: 200;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  #shopify-section-{{ section.id }} .neo-mobile-overlay.is-open {
+    opacity: 1;
+  }
+  #shopify-section-{{ section.id }} .neo-mobile-drawer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: min(86%, 360px);
+    height: 100dvh;
+    background: var(--neo-bg);
+    color: var(--neo-txt);
+    border-radius: 0 var(--neo-radius) var(--neo-radius) 0;
+    box-shadow: 24px 0 60px -20px rgba(22, 24, 29, 0.35);
+    z-index: 210;
+    display: flex;
+    flex-direction: column;
+    padding: 1.1rem 1.1rem calc(1.1rem + env(safe-area-inset-bottom));
+    transform: translateX(-102%);
+    transition: transform 0.38s var(--neo-ease);
+    overscroll-behavior: contain;
+  }
+  #shopify-section-{{ section.id }} .neo-mobile-drawer.is-open {
+    transform: translateX(0);
+  }
+
+  #shopify-section-{{ section.id }} .neo-mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.9rem;
+    padding-bottom: 0.9rem;
+    border-bottom: 1px solid rgba(22, 24, 29, 0.08);
+  }
+  #shopify-section-{{ section.id }} .neo-mobile-title {
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    font-size: calc(var(--txt-scale-mobile) * 1.05rem);
+  }
+
+  #shopify-section-{{ section.id }} .neo-mobile-nav {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    margin: 0 -0.35rem 1rem;
+    padding: 0 0.35rem;
+  }
+  #shopify-section-{{ section.id }} .neo-mobile-nav-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  #shopify-section-{{ section.id }} .neo-mobile-nav-item {
+    opacity: 0;
+    transform: translateX(-14px);
+  }
+  #shopify-section-{{ section.id }} .neo-mobile-drawer.is-open .neo-mobile-nav-item {
+    opacity: 1;
+    transform: translateX(0);
+    transition:
+      opacity 0.35s ease calc(0.06s * var(--stagger, 0) + 0.1s),
+      transform 0.35s var(--neo-ease) calc(0.06s * var(--stagger, 0) + 0.1s);
+  }
+  #shopify-section-{{ section.id }} .neo-mobile-nav-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    padding: 0.85rem 1rem;
+    border-radius: var(--neo-radius-sm);
+    text-decoration: none;
+    color: var(--neo-txt);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    font-size: calc(var(--txt-scale-mobile) * 1rem);
+    transition: box-shadow 0.2s ease, transform 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #shopify-section-{{ section.id }} .neo-mobile-nav-link:active {
+    box-shadow: var(--neo-shadow-in);
+    transform: scale(0.985);
+  }
+  #shopify-section-{{ section.id }} .neo-mobile-nav-link.is-active {
+    box-shadow: var(--neo-shadow-in);
+  }
+  #shopify-section-{{ section.id }} .neo-mobile-nav-chevron {
+    width: 1rem;
+    height: 1rem;
+    color: var(--neo-txt-soft);
+    flex-shrink: 0;
+  }
+
+  #shopify-section-{{ section.id }} .neo-mobile-footer {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  #shopify-section-{{ section.id }} .neo-mobile-cta {
+    display: inline-flex;
+    justify-content: center;
+    width: 100%;
+    font-size: calc(var(--txt-scale-mobile) * 0.95rem);
+    padding: 0.9rem 1.15rem;
+  }
+  #shopify-section-{{ section.id }} .neo-mobile-icons {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+  }
+  #shopify-section-{{ section.id }} .neo-mobile-icon-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.7rem 0.4rem;
+    border-radius: var(--neo-radius-sm);
+    text-decoration: none;
+    color: var(--neo-txt);
+    font-size: calc(var(--txt-scale-mobile) * 0.72rem);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    box-shadow: var(--neo-shadow-in);
+    position: relative;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #shopify-section-{{ section.id }} .neo-mobile-icon-chip svg {
+    width: calc(var(--icon-scale-mobile) * 1.2rem);
+    height: calc(var(--icon-scale-mobile) * 1.2rem);
+  }
+  #shopify-section-{{ section.id }} .neo-mobile-icon-chip .neo-cart-count--inline {
+    position: absolute;
+    top: 0.35rem;
+    right: 0.5rem;
+    margin: 0;
+  }
+
+  /* ---------- Desktop ---------- */
+  @media (min-width: 990px) {
+    #shopify-section-{{ section.id }} .neo-header-shell {
+      padding: 0.65rem 0.9rem;
+    }
+    #shopify-section-{{ section.id }} .neo-logo-img {
+      max-height: calc(44px * var(--logo-scale));
+    }
+    #shopify-section-{{ section.id }} .neo-header-center {
+      display: flex;
+    }
+    #shopify-section-{{ section.id }} .neo-hamburger-btn {
+      display: none;
+    }
+    #shopify-section-{{ section.id }} .neo-cta-pill {
+      display: inline-flex;
+    }
+    #shopify-section-{{ section.id }} .neo-icon-imgwrap svg,
+    #shopify-section-{{ section.id }} .neo-icon-imgwrap img {
+      width: calc(var(--icon-scale-desktop) * 1.25rem);
+      height: calc(var(--icon-scale-desktop) * 1.25rem);
+    }
+  }
+
+  /* Tablet: keep hamburger, show CTA */
+  @media (min-width: 640px) and (max-width: 989px) {
+    #shopify-section-{{ section.id }} .neo-cta-pill:not(.neo-mobile-cta) {
+      display: inline-flex;
+    }
+  }
+
+  /* Small phones: hide account icon in the bar (still reachable in drawer) */
+  @media (max-width: 400px) {
+    #shopify-section-{{ section.id }} .neo-account-btn {
+      display: none;
+    }
+    #shopify-section-{{ section.id }} .neo-logo-img {
+      max-height: calc(30px * var(--logo-scale));
+    }
+  }
+
+  /* ---------- Reduced motion ---------- */
+  @media (prefers-reduced-motion: reduce) {
+    #shopify-section-{{ section.id }} *,
+    #shopify-section-{{ section.id }} *::before,
+    #shopify-section-{{ section.id }} *::after {
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+    }
+  }
+{% endstyle %}
+
+<script>
+  (function () {
+    const sectionWrapper = document.getElementById('shopify-section-{{ section.id }}');
+    const sectionEl = document.getElementById('neo-header-{{ section.id }}');
+    if (!sectionWrapper || !sectionEl) return;
+
+    const stickZone = sectionEl.querySelector('[data-neo-stickzone]');
+    const spacerEl = sectionEl.querySelector('[data-neo-stick-spacer]');
+    const toggleBtn = sectionEl.querySelector('[data-neo-menu-toggle]');
+    const closeBtn = sectionEl.querySelector('[data-neo-menu-close]');
+    const overlay = sectionEl.querySelector('[data-neo-menu-overlay]');
+    const panel = sectionEl.querySelector('[data-neo-menu-panel]');
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    /* ---------- Smart sticky: fix past threshold, hide on scroll down, reveal on scroll up ---------- */
+    let thresholdPx = 0;
+    let lastSpacerH = 0;
+    let lastScrollY = window.scrollY;
+    let ticking = false;
+
+    function measureThreshold() {
+      const prev = sectionWrapper.previousElementSibling; /* announcement bar if present */
+      thresholdPx = prev ? prev.offsetHeight : 0;
+    }
+
+    function applySticky() {
+      const y = window.scrollY;
+      const shouldFix = y >= thresholdPx;
+
+      if (shouldFix) {
+        if (!stickZone.classList.contains('is-fixed')) stickZone.classList.add('is-fixed');
+        const h = stickZone.offsetHeight;
+        if (lastSpacerH !== h) {
+          spacerEl.style.height = h + 'px';
+          lastSpacerH = h;
+        }
+        /* Hide on scroll down (past one header height), reveal on scroll up */
+        const goingDown = y > lastScrollY;
+        const menuOpen = panel && !panel.hidden;
+        if (goingDown && y > thresholdPx + h * 2 && !menuOpen) {
+          stickZone.classList.add('is-hidden');
+        } else if (!goingDown || y <= thresholdPx + h) {
+          stickZone.classList.remove('is-hidden');
+        }
+      } else {
+        stickZone.classList.remove('is-fixed', 'is-hidden');
+        if (lastSpacerH !== 0) {
+          spacerEl.style.height = '0px';
+          lastSpacerH = 0;
+        }
+      }
+      lastScrollY = y;
+    }
+
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(function () {
+        applySticky();
+        ticking = false;
+      });
+    }
+
+    function initSticky() {
+      measureThreshold();
+      applySticky();
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', function () {
+      measureThreshold();
+      applySticky();
+    });
+    document.addEventListener('shopify:section:load', initSticky);
+    initSticky();
+
+    /* ---------- Mobile drawer: scroll lock + focus trap ---------- */
+    if (toggleBtn && closeBtn && overlay && panel) {
+      let lastFocused = null;
+
+      function focusables() {
+        return panel.querySelectorAll('a[href], button:not([disabled])');
+      }
+
+      function trapFocus(evt) {
+        if (evt.key !== 'Tab') return;
+        const items = focusables();
+        if (!items.length) return;
+        const first = items[0];
+        const last = items[items.length - 1];
+        if (evt.shiftKey && document.activeElement === first) {
+          evt.preventDefault();
+          last.focus();
+        } else if (!evt.shiftKey && document.activeElement === last) {
+          evt.preventDefault();
+          first.focus();
+        }
+      }
+
+      function openMenu() {
+        lastFocused = document.activeElement;
+        panel.hidden = false;
+        overlay.hidden = false;
+        document.documentElement.style.overflow = 'hidden';
+        requestAnimationFrame(function () {
+          panel.classList.add('is-open');
+          overlay.classList.add('is-open');
+          toggleBtn.setAttribute('aria-expanded', 'true');
+          closeBtn.focus();
+        });
+        panel.addEventListener('keydown', trapFocus);
+      }
+
+      function closeMenu() {
+        panel.classList.remove('is-open');
+        overlay.classList.remove('is-open');
+        toggleBtn.setAttribute('aria-expanded', 'false');
+        document.documentElement.style.overflow = '';
+        panel.removeEventListener('keydown', trapFocus);
+        const delay = reduceMotion ? 0 : 380;
+        setTimeout(function () {
+          panel.hidden = true;
+          overlay.hidden = true;
+        }, delay);
+        if (lastFocused && lastFocused.focus) lastFocused.focus();
+      }
+
+      toggleBtn.addEventListener('click', function () {
+        if (panel.hidden) openMenu();
+        else closeMenu();
+      });
+      closeBtn.addEventListener('click', closeMenu);
+      overlay.addEventListener('click', closeMenu);
+      document.addEventListener('keydown', function (evt) {
+        if (evt.key === 'Escape' && !panel.hidden) closeMenu();
+      });
+      /* Close when a drawer link is tapped so the drawer isn't open on back-nav */
+      panel.addEventListener('click', function (evt) {
+        if (evt.target.closest('a[href]')) closeMenu();
+      });
+    }
+
+    /* ---------- Live cart count ---------- */
+    const countEls = sectionEl.querySelectorAll('[data-neo-cart-count]');
+
+    function setCartCount(n) {
+      countEls.forEach(function (el) {
+        const prev = parseInt(el.textContent, 10) || 0;
+        el.textContent = n;
+        el.classList.toggle('is-empty', n === 0);
+        if (n > prev) {
+          el.classList.remove('is-bumping');
+          void el.offsetWidth; /* restart animation */
+          el.classList.add('is-bumping');
+        }
+      });
+    }
+
+    let refreshTimer = null;
+    function refreshCartCount() {
+      clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(async function () {
+        try {
+          const res = await fetch('/cart.js', {
+            headers: { Accept: 'application/json' },
+            credentials: 'same-origin'
+          });
+          if (!res.ok) return;
+          const cart = await res.json();
+          setCartCount(cart.item_count || 0);
+        } catch (e) {
+          /* silent */
+        }
+      }, 150);
+    }
+
+    /* Standard add-to-cart form submits */
+    document.addEventListener(
+      'submit',
+      function (e) {
+        const form = e.target;
+        if (form && form.action && form.action.indexOf('/cart/add') !== -1) {
+          setTimeout(refreshCartCount, 400);
+          setTimeout(refreshCartCount, 1200);
+        }
+      },
+      true
+    );
+
+    /* Themes/apps that emit cart events */
+    ['cart:updated', 'cart:refresh', 'cart:change'].forEach(function (evtName) {
+      document.addEventListener(evtName, refreshCartCount);
+    });
+
+    /* Catch custom AJAX hitting the cart API */
+    const _fetch = window.fetch;
+    window.fetch = function () {
+      const args = arguments;
+      let url = '';
+      try {
+        url = typeof args[0] === 'string' ? args[0] : (args[0] && args[0].url) || '';
+      } catch (e) {}
+      const isCartMutation = /\/cart\/(add|change|update|clear)(\.js)?([?/]|$)/.test(url);
+      return _fetch.apply(this, args).then(function (resp) {
+        if (isCartMutation && resp.ok) refreshCartCount();
+        return resp;
+      });
+    };
+
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) refreshCartCount();
+    });
+    window.addEventListener('pageshow', refreshCartCount);
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Neomorphic Header",
+  "tag": "section",
+  "class": "neo-header-wrapper-outer",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Layout"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_full_width",
+      "label": "Full width header",
+      "default": false
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "outer_bg_color",
+      "label": "Background behind header card",
+      "default": "transparent"
+    },
+    {
+      "type": "color",
+      "id": "header_bg_color",
+      "label": "Header card background color",
+      "default": "#eef0f4"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent color (CTA button & cart badge)",
+      "default": "#1a1a1a"
+    },
+    {
+      "type": "header",
+      "content": "Shadow depth"
+    },
+    {
+      "type": "range",
+      "id": "outer_bg_shadow_depth",
+      "label": "Behind card shadow depth",
+      "min": 0,
+      "max": 2,
+      "step": 0.5,
+      "unit": "x",
+      "default": 0
+    },
+    {
+      "type": "range",
+      "id": "header_card_shadow_depth",
+      "label": "Header card shadow depth",
+      "min": 0,
+      "max": 2,
+      "step": 0.5,
+      "unit": "x",
+      "default": 1
+    },
+    {
+      "type": "range",
+      "id": "item_shadow_depth",
+      "label": "Menu/icon hover & press shadow depth",
+      "min": 0,
+      "max": 2,
+      "step": 0.5,
+      "unit": "x",
+      "default": 1
+    },
+    {
+      "type": "header",
+      "content": "Logo"
+    },
+    {
+      "type": "image_picker",
+      "id": "logo_image",
+      "label": "Logo image"
+    },
+    {
+      "type": "range",
+      "id": "logo_scale",
+      "label": "Logo size scale",
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.1,
+      "unit": "x",
+      "default": 1.0
+    },
+    {
+      "type": "header",
+      "content": "Navigation"
+    },
+    {
+      "type": "link_list",
+      "id": "menu",
+      "label": "Navigation menu"
+    },
+    {
+      "type": "text",
+      "id": "cta_label",
+      "label": "CTA label",
+      "default": "Shop Now"
+    },
+    {
+      "type": "url",
+      "id": "cta_link",
+      "label": "CTA link"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_cart_count",
+      "label": "Show cart item count",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "mobile_menu_heading",
+      "label": "Mobile menu heading",
+      "default": "Menu"
+    },
+    {
+      "type": "header",
+      "content": "Icon overrides"
+    },
+    {
+      "type": "image_picker",
+      "id": "search_icon_image",
+      "label": "Search icon (optional override)"
+    },
+    {
+      "type": "image_picker",
+      "id": "account_icon_image",
+      "label": "Account icon (optional override)"
+    },
+    {
+      "type": "image_picker",
+      "id": "cart_icon_image",
+      "label": "Cart icon (optional override)"
+    },
+    {
+      "type": "image_picker",
+      "id": "hamburger_icon_image",
+      "label": "Hamburger / menu icon (optional override)"
+    },
+    {
+      "type": "header",
+      "content": "Sizing"
+    },
+    {
+      "type": "range",
+      "id": "mobile_header_pad_scale",
+      "label": "Mobile header height scale",
+      "min": 1.0,
+      "max": 2.0,
+      "step": 0.1,
+      "unit": "x",
+      "default": 1.0
+    },
+    {
+      "type": "range",
+      "id": "desktop_text_scale",
+      "label": "Desktop menu text size",
+      "min": 0.8,
+      "max": 2.0,
+      "step": 0.1,
+      "unit": "x",
+      "default": 1
+    },
+    {
+      "type": "range",
+      "id": "mobile_text_scale",
+      "label": "Mobile menu text size",
+      "min": 0.8,
+      "max": 2.0,
+      "step": 0.1,
+      "unit": "x",
+      "default": 1
+    },
+    {
+      "type": "range",
+      "id": "desktop_icon_scale",
+      "label": "Desktop icon size",
+      "min": 0.8,
+      "max": 2.0,
+      "step": 0.1,
+      "unit": "x",
+      "default": 1
+    },
+    {
+      "type": "range",
+      "id": "mobile_icon_scale",
+      "label": "Mobile icon size",
+      "min": 0.8,
+      "max": 2.0,
+      "step": 0.1,
+      "unit": "x",
+      "default": 1
+    }
+  ],
+  "presets": [
+    {
+      "name": "Neomorphic Header"
+    }
+  ]
+}
+{% endschema %}

@@ -267,6 +267,13 @@
     position: relative;
   }
 
+  /* Themes that don't set a global border-box would overflow the fixed bar */
+  #shopify-section-{{ section.id }} *,
+  #shopify-section-{{ section.id }} *::before,
+  #shopify-section-{{ section.id }} *::after {
+    box-sizing: border-box;
+  }
+
   /* ---------- Outer strip / sticky zone ---------- */
   #shopify-section-{{ section.id }} .neo-header-stickzone {
     background: var(--outer-bg);
@@ -286,6 +293,7 @@
     top: 0;
     left: 0;
     right: 0;
+    width: auto;
   }
   #shopify-section-{{ section.id }} .neo-header-stickzone.is-hidden {
     transform: translateY(-110%);
@@ -793,43 +801,60 @@
     const panel = sectionEl.querySelector('[data-neo-menu-panel]');
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    /* ---------- Smart sticky: fix past threshold, hide on scroll down, reveal on scroll up ---------- */
+    /* ---------- Sticky header ----------
+       Pins the bar to the top once the page scrolls past the header's own
+       resting position (so any announcement bar above scrolls away first).
+       A spacer takes over the vacated flow height to prevent content jump. */
+    const STICKY_ENABLED = {% if section.settings.enable_sticky %}true{% else %}false{% endif %};
+    const STICKY_AUTOHIDE = {% if section.settings.sticky_hide_on_scroll %}true{% else %}false{% endif %};
+
     let thresholdPx = 0;
     let lastSpacerH = 0;
     let lastScrollY = window.scrollY;
     let ticking = false;
 
     function measureThreshold() {
-      const prev = sectionWrapper.previousElementSibling; /* announcement bar if present */
-      thresholdPx = prev ? prev.offsetHeight : 0;
+      /* Distance from the document top to where the header naturally sits.
+         Valid while fixed too, because the spacer holds the flow height. */
+      const rect = sectionWrapper.getBoundingClientRect();
+      thresholdPx = Math.max(0, Math.round(rect.top + window.scrollY));
+    }
+
+    function releaseSticky() {
+      stickZone.classList.remove('is-fixed', 'is-hidden');
+      if (lastSpacerH !== 0) {
+        spacerEl.style.height = '0px';
+        lastSpacerH = 0;
+      }
     }
 
     function applySticky() {
-      const y = window.scrollY;
-      const shouldFix = y >= thresholdPx;
+      if (!STICKY_ENABLED) return;
 
-      if (shouldFix) {
-        if (!stickZone.classList.contains('is-fixed')) stickZone.classList.add('is-fixed');
+      const y = window.scrollY;
+
+      if (y >= thresholdPx && thresholdPx >= 0) {
+        stickZone.classList.add('is-fixed');
+
         const h = stickZone.offsetHeight;
         if (lastSpacerH !== h) {
           spacerEl.style.height = h + 'px';
           lastSpacerH = h;
         }
-        /* Hide on scroll down (past one header height), reveal on scroll up */
-        const goingDown = y > lastScrollY;
-        const menuOpen = panel && !panel.hidden;
-        if (goingDown && y > thresholdPx + h * 2 && !menuOpen) {
-          stickZone.classList.add('is-hidden');
-        } else if (!goingDown || y <= thresholdPx + h) {
-          stickZone.classList.remove('is-hidden');
+
+        if (STICKY_AUTOHIDE) {
+          const goingDown = y > lastScrollY;
+          const menuOpen = panel && !panel.hidden;
+          if (goingDown && y > thresholdPx + h * 2 && !menuOpen) {
+            stickZone.classList.add('is-hidden');
+          } else if (!goingDown || y <= thresholdPx + h) {
+            stickZone.classList.remove('is-hidden');
+          }
         }
       } else {
-        stickZone.classList.remove('is-fixed', 'is-hidden');
-        if (lastSpacerH !== 0) {
-          spacerEl.style.height = '0px';
-          lastSpacerH = 0;
-        }
+        releaseSticky();
       }
+
       lastScrollY = y;
     }
 
@@ -843,16 +868,29 @@
     }
 
     function initSticky() {
+      if (!STICKY_ENABLED) {
+        releaseSticky();
+        return;
+      }
+      /* No need to unfix first: the spacer keeps the wrapper's document
+         offset identical whether the bar is fixed or in flow. */
       measureThreshold();
       applySticky();
     }
 
     window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', function () {
-      measureThreshold();
-      applySticky();
-    });
+    window.addEventListener('resize', initSticky);
+    window.addEventListener('orientationchange', initSticky);
+    window.addEventListener('load', initSticky);
     document.addEventListener('shopify:section:load', initSticky);
+
+    /* An announcement bar can resize or be dismissed after first paint, which
+       moves the header's resting position. Observe it rather than the body,
+       so toggling the spacer can't feed back into this observer. */
+    if ('ResizeObserver' in window && sectionWrapper.previousElementSibling) {
+      new ResizeObserver(initSticky).observe(sectionWrapper.previousElementSibling);
+    }
+
     initSticky();
 
     /* ---------- Mobile drawer: scroll lock + focus trap ---------- */
@@ -1009,6 +1047,20 @@
       "type": "checkbox",
       "id": "enable_full_width",
       "label": "Full width header",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_sticky",
+      "label": "Sticky header",
+      "info": "Keeps the header pinned to the top of the screen while scrolling.",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "sticky_hide_on_scroll",
+      "label": "Hide sticky header when scrolling down",
+      "info": "Reveals it again as soon as the customer scrolls back up. Leave off to keep the header visible at all times.",
       "default": false
     },
     {

@@ -1,0 +1,570 @@
+{%- comment -%}
+  VF Article v4 — Vettofit blog article section (Brand Identity System v4.0, Aug 2026)
+  Creative territory: Editorial Wellness — chalk canvas, carbon type, teal as signal (5-10%),
+  Night Plum depth, flat surfaces, 24px cards / 14px controls, Helvetica family.
+  Includes: breadcrumbs, progress bar, byline + vet reviewer, TOC (auto from H2),
+  share, product card, tags, author box, related articles, newsletter.
+  SEO/AEO/LLM: BlogPosting + BreadcrumbList JSON-LD, semantic HTML, time tags.
+  No FAQ section (added manually per blog). No header/footer (theme provides).
+{%- endcomment -%}
+
+{%- liquid
+  assign words = article.content | strip_html | split: ' ' | size
+  assign minutes = words | divided_by: 200 | at_least: 1
+  assign reviewer = article.metafields.custom.reviewer | default: section.settings.default_reviewer
+  assign author_name = article.metafields.custom.author_name | default: section.settings.default_author | default: article.author
+-%}
+
+<div class="vfm" id="vfm-{{ section.id }}">
+
+  {%- if section.settings.show_progress -%}
+    <div class="vfm-progress" aria-hidden="true"><div class="vfm-progress-fill" data-vfm-progress></div></div>
+  {%- endif -%}
+
+  <div class="vfm-wrap">
+
+    {%- if section.settings.show_breadcrumbs -%}
+    <nav class="vfm-crumbs" aria-label="Breadcrumb">
+      <a href="{{ routes.root_url }}">{{ section.settings.home_label | default: 'Home' }}</a>
+      <span aria-hidden="true">›</span>
+      <a href="{{ blog.url }}">{{ section.settings.blog_crumb_label | default: blog.title }}</a>
+      <span aria-hidden="true">›</span>
+      <span aria-current="page">{{ article.title | truncate: 64 }}</span>
+    </nav>
+    {%- endif -%}
+
+    <header class="vfm-head">
+      {%- if article.tags.size > 0 -%}
+        <span class="vfm-eyebrow">{{ article.tags.first }}</span>
+      {%- endif -%}
+      <h1 class="vfm-title">{{ article.title }}</h1>
+      {%- if article.excerpt != blank -%}
+        <p class="vfm-excerpt">{{ article.excerpt | strip_html }}</p>
+      {%- endif -%}
+
+      <div class="vfm-meta">
+        {%- if section.settings.show_author -%}
+        <span class="vfm-byline">
+          <span class="vfm-avatar" aria-hidden="true">{{ author_name | slice: 0 }}{{ shop.name | slice: 0 }}</span>
+          <span>By <strong>{{ author_name }}</strong>
+            {%- if section.settings.show_reviewer and reviewer != blank -%}
+            <br><span class="vfm-reviewer">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#067A73" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
+              Reviewed by {{ reviewer }}</span>
+            {%- endif -%}
+          </span>
+        </span>
+        {%- endif -%}
+        <span class="vfm-stats">
+          {%- if section.settings.show_reading_time -%}
+          <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>{{ minutes }} min read</span>
+          {%- endif -%}
+          {%- if section.settings.show_updated -%}
+          <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="4"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Updated <time datetime="{{ article.updated_at | date: '%Y-%m-%d' }}">{{ article.updated_at | date: '%b %-d, %Y' }}</time></span>
+          {%- endif -%}
+        </span>
+      </div>
+    </header>
+
+    {%- if section.settings.show_hero_image and article.image -%}
+    <figure class="vfm-hero vfm-hero-anim">
+      <img
+        src="{{ article.image | image_url: width: 1400 }}"
+        srcset="{{ article.image | image_url: width: 700 }} 700w, {{ article.image | image_url: width: 1000 }} 1000w, {{ article.image | image_url: width: 1400 }} 1400w"
+        sizes="(max-width: 1200px) 100vw, 1104px"
+        alt="{{ article.image.alt | default: article.title | escape }}"
+        width="{{ article.image.width }}" height="{{ article.image.height }}"
+        loading="eager" fetchpriority="high">
+    </figure>
+    {%- endif -%}
+
+    <div class="vfm-grid{% unless section.settings.enable_toc %} vfm-grid--noside{% endunless %}" data-vfm-grid>
+
+      {%- if section.settings.enable_toc -%}
+      <aside class="vfm-side" aria-label="On this page">
+        <div class="vfm-side-sticky">
+          <div class="vfm-card vfm-toc-card">
+            <div class="vfm-toc-block" data-vfm-toc-block>
+              <span class="vfm-card-heading">{{ section.settings.toc_heading | default: 'On this page' }}</span>
+              <ol class="vfm-toc" data-vfm-toc></ol>
+            </div>
+            {%- if section.settings.show_share -%}
+            <div class="vfm-share">
+              <span class="vfm-card-heading">Share</span>
+              <div class="vfm-share-row">
+                <button type="button" class="vfm-share-btn" data-vfm-copy aria-label="Copy link" title="Copy link"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
+                <a class="vfm-share-btn" href="https://wa.me/?text={{ article.title | url_encode }}%20{{ shop.url | append: article.url | url_encode }}" target="_blank" rel="noopener" aria-label="Share on WhatsApp"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></a>
+                <a class="vfm-share-btn" href="https://twitter.com/intent/tweet?text={{ article.title | url_encode }}&url={{ shop.url | append: article.url | url_encode }}" target="_blank" rel="noopener" aria-label="Share on X"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.9 1.15h3.68l-8.04 9.19L24 22.85h-7.4l-5.8-7.58-6.64 7.58H.47l8.6-9.83L0 1.15h7.59l5.24 6.93zm-1.29 19.5h2.04L6.49 3.24H4.3z"/></svg></a>
+                <a class="vfm-share-btn" href="https://www.facebook.com/sharer/sharer.php?u={{ shop.url | append: article.url | url_encode }}" target="_blank" rel="noopener" aria-label="Share on Facebook"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg></a>
+              </div>
+              <span class="vfm-copy-msg" data-vfm-copy-msg></span>
+            </div>
+            {%- endif -%}
+          </div>
+        </div>
+      </aside>
+      {%- endif -%}
+
+      <article class="vfm-article">
+
+        {%- if section.settings.enable_toc -%}
+        <details class="vfm-mtoc">
+          <summary>{{ section.settings.toc_heading | default: 'On this page' }}<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></summary>
+          <ol class="vfm-mtoc-list" data-vfm-mtoc></ol>
+        </details>
+        {%- endif -%}
+
+        <div class="vfm-content" data-vfm-content>
+          {{ article.content }}
+        </div>
+
+        {%- if section.settings.product != blank -%}
+          {%- assign p = all_products[section.settings.product] -%}
+          {%- if p and p != empty -%}
+          <aside class="vfm-card vfm-product vfm-rv" aria-label="Recommended product">
+            {%- if p.featured_image -%}
+            <span class="vfm-product-media"><img src="{{ p.featured_image | image_url: width: 240 }}" alt="{{ p.featured_image.alt | default: p.title | escape }}" width="104" height="104" loading="lazy"></span>
+            {%- endif -%}
+            <div class="vfm-product-info">
+              <div class="vfm-product-badges">
+                <span class="vfm-proof">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
+                  Vet-approved
+                </span>
+                <span class="vfm-stars" aria-label="Rated 5 out of 5">★★★★★</span>
+              </div>
+              <h3>{{ p.title }}</h3>
+              <p>{{ section.settings.product_note }}
+                <strong>{{ p.price | money }}</strong>
+                {%- if p.compare_at_price > p.price -%}
+                <s>{{ p.compare_at_price | money }}</s>
+                {%- assign pct = p.compare_at_price | minus: p.price | times: 100 | divided_by: p.compare_at_price -%}
+                <span class="vfm-off">{{ pct }}% off</span>
+                {%- endif -%}
+              </p>
+            </div>
+            <a class="vfm-btn" href="{{ p.url }}">View product</a>
+          </aside>
+          {%- endif -%}
+        {%- endif -%}
+
+        {%- if section.settings.show_tags and article.tags.size > 0 -%}
+        <div class="vfm-tags vfm-rv">
+          {%- for tag in article.tags -%}
+            <a class="vfm-chip" href="{{ blog.url }}/tagged/{{ tag | handle }}">{{ tag }}</a>
+          {%- endfor -%}
+        </div>
+        {%- endif -%}
+
+        {%- if section.settings.show_author_box -%}
+        <footer class="vfm-author vfm-rv">
+          <span class="vfm-avatar vfm-avatar-lg" aria-hidden="true">{{ author_name | slice: 0 }}{{ shop.name | slice: 0 }}</span>
+          <div>
+            <h3>{{ author_name }}</h3>
+            <p>{{ section.settings.author_bio }}</p>
+            {%- if section.settings.show_reviewer and reviewer != blank -%}
+            <p class="vfm-reviewer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#067A73" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>Medically reviewed by <strong>{{ reviewer }}</strong></p>
+            {%- endif -%}
+          </div>
+        </footer>
+        {%- endif -%}
+
+      </article>
+    </div>
+
+    {%- if section.settings.enable_related -%}
+    {%- assign shown = 0 -%}
+    <section class="vfm-related vfm-rv" aria-label="{{ section.settings.related_heading }}">
+      <div class="vfm-related-head">
+        <h2>{{ section.settings.related_heading | default: 'Keep reading' }}</h2>
+        <a href="{{ blog.url }}">All articles →</a>
+      </div>
+      <div class="vfm-related-grid">
+        {%- for a in blog.articles -%}
+          {%- if a.id != article.id and shown < section.settings.related_limit -%}
+            {%- assign shown = shown | plus: 1 -%}
+            {%- assign awords = a.content | strip_html | split: ' ' | size -%}
+            {%- assign amin = awords | divided_by: 200 | at_least: 1 -%}
+            <a class="vfm-rel-card" href="{{ a.url }}">
+              {%- if a.image -%}
+              <span class="vfm-rel-media"><img src="{{ a.image | image_url: width: 640 }}" alt="{{ a.image.alt | default: a.title | escape }}" width="640" height="400" loading="lazy"></span>
+              {%- endif -%}
+              <span class="vfm-rel-body">
+                <span class="vfm-rel-meta"><time datetime="{{ a.published_at | date: '%Y-%m-%d' }}">{{ a.published_at | date: '%b %-d, %Y' }}</time> · {{ amin }} min read</span>
+                <span class="vfm-rel-title">{{ a.title }}</span>
+                <span class="vfm-rel-more">Read article →</span>
+              </span>
+            </a>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    </section>
+    {%- endif -%}
+
+  </div>
+
+  {%- if section.settings.show_newsletter -%}
+  <section class="vfm-news vfm-rv" aria-label="Newsletter">
+    <div class="vfm-news-inner">
+      <div class="vfm-news-copy">
+        <h2>{{ section.settings.newsletter_heading }}</h2>
+        <p>{{ section.settings.newsletter_text }} <span class="vfm-hashtag">#CareWithVettofit</span></p>
+      </div>
+      {%- form 'customer', class: 'vfm-news-form' -%}
+        <input type="hidden" name="contact[tags]" value="newsletter,blog">
+        <input type="email" name="contact[email]" required placeholder="you@example.com" aria-label="Email address" autocomplete="email">
+        <button type="submit" class="vfm-btn vfm-btn--signal">Subscribe</button>
+        {%- if form.posted_successfully? -%}
+          <span class="vfm-form-msg">Subscribed — welcome to the pack.</span>
+        {%- elsif form.errors -%}
+          <span class="vfm-form-msg">{{ form.errors.messages['email'] }}</span>
+        {%- endif -%}
+      {%- endform -%}
+    </div>
+  </section>
+  {%- endif -%}
+
+</div>
+
+{%- comment -%} ——— JSON-LD: BlogPosting + BreadcrumbList (AEO/GEO/LLM) ——— {%- endcomment -%}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "mainEntityOfPage": { "@type": "WebPage", "@id": {{ shop.url | append: article.url | json }} },
+  "headline": {{ article.title | json }},
+  "description": {{ article.excerpt_or_content | strip_html | truncate: 300 | json }},
+  {%- if article.image %}"image": {{ article.image | image_url: width: 1400 | prepend: 'https:' | json }},{% endif %}
+  "datePublished": {{ article.published_at | date: '%Y-%m-%dT%H:%M:%S%z' | json }},
+  "dateModified": {{ article.updated_at | date: '%Y-%m-%dT%H:%M:%S%z' | json }},
+  "author": { "@type": "Person", "name": {{ author_name | json }} },
+  {%- if reviewer != blank %}"reviewedBy": { "@type": "Person", "name": {{ reviewer | json }}, "jobTitle": "Veterinarian" },{% endif %}
+  "wordCount": {{ words }},
+  "timeRequired": "PT{{ minutes }}M",
+  {%- if article.tags.size > 0 %}"keywords": {{ article.tags | join: ', ' | json }},{% endif %}
+  "inLanguage": "en",
+  "publisher": {
+    "@type": "Organization",
+    "name": {{ shop.name | json }},
+    "url": {{ shop.url | json }}
+  }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": {{ shop.url | json }} },
+    { "@type": "ListItem", "position": 2, "name": {{ blog.title | json }}, "item": {{ shop.url | append: blog.url | json }} },
+    { "@type": "ListItem", "position": 3, "name": {{ article.title | json }}, "item": {{ shop.url | append: article.url | json }} }
+  ]
+}
+</script>
+
+{% style %}
+{%- comment -%} v4.0 design tokens — Carbon / Chalk / Signal Teal / Night Plum. Teal ≤10% of the page. {%- endcomment -%}
+#vfm-{{ section.id }} {
+  --vf-carbon: #111111;
+  --vf-chalk: #F7F5EF;
+  --vf-white: #FFFFFF;
+  --vf-teal: #09D1C7;
+  --vf-teal-deep: #067A73;
+  --vf-teal-tint: #E4F9F7;
+  --vf-plum: #2B1B3A;
+  --vf-ink: #26262A;
+  --vf-mute: #63636B;
+  --vf-line: #E4E1D8;
+  --vf-radius-card: 24px;
+  --vf-radius-control: 14px;
+  --vf-motion-fast: 180ms;
+  --vf-motion-base: 260ms;
+}
+.vfm { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: var(--vf-ink); background: var(--vf-chalk); font-size: 17px; line-height: 1.6; }
+.vfm *, .vfm *::before, .vfm *::after { box-sizing: border-box; }
+.vfm a { color: var(--vf-teal-deep); }
+.vfm ::selection { background: var(--vf-teal); color: var(--vf-carbon); }
+.vfm :focus-visible { outline: 2px solid var(--vf-teal-deep); outline-offset: 2px; }
+.vfm-wrap { max-width: 1200px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 48px); }
+
+.vfm-progress { position: fixed; top: 0; left: 0; right: 0; height: 3px; background: transparent; z-index: 60; }
+.vfm-progress-fill { height: 100%; width: 0%; background: var(--vf-teal); }
+
+.vfm-crumbs { padding: 24px 0 0; font-size: 14px; color: var(--vf-mute); }
+.vfm-crumbs a { color: inherit; text-decoration: none; }
+.vfm-crumbs a:hover { color: var(--vf-carbon); }
+.vfm-crumbs span[aria-hidden] { margin: 0 8px; color: #B5B2A8; }
+.vfm-crumbs span[aria-current] { color: var(--vf-carbon); font-weight: 500; }
+
+.vfm-head { padding: clamp(32px, 5vw, 56px) 0 0; max-width: 800px; }
+.vfm-eyebrow { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--vf-teal-deep); }
+.vfm-eyebrow::before { content: ''; width: 22px; height: 2px; background: var(--vf-teal); }
+.vfm-title { font-weight: 800; font-size: clamp(38px, 5vw, 60px); line-height: 1.05; letter-spacing: -0.02em; color: var(--vf-carbon); margin: 18px 0 0; }
+.vfm-excerpt { font-size: clamp(18px, 2vw, 21px); line-height: 1.45; font-weight: 500; color: #4C4C52; margin: 20px 0 0; max-width: 62ch; }
+.vfm-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 28px; margin-top: 28px; padding-top: 22px; border-top: 1px solid var(--vf-line); }
+.vfm-byline { display: inline-flex; align-items: center; gap: 12px; font-size: 14px; line-height: 1.45; }
+.vfm-byline strong { color: var(--vf-carbon); }
+.vfm-avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--vf-carbon); color: var(--vf-white); display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; text-transform: uppercase; flex: none; }
+.vfm-avatar-lg { width: 56px; height: 56px; font-size: 18px; }
+.vfm-reviewer { color: var(--vf-teal-deep); display: inline-flex; align-items: center; gap: 5px; font-weight: 500; }
+.vfm-stats { display: inline-flex; align-items: center; gap: 18px; color: var(--vf-mute); font-size: 14px; font-variant-numeric: tabular-nums; }
+.vfm-stats > span { display: inline-flex; align-items: center; gap: 6px; }
+
+.vfm-hero { margin: 0; padding: 32px 0 0; }
+.vfm-hero img { width: 100%; height: auto; border-radius: var(--vf-radius-card); display: block; }
+.vfm-hero-anim { animation: vfmHeroIn var(--vf-motion-base) ease both; }
+@keyframes vfmHeroIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.vfm-grid { display: grid; grid-template-columns: 256px minmax(0, 720px); gap: 28px clamp(40px, 6vw, 80px); padding: clamp(32px, 4vw, 56px) 0 0; justify-content: start; }
+.vfm-side { grid-column: 1; grid-row: 1; }
+.vfm-article { grid-column: 2; grid-row: 1; }
+.vfm-grid--noside { grid-template-columns: minmax(0, 720px); }
+.vfm-grid--noside .vfm-article { grid-column: 1; }
+.vfm-side-sticky { position: sticky; top: calc(var(--vfm-header-offset, 0px) + 24px); }
+
+.vfm-card { background: var(--vf-white); border: 1px solid var(--vf-line); border-radius: var(--vf-radius-card); }
+.vfm-toc-card { padding: 24px; }
+.vfm-card-heading { display: block; font-weight: 700; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--vf-mute); margin-bottom: 14px; }
+.vfm-toc { list-style: none; margin: 0; padding: 0; }
+.vfm-toc a { display: block; padding: 8px 0 8px 14px; border-left: 2px solid var(--vf-line); font-size: 14px; font-weight: 500; line-height: 1.4; color: var(--vf-mute); text-decoration: none; transition: color var(--vf-motion-fast) ease, border-color var(--vf-motion-fast) ease; }
+.vfm-toc a:hover { color: var(--vf-carbon); }
+.vfm-toc a.is-active { color: var(--vf-carbon); border-left-color: var(--vf-teal); font-weight: 700; }
+.vfm-share { border-top: 1px solid var(--vf-line); margin-top: 18px; padding-top: 18px; }
+.vfm-share-row { display: flex; gap: 8px; }
+.vfm-share-btn { width: 44px; height: 44px; border-radius: var(--vf-radius-control); border: 1px solid var(--vf-line); background: var(--vf-white); color: var(--vf-carbon); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; transition: border-color var(--vf-motion-fast) ease, background var(--vf-motion-fast) ease; }
+.vfm-share-btn:hover { border-color: var(--vf-carbon); background: var(--vf-chalk); }
+.vfm-copy-msg { display: block; font-size: 12px; font-weight: 600; color: var(--vf-teal-deep); margin-top: 8px; min-height: 15px; }
+
+.vfm-mtoc { display: none; background: var(--vf-white); border: 1px solid var(--vf-line); border-radius: var(--vf-radius-card); padding: 6px 20px; margin-bottom: 28px; }
+.vfm-mtoc summary { cursor: pointer; padding: 12px 0; font-weight: 700; font-size: 15px; color: var(--vf-carbon); list-style: none; display: flex; align-items: center; justify-content: space-between; min-height: 48px; }
+.vfm-mtoc summary::-webkit-details-marker { display: none; }
+.vfm-mtoc-list { list-style: none; margin: 0 0 12px; padding: 0; }
+.vfm-mtoc-list a { display: flex; align-items: center; min-height: 48px; font-size: 15px; font-weight: 500; color: var(--vf-ink); text-decoration: none; border-top: 1px solid var(--vf-line); }
+
+.vfm-content { overflow-wrap: break-word; }
+.vfm-content > :first-child { margin-top: 0; }
+.vfm-content h2.vfm-rich { font-weight: 700; font-size: clamp(26px, 3vw, 34px); line-height: 1.12; letter-spacing: -0.01em; color: var(--vf-carbon); margin: 44px 0 16px; }
+.vfm-content h2[id], .vfm-content h3[id] { scroll-margin-top: calc(var(--vfm-header-offset, 0px) + 24px); }
+.vfm-content h3.vfm-rich { font-weight: 700; font-size: clamp(20px, 2.2vw, 24px); line-height: 1.2; color: var(--vf-carbon); margin: 32px 0 12px; }
+.vfm-content p.vfm-rich { margin: 0 0 18px; }
+.vfm-content ul.vfm-rich, .vfm-content ol.vfm-rich { margin: 0 0 20px; padding-left: 24px; }
+.vfm-content ul.vfm-rich > li, .vfm-content ol.vfm-rich > li { margin-bottom: 10px; }
+.vfm-content img.vfm-rich { max-width: 100%; height: auto; border-radius: var(--vf-radius-card); }
+.vfm-content blockquote.vfm-rich { margin: 28px 0; padding: 6px 0 6px 24px; border-left: 3px solid var(--vf-teal); font-weight: 600; font-size: clamp(20px, 2.4vw, 25px); line-height: 1.35; letter-spacing: -0.01em; color: var(--vf-carbon); }
+.vfm-content table.vfm-rich { width: 100%; border-collapse: collapse; font-size: 15px; font-variant-numeric: tabular-nums; margin: 0 0 24px; box-shadow: 0 0 0 1px var(--vf-line); border-radius: 16px; overflow: hidden; border-style: hidden; background: var(--vf-white); }
+.vfm-content table.vfm-rich th { background: var(--vf-carbon); color: var(--vf-white); text-align: left; font-weight: 700; font-size: 14px; padding: 12px 16px; }
+.vfm-content table.vfm-rich td { padding: 12px 16px; border-top: 1px solid var(--vf-line); }
+.vfm-content table.vfm-rich tbody tr:nth-child(even) { background: var(--vf-chalk); }
+
+.vfm-product { display: flex; flex-wrap: wrap; align-items: center; gap: 20px; padding: 24px; margin-top: 44px; transition: transform var(--vf-motion-fast) ease, border-color var(--vf-motion-fast) ease; }
+.vfm-product:hover { transform: translateY(-2px); border-color: #C9C5B8; }
+.vfm-product-media { display: flex; align-items: center; justify-content: center; width: 116px; height: 116px; border-radius: 16px; background: var(--vf-chalk); flex: none; }
+.vfm-product-media img { width: 96px !important; height: 96px !important; max-width: 96px; object-fit: contain; display: block; }
+.vfm-product-info { flex: 1 1 260px; min-width: 0; }
+.vfm-product-badges { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
+.vfm-proof { display: inline-flex; align-items: center; gap: 6px; background: var(--vf-teal-tint); color: var(--vf-teal-deep); font-weight: 700; font-size: 12px; padding: 6px 12px; border-radius: 999px; }
+.vfm-stars { color: var(--vf-carbon); font-size: 13px; letter-spacing: 2px; }
+.vfm-product-info h3 { font-weight: 700; font-size: 18px; line-height: 1.3; letter-spacing: -0.01em; color: var(--vf-carbon); margin: 0 0 6px; }
+.vfm-product-info p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--vf-mute); font-variant-numeric: tabular-nums; }
+.vfm-product-info strong { color: var(--vf-carbon); font-size: 16px; }
+.vfm-product-info s { color: #B5B2A8; }
+.vfm-off { color: var(--vf-teal-deep); font-weight: 700; font-size: 13px; margin-left: 4px; }
+
+.vfm-btn { display: inline-flex; align-items: center; justify-content: center; background: var(--vf-carbon); color: var(--vf-white); font-family: inherit; font-weight: 700; font-size: 15px; letter-spacing: .01em; text-decoration: none; padding: 13px 24px; border-radius: var(--vf-radius-control); border: 0; cursor: pointer; white-space: nowrap; transition: opacity var(--vf-motion-fast) ease, transform var(--vf-motion-fast) ease; min-height: 48px; }
+.vfm-btn:hover { opacity: .88; transform: translateY(-1px); }
+.vfm-btn--signal { background: var(--vf-teal); color: var(--vf-carbon); }
+
+.vfm-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 36px; }
+.vfm-chip { display: inline-flex; align-items: center; background: transparent; border: 1px solid var(--vf-line); color: var(--vf-ink); font-weight: 600; font-size: 13px; padding: 9px 16px; min-height: 38px; border-radius: 999px; text-decoration: none; transition: border-color var(--vf-motion-fast) ease, background var(--vf-motion-fast) ease; }
+.vfm-chip:hover { border-color: var(--vf-carbon); background: var(--vf-white); }
+
+.vfm-author { margin-top: 44px; background: var(--vf-white); border: 1px solid var(--vf-line); border-radius: var(--vf-radius-card); padding: 28px; display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; }
+.vfm-author > div { flex: 1 1 300px; }
+.vfm-author h3 { font-weight: 700; font-size: 18px; letter-spacing: -0.01em; color: var(--vf-carbon); margin: 0 0 6px; }
+.vfm-author p { margin: 0 0 10px; font-size: 15px; line-height: 1.6; color: #4C4C52; }
+.vfm-author .vfm-reviewer { font-size: 13.5px; margin: 0; }
+
+.vfm-related { padding: clamp(48px, 6vw, 80px) 0; }
+.vfm-related-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 28px; flex-wrap: wrap; }
+.vfm-related-head h2 { font-weight: 800; font-size: clamp(28px, 3.4vw, 40px); letter-spacing: -0.02em; color: var(--vf-carbon); margin: 0; }
+.vfm-related-head a { font-weight: 700; font-size: 15px; text-decoration: none; color: var(--vf-carbon); border-bottom: 2px solid var(--vf-teal); padding-bottom: 2px; }
+.vfm-related-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(16px, 2.5vw, 24px); }
+.vfm-rel-card { text-decoration: none; color: inherit; display: flex; flex-direction: column; min-width: 0; background: var(--vf-white); border: 1px solid var(--vf-line); border-radius: var(--vf-radius-card); overflow: hidden; transition: transform var(--vf-motion-fast) ease, border-color var(--vf-motion-fast) ease; }
+.vfm-rel-card:hover { transform: translateY(-2px); border-color: #C9C5B8; }
+.vfm-rel-media { display: block; position: relative; width: 100%; padding-top: 62.5%; overflow: hidden; }
+.vfm-rel-media img { position: absolute; inset: 0; width: 100% !important; height: 100% !important; max-width: none; object-fit: cover; display: block; }
+.vfm-rel-body { display: flex; flex-direction: column; gap: 8px; padding: 18px; }
+.vfm-rel-meta { font-size: 12.5px; font-weight: 500; color: var(--vf-mute); font-variant-numeric: tabular-nums; }
+.vfm-rel-title { font-weight: 700; font-size: 16px; line-height: 1.3; letter-spacing: -0.01em; color: var(--vf-carbon); }
+.vfm-rel-more { font-weight: 700; font-size: 13.5px; color: var(--vf-teal-deep); }
+
+.vfm-news { background: var(--vf-plum); }
+.vfm-news-inner { max-width: 1200px; margin: 0 auto; padding: clamp(48px, 7vw, 88px) clamp(16px, 4vw, 48px); display: flex; flex-wrap: wrap; align-items: center; gap: 32px 64px; }
+.vfm-news-copy { flex: 1 1 380px; }
+.vfm-news-copy h2 { font-weight: 800; font-size: clamp(28px, 3.8vw, 44px); line-height: 1.08; letter-spacing: -0.02em; color: var(--vf-white); margin: 0; }
+.vfm-news-copy p { margin: 16px 0 0; font-size: 16px; line-height: 1.6; color: rgba(255,255,255,.78); max-width: 46ch; }
+.vfm-hashtag { color: var(--vf-teal); font-weight: 700; }
+.vfm-news-form { flex: 1 1 340px; display: flex; flex-wrap: wrap; gap: 12px; }
+.vfm-news-form input[type="email"] { flex: 1 1 220px; min-height: 50px; padding: 0 18px; font: inherit; font-size: 16px; color: var(--vf-ink); background: var(--vf-white); border: 1px solid transparent; border-radius: var(--vf-radius-control); }
+.vfm-form-msg { display: block; flex-basis: 100%; font-size: 14px; font-weight: 500; color: var(--vf-teal); }
+
+.vfm-rv { opacity: 0; transform: translateY(12px); transition: opacity var(--vf-motion-base) ease, transform var(--vf-motion-base) ease; }
+.vfm-rv.in { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .vfm-rv { opacity: 1; transform: none; transition: none; }
+  .vfm-hero-anim { animation: none; }
+  .vfm-rel-card:hover, .vfm-product:hover, .vfm-btn:hover { transform: none; }
+}
+@media (max-width: 959px) {
+  .vfm-grid { grid-template-columns: minmax(0, 1fr); }
+  .vfm-side { display: none; }
+  .vfm-article { grid-column: 1; }
+  .vfm-mtoc { display: block; }
+}
+@media (min-width: 960px) { .vfm-mtoc { display: none !important; } }
+@media (max-width: 640px) { .vfm-related-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 440px) {
+  .vfm-related-grid { grid-template-columns: 1fr; }
+  .vfm-btn { width: 100%; }
+  .vfm-product { padding: 20px; }
+}
+{% endstyle %}
+
+<script>
+(function () {
+  var root = document.getElementById('vfm-{{ section.id }}');
+  if (!root) return;
+
+  // Offset for the theme's sticky header, if any
+  var themeHeader = document.querySelector('.header-wrapper, .site-header, header.header, sticky-header');
+  if (themeHeader) root.style.setProperty('--vfm-header-offset', themeHeader.offsetHeight + 'px');
+
+  // Elements inside custom embeds (any wrapper with an inline background or data-vf-skip) keep their own styling
+  var content = root.querySelector('[data-vfm-content]');
+  var inEmbed = function (el) { return !!el.closest('[data-vf-skip],[style*="background"]') || (el.hasAttribute('style') && /color|background|font/.test(el.getAttribute('style'))); };
+  if (content) {
+    Array.prototype.forEach.call(content.querySelectorAll('h2,h3,p,ul,ol,blockquote,table,img'), function (el) {
+      if (!inEmbed(el)) el.classList.add('vfm-rich');
+    });
+  }
+  // Build TOC from H2s outside embeds
+  var tocs = [root.querySelector('[data-vfm-toc]'), root.querySelector('[data-vfm-mtoc]')].filter(Boolean);
+  var heads = content ? Array.prototype.filter.call(content.querySelectorAll('h2'), function (h) { return !inEmbed(h); }) : [];
+  if (tocs.length && heads.length) {
+    heads.forEach(function (h, i) {
+      if (!h.id) h.id = 'sec-' + (i + 1) + '-' + h.textContent.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48);
+      tocs.forEach(function (toc) {
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.href = '#' + h.id;
+        a.textContent = h.textContent.replace(/^\d+\.\s*/, '');
+        if (toc.hasAttribute('data-vfm-toc')) a.setAttribute('data-vfm-link', h.id);
+        li.appendChild(a);
+        toc.appendChild(li);
+      });
+    });
+    // Active-section highlight (desktop TOC)
+    var links = root.querySelectorAll('[data-vfm-link]');
+    if ('IntersectionObserver' in window && links.length) {
+      var io = new IntersectionObserver(function (entries) {
+        var vis = entries.filter(function (e) { return e.isIntersecting; });
+        if (!vis.length) return;
+        var id = vis[0].target.id;
+        links.forEach(function (l) { l.classList.toggle('is-active', l.getAttribute('data-vfm-link') === id); });
+      }, { rootMargin: '-15% 0px -70% 0px' });
+      heads.forEach(function (h) { io.observe(h); });
+    }
+  }
+  if (!heads.length) {
+    var mtoc = root.querySelector('.vfm-mtoc'); if (mtoc) mtoc.style.display = 'none';
+    var tocBlock = root.querySelector('[data-vfm-toc-block]'); if (tocBlock) tocBlock.style.display = 'none';
+    var side = root.querySelector('.vfm-side');
+    if (side && !side.querySelector('.vfm-share')) {
+      side.style.display = 'none';
+      var grid = root.querySelector('[data-vfm-grid]'); if (grid) grid.classList.add('vfm-grid--noside');
+    }
+  }
+
+  // Reading progress
+  var fill = root.querySelector('[data-vfm-progress]');
+  if (fill) {
+    var ticking = false;
+    var onScroll = function () {
+      if (ticking) return; ticking = true;
+      requestAnimationFrame(function () {
+        ticking = false;
+        var max = document.documentElement.scrollHeight - window.innerHeight;
+        fill.style.width = (max > 0 ? Math.min(100, (window.scrollY / max) * 100) : 0) + '%';
+      });
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  }
+
+  // Scroll reveal
+  var rvEls = root.querySelectorAll('.vfm-rv');
+  if ('IntersectionObserver' in window && rvEls.length) {
+    var rio = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); rio.unobserve(e.target); } });
+    }, { rootMargin: '0px 0px -8% 0px' });
+    rvEls.forEach(function (el) { rio.observe(el); });
+  } else {
+    rvEls.forEach(function (el) { el.classList.add('in'); });
+  }
+
+  // Copy link
+  var copyBtn = root.querySelector('[data-vfm-copy]');
+  var copyMsg = root.querySelector('[data-vfm-copy-msg]');
+  if (copyBtn) copyBtn.addEventListener('click', function () {
+    var done = function () {
+      if (!copyMsg) return;
+      copyMsg.textContent = 'Link copied';
+      setTimeout(function () { copyMsg.textContent = ''; }, 2000);
+    };
+    if (navigator.clipboard) navigator.clipboard.writeText(location.href).then(done, done); else done();
+  });
+})();
+</script>
+
+{% schema %}
+{
+  "name": "VF Article v4",
+  "tag": "section",
+  "settings": [
+    { "type": "header", "content": "Header elements" },
+    { "type": "checkbox", "id": "show_breadcrumbs", "label": "Show breadcrumbs", "default": true },
+    { "type": "text", "id": "home_label", "label": "Home crumb label", "default": "Home" },
+    { "type": "text", "id": "blog_crumb_label", "label": "Blog crumb label", "default": "Blogs" },
+    { "type": "checkbox", "id": "show_progress", "label": "Show reading progress bar", "default": true },
+    { "type": "checkbox", "id": "show_hero_image", "label": "Show hero image", "default": true },
+    { "type": "checkbox", "id": "show_reading_time", "label": "Show reading time", "default": true },
+    { "type": "checkbox", "id": "show_updated", "label": "Show last updated date", "default": true },
+    { "type": "header", "content": "Author & reviewer (E-E-A-T)" },
+    { "type": "checkbox", "id": "show_author", "label": "Show author byline", "default": true },
+    { "type": "checkbox", "id": "show_reviewer", "label": "Show vet reviewer", "default": true },
+    { "type": "text", "id": "default_author", "label": "Default author name (or set per-article metafield custom.author_name)" },
+    { "type": "text", "id": "default_reviewer", "label": "Default reviewer (or set per-article metafield custom.reviewer)", "default": "Dr. Anjali Rao, BVSc & AH" },
+    { "type": "checkbox", "id": "show_author_box", "label": "Show author box at end", "default": true },
+    { "type": "textarea", "id": "author_bio", "label": "Author bio", "default": "The Vettofit editorial team writes practical, vet-reviewed guides on everyday pet nutrition and wellness. Every article is reviewed by a licensed veterinarian before publishing." },
+    { "type": "header", "content": "Table of contents" },
+    { "type": "checkbox", "id": "enable_toc", "label": "Enable table of contents (built from H2 headings)", "default": true },
+    { "type": "text", "id": "toc_heading", "label": "TOC heading", "default": "On this page" },
+    { "type": "header", "content": "Sharing & tags" },
+    { "type": "checkbox", "id": "show_share", "label": "Show share buttons", "default": true },
+    { "type": "checkbox", "id": "show_tags", "label": "Show tags", "default": true },
+    { "type": "header", "content": "Product promotion" },
+    { "type": "product", "id": "product", "label": "Product card at end of article" },
+    { "type": "text", "id": "product_note", "label": "Product card note", "default": "Vet-approved support for this topic." },
+    { "type": "header", "content": "Related articles" },
+    { "type": "checkbox", "id": "enable_related", "label": "Show related articles", "default": true },
+    { "type": "text", "id": "related_heading", "label": "Heading", "default": "Keep reading" },
+    { "type": "range", "id": "related_limit", "label": "Number of articles", "min": 2, "max": 8, "step": 1, "default": 4 },
+    { "type": "header", "content": "Newsletter" },
+    { "type": "checkbox", "id": "show_newsletter", "label": "Show newsletter signup", "default": true },
+    { "type": "text", "id": "newsletter_heading", "label": "Heading", "default": "Better pet parenting, in your inbox." },
+    { "type": "textarea", "id": "newsletter_text", "label": "Text", "default": "One vet-reviewed guide a month. No spam, no fluff — unsubscribe anytime." }
+  ],
+  "presets": [{ "name": "VF Article v4" }]
+}
+{% endschema %}

@@ -1,0 +1,457 @@
+{%- comment -%}
+  Vettofit PDP · buy box (brand book 9.6 "Above fold")
+  Order: eyebrow chips → H1 → outcome line → rating → price → variant cards →
+         purchase option (one-time / Subscribe & save) → qty + Add to cart → Buy now →
+         OOS / limit / status messages → proof chips → delivery, payment, returns, support.
+  Params: product, sid, s, blocks, current, rating_val, rating_count, rating_pct, rating_display,
+          show_badge, badge_html, species_label, need_label, show_evidence_link
+{%- endcomment -%}
+{%- liquid
+  assign mf = product.metafields.vf
+  assign form_id = 'VfPdpForm-' | append: sid
+
+  assign add_label = s.add_label | default: 'Add to cart'
+  assign buy_label = s.buy_label | default: 'Buy now'
+  assign oos_label = s.oos_label | default: 'Back soon'
+  assign oos_msg = s.oos_message | default: 'Back soon. Get an alert when it returns.'
+  if s.oos_alert_url == blank and oos_msg contains 'Get an alert'
+    assign oos_msg = 'Back soon. We’re restocking this one.'
+  endif
+
+  assign single_option = false
+  if product.has_only_default_variant == false and product.options.size == 1
+    assign single_option = true
+  endif
+
+  assign has_plans = false
+  if s.show_subscription and product.selling_plan_groups.size > 0
+    assign has_plans = true
+  endif
+  assign sub_default = false
+  assign first_plan = nil
+  assign plan_total = 0
+  if has_plans
+    assign first_plan = product.selling_plan_groups.first.selling_plans.first
+    for g in product.selling_plan_groups
+      assign plan_total = plan_total | plus: g.selling_plans.size
+    endfor
+    if product.requires_selling_plan or s.subscription_default == 'subscribe'
+      assign sub_default = true
+    endif
+  endif
+  assign cur_alloc = current.selling_plan_allocations.first
+
+  assign show_cmp = false
+  if s.show_compare_at and current.compare_at_price > current.price
+    assign show_cmp = true
+  endif
+
+  assign any_trust = false
+  for b in blocks
+    if b.type == 'trust_badge' and b.settings.enabled
+      assign any_trust = true
+      break
+    endif
+  endfor
+
+  assign wa = s.support_whatsapp | remove: '+' | remove: ' ' | remove: '-' | remove: '(' | remove: ')'
+  assign wa_msg = 'Hi Vettofit, I have a question about ' | append: product.title
+  assign days_basis = mf.days_supply_basis.value
+
+  assign show_species = false
+  if s.show_species_chip and species_label != blank
+    assign show_species = true
+  endif
+  assign show_eyebrow = show_species
+  if need_label != blank or show_badge
+    assign show_eyebrow = true
+  endif
+-%}
+
+{%- capture unit_str -%}
+  {%- if s.show_unit_price and current.unit_price_measurement -%}
+    {{- current.unit_price | money -}}/
+    {%- if current.unit_price_measurement.reference_value != 1 -%}{{- current.unit_price_measurement.reference_value -}}{%- endif -%}
+    {{- current.unit_price_measurement.reference_unit -}}
+  {%- endif -%}
+{%- endcapture -%}
+{%- capture perday_str -%}
+  {%- assign cur_days = current.metafields.vf.days_supply.value | plus: 0 -%}
+  {%- if cur_days > 0 and days_basis != blank -%}
+    ≈ {{ current.price | divided_by: cur_days | money }} a day {{ days_basis }}
+  {%- endif -%}
+{%- endcapture -%}
+
+<div class="vf-buy">
+  {%- if show_eyebrow -%}
+    <ul class="vf-buy__eyebrow" role="list">
+      {%- if show_species -%}
+        <li class="vf-chip">{{ species_label }}</li>
+      {%- endif -%}
+      {%- if need_label != blank -%}
+        <li class="vf-chip vf-chip--accent">{{ need_label }}</li>
+      {%- endif -%}
+      {%- if show_badge -%}
+        <li class="vf-chip vf-chip--status">{{ badge_html | strip_html | strip }}</li>
+      {%- endif -%}
+    </ul>
+  {%- endif -%}
+
+  <h1 class="vf-buy__title" id="VfTitle-{{ sid }}">{{ product.title }}</h1>
+
+  {%- if mf.outcome_line.value != blank -%}
+    <p class="vf-buy__outcome">{{ mf.outcome_line.value }}</p>
+  {%- elsif request.design_mode -%}
+    <p class="vf-buy__outcome vf-ph">[PLACEHOLDER: needs vet/claim approval] One-line outcome · CONTEXT + SUPPORT VERB + OUTCOME AREA + PROOF · metafield vf.outcome_line</p>
+  {%- endif -%}
+
+  {%- if s.show_rating and rating_val > 0 -%}
+    <a
+      class="vf-rating"
+      href="#VfReviews-{{ sid }}"
+      aria-label="Rated {{ rating_display }} out of 5{% if rating_count > 0 %} from {{ rating_count }} reviews{% endif %}. Read reviews"
+    >
+      <span class="vf-stars" style="--vf-rating: {{ rating_pct }}%;" aria-hidden="true">
+        <span class="vf-stars__base">{%- for i in (1..5) -%}{%- render 'vf-icon', name: 'star', size: 16 -%}{%- endfor -%}</span>
+        <span class="vf-stars__fill">{%- for i in (1..5) -%}{%- render 'vf-icon', name: 'star', size: 16 -%}{%- endfor -%}</span>
+      </span>
+      <span class="vf-rating__value" aria-hidden="true">{{ rating_display }}</span>
+      {%- if rating_count > 0 -%}
+        <span class="vf-rating__count" aria-hidden="true">{{ rating_count }} reviews</span>
+      {%- endif -%}
+    </a>
+  {%- endif -%}
+
+  <div class="vf-price" data-vf-price-block>
+    <p class="vf-price__row">
+      <span class="vf-sr" data-vf-price-label>{% if show_cmp %}Sale price{% else %}Price{% endif %}</span>
+      <span class="vf-price__current" data-vf-price>{{ current.price | money }}</span>
+      <span class="vf-price__compare" data-vf-compare-wrap data-vf-allow="{{ s.show_compare_at }}"{% unless show_cmp %} hidden{% endunless %}>
+        <span class="vf-sr">Regular price</span>
+        <s data-vf-compare>{{ current.compare_at_price | money }}</s>
+      </span>
+    </p>
+    {%- if s.tax_note != blank -%}
+      <p class="vf-price__note">{{ s.tax_note }}</p>
+    {%- endif -%}
+    <p class="vf-price__unit" data-vf-unit{% if unit_str == blank %} hidden{% endif %}>{{ unit_str }}</p>
+    <p class="vf-price__unit" data-vf-perday{% if perday_str == blank %} hidden{% endif %}>{{ perday_str | strip }}</p>
+  </div>
+
+  {%- form 'product', product, id: form_id, class: 'vf-form', novalidate: 'novalidate', data-vf-form: '' -%}
+    <select name="id" class="vf-hidden-select" data-vf-id hidden aria-hidden="true" tabindex="-1">
+      {%- for v in product.variants -%}
+        <option value="{{ v.id }}"{% if v.id == current.id %} selected{% endif %}{% unless v.available %} disabled{% endunless %}>{{ v.title }}</option>
+      {%- endfor -%}
+    </select>
+    <input type="hidden" name="selling_plan" value="{% if sub_default and first_plan %}{{ first_plan.id }}{% endif %}" data-vf-selling-plan>
+
+    {%- unless product.has_only_default_variant -%}
+      {%- if single_option -%}
+        {%- assign opt = product.options_with_values.first -%}
+        <fieldset class="vf-field">
+          <legend class="vf-label">{{ opt.name }}<span aria-hidden="true">:</span> <span class="vf-label__value" data-vf-selected="0">{{ current.option1 }}</span></legend>
+          <div class="vf-vcards">
+            {%- for v in product.variants -%}
+              {%- liquid
+                assign v_save = 0
+                if v.compare_at_price > v.price
+                  assign v_save = v.compare_at_price | minus: v.price
+                endif
+              -%}
+              {%- capture v_unit -%}
+                {%- if s.show_unit_price and v.unit_price_measurement -%}
+                  {{- v.unit_price | money -}}/
+                  {%- if v.unit_price_measurement.reference_value != 1 -%}{{- v.unit_price_measurement.reference_value -}}{%- endif -%}
+                  {{- v.unit_price_measurement.reference_unit -}}
+                {%- endif -%}
+              {%- endcapture -%}
+              <label class="vf-vcard{% unless v.available %} is-oos{% endunless %}">
+                <input
+                  type="radio"
+                  class="vf-sr-input"
+                  name="vf-opt-{{ sid }}-0"
+                  value="{{ v.option1 | escape }}"
+                  data-vf-opt="0"
+                  {% if v.id == current.id %}checked{% endif %}
+                >
+                <span class="vf-vcard__face">
+                  <span class="vf-vcard__head">
+                    <span class="vf-vcard__name">{{ v.option1 }}</span>
+                    {%- if v.metafields.vf.most_popular.value == true -%}
+                      <span class="vf-tag">Most popular</span>
+                    {%- endif -%}
+                  </span>
+                  <span class="vf-vcard__price">{{ v.price | money }}</span>
+                  {%- if v_unit != blank -%}
+                    <span class="vf-vcard__meta">{{ v_unit }}</span>
+                  {%- endif -%}
+                  {%- if s.show_compare_at and v_save > 0 -%}
+                    <span class="vf-vcard__save">Save {{ v_save | money }}</span>
+                  {%- endif -%}
+                  {%- unless v.available -%}
+                    <span class="vf-vcard__oos">Back soon</span>
+                  {%- endunless -%}
+                </span>
+                <span class="vf-vcard__check" aria-hidden="true">{%- render 'vf-icon', name: 'check', size: 14 -%}</span>
+              </label>
+            {%- endfor -%}
+          </div>
+        </fieldset>
+      {%- else -%}
+        {%- for opt in product.options_with_values -%}
+          {%- assign oi = forloop.index0 -%}
+          <fieldset class="vf-field">
+            <legend class="vf-label">{{ opt.name }}<span aria-hidden="true">:</span> <span class="vf-label__value" data-vf-selected="{{ oi }}">{{ current.options[oi] }}</span></legend>
+            <div class="vf-opts">
+              {%- for val in opt.values -%}
+                <label class="vf-optbtn">
+                  <input
+                    type="radio"
+                    class="vf-sr-input"
+                    name="vf-opt-{{ sid }}-{{ oi }}"
+                    value="{{ val | escape }}"
+                    data-vf-opt="{{ oi }}"
+                    {% if current.options[oi] == val %}checked{% endif %}
+                  >
+                  <span class="vf-optbtn__face">{{ val }}<span class="vf-sr" data-vf-optstate></span></span>
+                </label>
+              {%- endfor -%}
+            </div>
+          </fieldset>
+        {%- endfor -%}
+      {%- endif -%}
+    {%- endunless -%}
+
+    {%- if has_plans -%}
+      <fieldset class="vf-field vf-purchase">
+        <legend class="vf-label">Purchase option</legend>
+        <div class="vf-choices">
+          {%- unless product.requires_selling_plan -%}
+            <label class="vf-choice">
+              <input type="radio" class="vf-sr-input" name="vf-purchase-{{ sid }}" value="onetime" data-vf-purchase{% unless sub_default %} checked{% endunless %}>
+              <span class="vf-choice__face">
+                <span class="vf-choice__radio" aria-hidden="true"></span>
+                <span class="vf-choice__title">{{ s.onetime_label | default: 'One-time purchase' }}</span>
+                <span class="vf-choice__price" data-vf-onetime-price>{{ current.price | money }}</span>
+              </span>
+            </label>
+          {%- endunless -%}
+          <label class="vf-choice">
+            <input type="radio" class="vf-sr-input" name="vf-purchase-{{ sid }}" value="subscribe" data-vf-purchase{% if sub_default %} checked{% endif %}>
+            <span class="vf-choice__face">
+              <span class="vf-choice__radio" aria-hidden="true"></span>
+              <span class="vf-choice__title">
+                {{ s.sub_label | default: 'Subscribe & save' }}
+                <span class="vf-tag vf-tag--signal" data-vf-sub-save hidden></span>
+              </span>
+              <span class="vf-choice__price" data-vf-sub-price>{% if cur_alloc %}{{ cur_alloc.price | money }}{% endif %}</span>
+            </span>
+          </label>
+        </div>
+        <div class="vf-purchase__detail" data-vf-plan-detail{% unless sub_default %} hidden{% endunless %}>
+          {%- if plan_total > 1 -%}
+            <label class="vf-label vf-label--sm" for="VfPlan-{{ sid }}">Delivery frequency</label>
+            <div class="vf-select">
+              <select id="VfPlan-{{ sid }}" class="vf-select__input" data-vf-plan-select>
+                {%- for g in product.selling_plan_groups -%}
+                  {%- for p in g.selling_plans -%}
+                    <option value="{{ p.id }}">{{ p.name }}</option>
+                  {%- endfor -%}
+                {%- endfor -%}
+              </select>
+              {%- render 'vf-icon', name: 'chevron-down', size: 18 -%}
+            </div>
+          {%- else -%}
+            <input type="hidden" value="{{ first_plan.id }}" data-vf-plan-select>
+            <p class="vf-purchase__plan">{%- render 'vf-icon', name: 'calendar', size: 18 -%}<span>{{ first_plan.name }}</span></p>
+          {%- endif -%}
+          {%- if s.sub_note != blank -%}
+            <p class="vf-purchase__note">{{ s.sub_note }}</p>
+          {%- elsif request.design_mode -%}
+            <p class="vf-purchase__note vf-ph">[PLACEHOLDER: subscription terms, e.g. how to pause or cancel. Confirm against your subscription app's policy.]</p>
+          {%- endif -%}
+        </div>
+      </fieldset>
+    {%- endif -%}
+
+    <div class="vf-cta" data-vf-cta-anchor>
+      <div class="vf-qty" data-vf-qty>
+        <label class="vf-sr" for="VfQty-{{ sid }}">Quantity</label>
+        <button type="button" class="vf-qty__btn" data-vf-qty-dec aria-label="Decrease quantity">
+          {%- render 'vf-icon', name: 'minus', size: 18 -%}
+        </button>
+        <input
+          id="VfQty-{{ sid }}"
+          class="vf-qty__input"
+          type="number"
+          name="quantity"
+          value="1"
+          min="1"
+          {% if s.max_per_variant > 0 %}max="{{ s.max_per_variant }}"{% endif %}
+          inputmode="numeric"
+          data-vf-qty-input
+        >
+        <button type="button" class="vf-qty__btn" data-vf-qty-inc aria-label="Increase quantity">
+          {%- render 'vf-icon', name: 'plus', size: 18 -%}
+        </button>
+      </div>
+      <button
+        type="submit"
+        name="add"
+        class="vf-btn vf-btn--primary vf-cta__add"
+        data-vf-add
+        {% unless current.available %}disabled{% endunless %}
+      >
+        <span data-vf-add-label>{% if current.available %}{{ add_label }}{% else %}{{ oos_label }}{% endif %}</span>
+      </button>
+    </div>
+
+    {%- if s.show_buy_now -%}
+      <button type="button" class="vf-btn vf-btn--secondary vf-cta__buy" data-vf-buy{% unless current.available %} hidden{% endunless %}>
+        {{ buy_label }}
+      </button>
+    {%- endif -%}
+
+    <div class="vf-msg vf-msg--oos" data-vf-oos{% if current.available %} hidden{% endif %}>
+      {%- render 'vf-icon', name: 'clock', size: 18 -%}
+      <p>
+        {{ oos_msg }}
+        {%- if s.oos_alert_url != blank -%}
+          <a class="vf-textlink" href="{{ s.oos_alert_url }}" data-vf-notify>Get an alert</a>
+        {%- endif -%}
+      </p>
+    </div>
+    <div class="vf-msg" data-vf-limit hidden>
+      {%- render 'vf-icon', name: 'info', size: 18 -%}
+      <p>{{ s.limit_message | default: 'You have the maximum for this item in your cart.' }}</p>
+    </div>
+    <div class="vf-msg vf-msg--error" data-vf-error role="alert" hidden>
+      {%- render 'vf-icon', name: 'alert', size: 18 -%}
+      <p data-vf-error-text></p>
+    </div>
+    <div class="vf-msg vf-msg--ok" data-vf-status hidden>
+      {%- render 'vf-icon', name: 'check', size: 18 -%}
+      <p><span data-vf-status-text></span> <a class="vf-textlink" href="{{ routes.cart_url }}">View cart</a></p>
+    </div>
+  {%- endform -%}
+
+  {%- if any_trust -%}
+    <div class="vf-proof">
+      <ul class="vf-proof__list" role="list">
+        {%- for b in blocks -%}
+          {%- if b.type == 'trust_badge' and b.settings.enabled -%}
+            <li class="vf-proof__item" {{ b.shopify_attributes }}>
+              {%- if b.settings.badge_icon != blank -%}
+                {{ b.settings.badge_icon | image_url: width: 48 | image_tag: width: 20, height: 20, alt: '', loading: 'lazy', class: 'vf-proof__img' }}
+              {%- else -%}
+                {%- render 'vf-icon', name: b.settings.icon, size: 20 -%}
+              {%- endif -%}
+              <span>{{ b.settings.badge_text | strip_html | strip }}</span>
+            </li>
+          {%- endif -%}
+        {%- endfor -%}
+      </ul>
+      {%- if show_evidence_link -%}
+        <a class="vf-textlink vf-proof__link" href="#VfEvidence-{{ sid }}">
+          See the evidence{%- render 'vf-icon', name: 'arrow-right', size: 16 -%}
+        </a>
+      {%- endif -%}
+    </div>
+  {%- endif -%}
+
+  <ul class="vf-service" role="list">
+    {%- if s.delivery_text != blank -%}
+      <li class="vf-service__item">{%- render 'vf-icon', name: 'truck', size: 20 -%}<span>{{ s.delivery_text }}</span></li>
+    {%- elsif request.design_mode -%}
+      <li class="vf-service__item vf-ph">{%- render 'vf-icon', name: 'truck', size: 20 -%}<span>[PLACEHOLDER: delivery promise, e.g. dispatch time and delivery window]</span></li>
+    {%- endif -%}
+
+    {%- if s.pincode_endpoint != blank -%}
+      <li class="vf-service__item vf-service__item--block">
+        <form class="vf-pin" data-vf-pincode data-endpoint="{{ s.pincode_endpoint | escape }}" novalidate>
+          <label class="vf-label vf-label--sm" for="VfPin-{{ sid }}">Check delivery to your pincode</label>
+          <div class="vf-pin__row">
+            <input
+              id="VfPin-{{ sid }}"
+              class="vf-input"
+              type="text"
+              inputmode="numeric"
+              autocomplete="postal-code"
+              maxlength="6"
+              pattern="[1-9][0-9]{5}"
+              placeholder="6-digit pincode"
+              aria-describedby="VfPinOut-{{ sid }}"
+            >
+            <button type="submit" class="vf-btn vf-btn--secondary vf-btn--sm">Check</button>
+          </div>
+          <p class="vf-pin__out" id="VfPinOut-{{ sid }}" data-vf-pincode-out aria-live="polite"></p>
+        </form>
+      </li>
+    {%- endif -%}
+
+    {%- if s.payments_text != blank -%}
+      <li class="vf-service__item">{%- render 'vf-icon', name: 'wallet', size: 20 -%}<span>{{ s.payments_text }}</span></li>
+    {%- elsif request.design_mode -%}
+      <li class="vf-service__item vf-ph">{%- render 'vf-icon', name: 'wallet', size: 20 -%}<span>[PLACEHOLDER: payment methods + COD availability and fee]</span></li>
+    {%- endif -%}
+
+    {%- if s.returns_text != blank -%}
+      <li class="vf-service__item">{%- render 'vf-icon', name: 'return', size: 20 -%}<span>{{ s.returns_text }}</span></li>
+    {%- elsif request.design_mode -%}
+      <li class="vf-service__item vf-ph">{%- render 'vf-icon', name: 'return', size: 20 -%}<span>[PLACEHOLDER: returns policy summary]</span></li>
+    {%- endif -%}
+
+    {%- if wa != blank -%}
+      <li class="vf-service__item">
+        {%- render 'vf-icon', name: 'chat', size: 20 -%}
+        <span>
+          <a class="vf-textlink" href="https://wa.me/{{ wa }}?text={{ wa_msg | url_encode }}" target="_blank" rel="noopener">
+            {{- s.support_label | default: 'Questions about fit or dosage? Chat with our team' -}}<span class="vf-sr"> (opens WhatsApp)</span>
+          </a>
+          {%- if s.support_hours != blank -%}<span class="vf-service__sub">{{ s.support_hours }}</span>{%- endif -%}
+        </span>
+      </li>
+    {%- endif -%}
+  </ul>
+</div>
+
+{%- comment -%} Variant data for vf-pdp.js — money is pre-formatted server-side (shop format, Markets-safe). {%- endcomment -%}
+<script type="application/json" data-vf-variants>
+  [
+    {%- for v in product.variants -%}
+      {%- capture v_unit_json -%}
+        {%- if s.show_unit_price and v.unit_price_measurement -%}
+          {{- v.unit_price | money | strip_html -}}/
+          {%- if v.unit_price_measurement.reference_value != 1 -%}{{- v.unit_price_measurement.reference_value -}}{%- endif -%}
+          {{- v.unit_price_measurement.reference_unit -}}
+        {%- endif -%}
+      {%- endcapture -%}
+      {%- capture v_day_json -%}
+        {%- assign v_days = v.metafields.vf.days_supply.value | plus: 0 -%}
+        {%- if v_days > 0 and days_basis != blank -%}
+          ≈ {{ v.price | divided_by: v_days | money | strip_html }} a day {{ days_basis }}
+        {%- endif -%}
+      {%- endcapture -%}
+      {
+        "id": {{ v.id }},
+        "title": {{ v.title | json }},
+        "options": {{ v.options | json }},
+        "available": {{ v.available | json }},
+        "sku": {{ v.sku | json }},
+        "price": {{ v.price }},
+        "price_fmt": {{ v.price | money | strip_html | json }},
+        "compare": {{ v.compare_at_price | default: 0 }},
+        "compare_fmt": {{ v.compare_at_price | money | strip_html | json }},
+        "unit_fmt": {{ v_unit_json | strip | json }},
+        "perday_fmt": {{ v_day_json | strip | json }},
+        "media_id": {{ v.featured_media.id | default: 0 }},
+        "plans": {
+          {%- for a in v.selling_plan_allocations -%}
+            "{{ a.selling_plan.id }}": { "price": {{ a.price }}, "price_fmt": {{ a.price | money | strip_html | json }}, "compare": {{ a.compare_at_price | default: 0 }} }{% unless forloop.last %},{% endunless %}
+          {%- endfor -%}
+        }
+      }{% unless forloop.last %},{% endunless %}
+    {%- endfor -%}
+  ]
+</script>

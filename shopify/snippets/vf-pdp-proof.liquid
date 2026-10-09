@@ -1,0 +1,253 @@
+{%- comment -%}
+  Vettofit PDP · proof zones (brand book 9.6 + Ch. 5):
+  Evidence band (Night Plum) → How to use (dosage table + calculator) → What to expect.
+  Claims shown here come only from approved metaobjects. Nothing is invented in code.
+  Params: product, sid, s, species_words
+{%- endcomment -%}
+{%- liquid
+  assign mf = product.metafields.vf
+  assign design = request.design_mode
+
+  assign vet = mf.vet_reviewer.value
+  assign evs = mf.evidence.value
+  assign ev_count = 0
+  if evs != blank
+    assign ev_count = evs.size
+  endif
+
+  assign fg = mf.feeding_guide.value
+  assign fg_tables = 0
+  if fg != blank and fg.tables != blank
+    assign fg_tables = fg.tables.size
+  endif
+  assign fg_unit = fg.unit_label | default: 'Daily amount'
+  assign steps = mf.how_to_steps.value
+  assign step_count = 0
+  if steps != blank
+    assign step_count = steps.size
+  endif
+  assign storage = mf.storage.value
+  assign safety = mf.safety_notes
+
+  assign rsteps = mf.result_window.value
+  assign r_count = 0
+  if rsteps != blank
+    assign r_count = rsteps.size
+  endif
+  assign vet_threshold = mf.result_vet_threshold.value | default: 'If anything persists or gets worse, speak to your vet.'
+-%}
+
+{%- comment -%} ── 6 · Evidence band ── {%- endcomment -%}
+{%- if s.show_evidence -%}
+  {%- if vet != blank or ev_count > 0 or design -%}
+    <section class="vf-band vf-evidence" id="VfEvidence-{{ sid }}" aria-labelledby="VfEvH-{{ sid }}" tabindex="-1">
+      <div class="vf-container vf-evidence__grid">
+        <div class="vf-evidence__intro">
+          <p class="vf-eyebrow vf-eyebrow--on-dark">Vet-backed. Pet-first.</p>
+          <h2 class="vf-h2" id="VfEvH-{{ sid }}">{{ s.evidence_title | default: 'What earns your trust' }}</h2>
+          {%- if s.evidence_intro != blank -%}<p class="vf-lead">{{ s.evidence_intro }}</p>{%- endif -%}
+
+          {%- if vet != blank -%}
+            <figure class="vf-vet">
+              {%- if vet.photo.value != blank -%}
+                {{ vet.photo.value | image_url: width: 192 | image_tag: width: 72, height: 72, loading: 'lazy', alt: '', class: 'vf-vet__photo' }}
+              {%- else -%}
+                <span class="vf-vet__mono" aria-hidden="true">{{ vet.name.value | slice: 0 }}</span>
+              {%- endif -%}
+              <figcaption class="vf-vet__text">
+                <span class="vf-vet__label">Formula reviewed by</span>
+                <span class="vf-vet__name">{{ vet.name.value }}</span>
+                {%- if vet.credential.value != blank -%}<span class="vf-vet__cred">{{ vet.credential.value }}</span>{%- endif -%}
+                {%- if vet.review_scope.value != blank -%}<span class="vf-vet__scope">{{ vet.review_scope.value }}</span>{%- endif -%}
+                {%- if vet.review_date.value != blank -%}
+                  <span class="vf-vet__date">Reviewed <time datetime="{{ vet.review_date.value }}">{{ vet.review_date.value | date: '%B %Y' }}</time></span>
+                {%- endif -%}
+              </figcaption>
+            </figure>
+          {%- elsif design -%}
+            <p class="vf-ph vf-ph--dark">[PLACEHOLDER] Vet reviewer card · metaobject vf_expert via vf.vet_reviewer (name, credential, review scope, review date). Never invent a reviewer.</p>
+          {%- endif -%}
+        </div>
+
+        <div class="vf-evidence__body">
+          {%- if ev_count > 0 -%}
+            <ul class="vf-evidence__list" role="list">
+              {%- for ev in evs -%}
+                {%- liquid
+                  assign cert = ev.certificate.value
+                  assign cert_url = ''
+                  if cert != blank
+                    if cert.media_type == 'image'
+                      assign cert_url = cert | image_url: width: 2400
+                    else
+                      assign cert_url = cert.url
+                    endif
+                  endif
+                -%}
+                <li class="vf-ev">
+                  {%- if ev.type.value != blank -%}<p class="vf-chip vf-chip--signal">{{ ev.type.value }}</p>{%- endif -%}
+                  <h3 class="vf-h4">{{ ev.claim.value }}</h3>
+                  {%- if ev.detail.value != blank -%}<p class="vf-ev__detail">{{ ev.detail.value }}</p>{%- endif -%}
+                  <p class="vf-ev__meta">
+                    {%- if cert_url != blank -%}
+                      <a class="vf-textlink vf-textlink--on-dark" href="{{ cert_url }}" target="_blank" rel="noopener">
+                        {%- render 'vf-icon', name: 'study', size: 18 -%}View certificate<span class="vf-sr"> (opens in a new tab)</span>
+                      </a>
+                    {%- endif -%}
+                    {%- if ev.source_url.value != blank -%}
+                      <a class="vf-textlink vf-textlink--on-dark" href="{{ ev.source_url.value }}" target="_blank" rel="noopener">
+                        {%- render 'vf-icon', name: 'arrow-right', size: 18 -%}Source<span class="vf-sr"> (opens in a new tab)</span>
+                      </a>
+                    {%- endif -%}
+                    {%- if ev.review_date.value != blank -%}
+                      <span class="vf-ev__date">Reviewed <time datetime="{{ ev.review_date.value }}">{{ ev.review_date.value | date: '%b %Y' }}</time></span>
+                    {%- endif -%}
+                  </p>
+                </li>
+              {%- endfor -%}
+            </ul>
+          {%- elsif design -%}
+            <p class="vf-ph vf-ph--dark">[PLACEHOLDER] Evidence items · metaobject vf_evidence via vf.evidence. Types allowed: Vet-approved formula · Made with human-grade ingredients · Made with clinically studied ingredients · Third-party tested for [attribute].</p>
+          {%- endif -%}
+        </div>
+      </div>
+    </section>
+  {%- endif -%}
+{%- endif -%}
+
+{%- comment -%} ── 7 · How to use ── {%- endcomment -%}
+{%- if s.show_howto -%}
+  {%- if fg_tables > 0 or step_count > 0 or safety != blank or design -%}
+    <section class="vf-zone vf-howto" aria-labelledby="VfHowH-{{ sid }}" data-vf-howto>
+      <div class="vf-container vf-howto__grid">
+        <header class="vf-zone__head vf-howto__head">
+          <p class="vf-eyebrow">Routine</p>
+          <h2 class="vf-h2" id="VfHowH-{{ sid }}">{{ s.howto_title | default: 'How to use' }}</h2>
+          {%- if fg.intro != blank -%}<p class="vf-lead">{{ fg.intro }}</p>{%- endif -%}
+        </header>
+
+        <div class="vf-howto__dose">
+          {%- if fg_tables > 0 -%}
+            {%- if fg_tables > 1 -%}
+              <fieldset class="vf-seg" data-vf-dose-switch hidden>
+                <legend class="vf-sr">Show amounts for</legend>
+                {%- for t in fg.tables -%}
+                  <label class="vf-seg__opt">
+                    <input class="vf-sr-input" type="radio" name="vf-dose-{{ sid }}" value="{{ forloop.index0 }}"{% if forloop.first %} checked{% endif %}>
+                    <span>{{ t.label }}</span>
+                  </label>
+                {%- endfor -%}
+              </fieldset>
+            {%- endif -%}
+
+            {%- if s.show_calculator -%}
+              <form class="vf-calc" data-vf-calc hidden novalidate>
+                <label class="vf-label vf-label--sm" for="VfCalc-{{ sid }}">Your pet’s weight (kg)</label>
+                <div class="vf-calc__row">
+                  {%- render 'vf-icon', name: 'scale', size: 20 -%}
+                  <input id="VfCalc-{{ sid }}" class="vf-input" type="number" inputmode="decimal" min="0.5" max="100" step="0.1" placeholder="e.g. 12" aria-describedby="VfCalcOut-{{ sid }}">
+                </div>
+                <output class="vf-calc__out" id="VfCalcOut-{{ sid }}" data-vf-calc-out aria-live="polite"></output>
+              </form>
+            {%- endif -%}
+
+            {%- for t in fg.tables -%}
+              <div class="vf-dose" data-vf-dose-table="{{ forloop.index0 }}">
+                <table class="vf-dose__table">
+                  <caption class="{% if fg_tables > 1 %}vf-dose__cap{% else %}vf-sr{% endif %}">
+                    {{ fg_unit }} by body weight{% if t.label != blank %} · {{ t.label }}{% endif %}
+                  </caption>
+                  <thead>
+                    <tr><th scope="col">Body weight</th><th scope="col">{{ fg_unit }}</th></tr>
+                  </thead>
+                  <tbody>
+                    {%- for r in t.rows -%}
+                      {%- liquid
+                        assign rmin = r.min_kg | default: 0
+                        assign rmax = r.max_kg
+                      -%}
+                      <tr data-min="{{ rmin }}" data-max="{{ rmax }}">
+                        <th scope="row">
+                          {%- if rmax == blank -%}{{ rmin }} kg and over
+                          {%- elsif rmin == 0 -%}Up to {{ rmax }} kg
+                          {%- else -%}{{ rmin }}–{{ rmax }} kg{%- endif -%}
+                        </th>
+                        <td>{{ r.amount }}</td>
+                      </tr>
+                    {%- endfor -%}
+                  </tbody>
+                </table>
+              </div>
+            {%- endfor -%}
+            {%- if fg.note != blank -%}<p class="vf-dose__note">{%- render 'vf-icon', name: 'info', size: 16 -%}<span>{{ fg.note }}</span></p>{%- endif -%}
+          {%- elsif design -%}
+            <p class="vf-ph">[PLACEHOLDER: needs vet approval] Dosage table · JSON metafield vf.feeding_guide — see docs/07-metafields.md for the schema.</p>
+          {%- endif -%}
+        </div>
+
+        <div class="vf-howto__side">
+          {%- if step_count > 0 -%}
+            <ol class="vf-steps" role="list">
+              {%- for st in steps -%}
+                <li class="vf-steps__item">
+                  <span class="vf-steps__n" aria-hidden="true">{% if forloop.index < 10 %}0{% endif %}{{ forloop.index }}</span>
+                  <p>{{ st }}</p>
+                </li>
+              {%- endfor -%}
+            </ol>
+          {%- endif -%}
+          {%- if storage != blank -%}
+            <p class="vf-howto__storage">{%- render 'vf-icon', name: 'box', size: 20 -%}<span><strong>Storage</strong> {{ storage }}</span></p>
+          {%- endif -%}
+          {%- if safety != blank -%}
+            <aside class="vf-callout" aria-labelledby="VfSafeH-{{ sid }}">
+              <p class="vf-callout__title" id="VfSafeH-{{ sid }}">{%- render 'vf-icon', name: 'alert', size: 18 -%}Before you start</p>
+              <div class="vf-callout__body vf-rte">
+                {%- if safety.type == 'rich_text_field' -%}
+                  {{ safety | metafield_tag }}
+                {%- else -%}
+                  {{ safety.value | escape | newline_to_br }}
+                {%- endif -%}
+              </div>
+            </aside>
+          {%- elsif design -%}
+            <p class="vf-ph">[PLACEHOLDER: needs vet approval] Safety notes · vf.safety_notes (age, pregnancy/lactation, medication, when to ask a vet).</p>
+          {%- endif -%}
+        </div>
+      </div>
+    </section>
+  {%- endif -%}
+{%- endif -%}
+
+{%- comment -%} ── 8 · What to expect (Ch. 5.5: approved timelines only, always with a vet threshold) ── {%- endcomment -%}
+{%- if s.show_expect -%}
+  {%- if r_count > 0 or design -%}
+    <section class="vf-zone vf-expect" aria-labelledby="VfExpH-{{ sid }}">
+      <div class="vf-container">
+        <header class="vf-zone__head">
+          <p class="vf-eyebrow">What to watch for</p>
+          <h2 class="vf-h2" id="VfExpH-{{ sid }}">{{ s.expect_title | default: 'What to expect' }}</h2>
+        </header>
+        {%- if r_count > 0 -%}
+          {%- assign r_cols = r_count | at_most: 4 -%}
+          <ol class="vf-timeline vf-cols-{{ r_cols }}" role="list">
+            {%- for st in rsteps -%}
+              <li class="vf-timeline__step">
+                <span class="vf-timeline__marker" aria-hidden="true"></span>
+                {%- if st.window.value != blank -%}<p class="vf-eyebrow">{{ st.window.value }}</p>{%- endif -%}
+                <h3 class="vf-h4">{{ st.title.value }}</h3>
+                {%- if st.track.value != blank -%}<p class="vf-timeline__track"><strong>Track:</strong> {{ st.track.value }}</p>{%- endif -%}
+              </li>
+            {%- endfor -%}
+          </ol>
+        {%- else -%}
+          <p class="vf-ph">[PLACEHOLDER: needs vet/claim approval] Timeline · vf.result_window (vf_result_step: window, what you may notice, what to track). Publish only evidence-supported windows.</p>
+        {%- endif -%}
+        <div class="vf-expect__foot">
+          {%- if s.expect_note != blank -%}<p class="vf-expect__note">{{ s.expect_note }}</p>{%- endif -%}
+          <p class="vf-callout vf-callout--inline">{%- render 'vf-icon', name: 'chat', size: 18 -%}<span>{{ vet_threshold }}</span></p>
+        </div>
+      </div>
+    </section>
+  {%- endif -%}
+{%- endif -%}

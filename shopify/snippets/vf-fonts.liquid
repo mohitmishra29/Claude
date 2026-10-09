@@ -1,0 +1,25 @@
+{%- comment -%}
+  Optional licensed Helvetica Now webfont (client override of the brand book's Inter).
+  Off by default: the system stack "Helvetica Neue", Helvetica, Arial, sans-serif is used.
+  Note: Android maps Helvetica/Arial to Roboto; Windows renders Arial.
+
+  To enable once Monotype WOFF2 files are licensed (web licence is pageview-based):
+  1. Upload to /assets with exactly these names:
+       HelveticaNowText-Regular.woff2   (400)
+       HelveticaNowText-Medium.woff2    (500)
+       HelveticaNowText-Bold.woff2      (700)
+       HelveticaNowDisplay-Bold.woff2   (700, headings)
+  2. Theme Editor → Vettofit PDP → Typography → tick "Use licensed Helvetica Now webfont".
+  3. For best LCP, move this render into layout/theme.liquid <head> instead.
+{%- endcomment -%}
+{{ 'HelveticaNowText-Regular.woff2' | asset_url | preload_tag: as: 'font', type: 'font/woff2', crossorigin: 'anonymous' }}
+<style>
+  @font-face { font-family: "Helvetica Now Text"; src: url("{{ 'HelveticaNowText-Regular.woff2' | asset_url }}") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+  @font-face { font-family: "Helvetica Now Text"; src: url("{{ 'HelveticaNowText-Medium.woff2' | asset_url }}") format("woff2"); font-weight: 500; font-style: normal; font-display: swap; }
+  @font-face { font-family: "Helvetica Now Text"; src: url("{{ 'HelveticaNowText-Bold.woff2' | asset_url }}") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
+  @font-face { font-family: "Helvetica Now Display"; src: url("{{ 'HelveticaNowDisplay-Bold.woff2' | asset_url }}") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
+  :root {
+    --vf-font-text: "Helvetica Now Text", var(--vf-font-system);
+    --vf-font-display: "Helvetica Now Display", "Helvetica Now Text", var(--vf-font-system);
+  }
+</style>

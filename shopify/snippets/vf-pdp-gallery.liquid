@@ -1,0 +1,161 @@
+{%- comment -%}
+  Vettofit PDP · gallery
+  Mobile/tablet: native scroll-snap swipe carousel + dots + counter (no JS swipe maths).
+  1024–1279: thumbnails under the stage · 1280+: vertical thumb rail + stage.
+  First image is the LCP element: eager + fetchpriority="high". Everything else lazy.
+  Params: product, sid, s (section.settings)
+{%- endcomment -%}
+{%- liquid
+  assign media_count = product.media.size
+  if media_count > 12
+    assign media_count = 12
+  endif
+  assign zoom = s.gallery_zoom
+  assign title_esc = product.title | escape
+-%}
+<div class="vf-gallery{% if media_count > 1 %} vf-gallery--multi{% endif %}" data-vf-gallery>
+  {%- if media_count > 1 -%}
+    <div class="vf-gallery__rail">
+      <ul class="vf-thumbs" role="list" data-vf-thumbs>
+        {%- for m in product.media limit: 12 -%}
+          <li class="vf-thumbs__item">
+            <button
+              type="button"
+              class="vf-thumb"
+              data-vf-thumb="{{ forloop.index0 }}"
+              aria-label="Show image {{ forloop.index }} of {{ media_count }}"
+              {% if forloop.first %}aria-current="true"{% endif %}
+            >
+              {%- if m.preview_image -%}
+                {{ m.preview_image | image_url: width: 160 | image_tag: widths: '80,120,160', sizes: '72px', loading: 'lazy', alt: '', class: 'vf-thumb__img' }}
+              {%- endif -%}
+              {%- if m.media_type == 'video' or m.media_type == 'external_video' -%}
+                <span class="vf-thumb__play">{%- render 'vf-icon', name: 'play', size: 14 -%}</span>
+              {%- endif -%}
+            </button>
+          </li>
+        {%- endfor -%}
+      </ul>
+    </div>
+  {%- endif -%}
+
+  <div class="vf-gallery__main">
+    <div
+      class="vf-gallery__track"
+      data-vf-track
+      role="region"
+      aria-roledescription="carousel"
+      aria-label="{{ title_esc }} images"
+      tabindex="0"
+    >
+      {%- for m in product.media limit: 12 -%}
+        <div
+          class="vf-slide"
+          data-vf-slide
+          data-media-id="{{ m.id }}"
+          role="group"
+          aria-roledescription="slide"
+          aria-label="{{ forloop.index }} of {{ media_count }}"
+        >
+          {%- case m.media_type -%}
+            {%- when 'video' -%}
+              {{ m | video_tag: image_size: '1100x', controls: true, muted: true, playsinline: true, preload: 'none', class: 'vf-slide__video' }}
+            {%- when 'external_video' -%}
+              {%- assign video_title = m.alt | default: product.title | escape -%}
+              <iframe
+                class="vf-slide__video"
+                src="{{ m | external_video_url: rel: 0, playsinline: 1 }}"
+                title="{{ video_title }}"
+                loading="lazy"
+                allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen
+              ></iframe>
+            {%- else -%}
+              {%- liquid
+                if forloop.first
+                  assign img_loading = 'eager'
+                  assign img_priority = 'high'
+                else
+                  assign img_loading = 'lazy'
+                  assign img_priority = 'auto'
+                endif
+                assign img_alt = m.alt | default: product.title
+              -%}
+              {%- capture slide_img -%}
+                {{ m.preview_image | image_url: width: 1600 | image_tag: widths: '360,540,720,900,1100,1400,1600', sizes: '(min-width: 1440px) 720px, (min-width: 1280px) 48vw, (min-width: 1024px) 50vw, (min-width: 768px) 46vw, 100vw', loading: img_loading, fetchpriority: img_priority, alt: img_alt, class: 'vf-slide__img' }}
+              {%- endcapture -%}
+              {%- if zoom -%}
+                <button
+                  type="button"
+                  class="vf-slide__open"
+                  data-vf-zoom-open="{{ forloop.index0 }}"
+                  aria-label="Open image {{ forloop.index }} of {{ media_count }} full screen"
+                >
+                  {{- slide_img -}}
+                  <span class="vf-slide__zoom" aria-hidden="true">{%- render 'vf-icon', name: 'zoom', size: 20 -%}</span>
+                </button>
+              {%- else -%}
+                {{- slide_img -}}
+              {%- endif -%}
+          {%- endcase -%}
+        </div>
+      {%- else -%}
+        <div class="vf-slide vf-slide--empty" data-vf-slide>
+          {{ 'product-1' | placeholder_svg_tag: 'vf-slide__placeholder' }}
+        </div>
+      {%- endfor -%}
+    </div>
+
+    {%- if media_count > 1 -%}
+      <button type="button" class="vf-gallery__nav vf-gallery__nav--prev" data-vf-prev aria-label="Previous image">
+        {%- render 'vf-icon', name: 'chevron-left', size: 20 -%}
+      </button>
+      <button type="button" class="vf-gallery__nav vf-gallery__nav--next" data-vf-next aria-label="Next image">
+        {%- render 'vf-icon', name: 'chevron-right', size: 20 -%}
+      </button>
+    {%- endif -%}
+  </div>
+
+  {%- if media_count > 1 -%}
+    <div class="vf-gallery__meta">
+      <div class="vf-dots" aria-hidden="true">
+        {%- for m in product.media limit: 12 -%}
+          <span class="vf-dot{% if forloop.first %} is-active{% endif %}" data-vf-dot></span>
+        {%- endfor -%}
+      </div>
+      <p class="vf-counter"><span class="vf-sr">Image </span><span data-vf-counter>1 / {{ media_count }}</span></p>
+    </div>
+  {%- endif -%}
+
+  {%- if zoom and media_count > 0 -%}
+    <dialog class="vf-lightbox" data-vf-lightbox aria-label="{{ title_esc }}: full-screen images">
+      <div class="vf-lightbox__bar">
+        <p class="vf-lightbox__count" data-vf-lb-counter>1 / {{ media_count }}</p>
+        <button type="button" class="vf-iconbtn" data-vf-lb-close aria-label="Close full-screen images">
+          {%- render 'vf-icon', name: 'close', size: 22 -%}
+        </button>
+      </div>
+      <div class="vf-lightbox__track" data-vf-lb-track>
+        {%- for m in product.media limit: 12 -%}
+          {%- assign lb_alt = m.alt | default: product.title -%}
+          <figure class="vf-lightbox__slide" data-vf-lb-slide>
+            {%- if m.preview_image -%}
+              {{ m.preview_image | image_url: width: 2400 | image_tag: widths: '900,1400,2000,2400', sizes: '100vw', loading: 'lazy', alt: lb_alt, class: 'vf-lightbox__img' }}
+            {%- endif -%}
+            {%- if m.media_type == 'video' or m.media_type == 'external_video' -%}
+              <figcaption class="vf-lightbox__caption">Play this video in the main gallery.</figcaption>
+            {%- endif -%}
+          </figure>
+        {%- endfor -%}
+      </div>
+      {%- if media_count > 1 -%}
+        <button type="button" class="vf-iconbtn vf-lightbox__nav vf-lightbox__nav--prev" data-vf-lb-prev aria-label="Previous image">
+          {%- render 'vf-icon', name: 'chevron-left', size: 22 -%}
+        </button>
+        <button type="button" class="vf-iconbtn vf-lightbox__nav vf-lightbox__nav--next" data-vf-lb-next aria-label="Next image">
+          {%- render 'vf-icon', name: 'chevron-right', size: 22 -%}
+        </button>
+      {%- endif -%}
+    </dialog>
+  {%- endif -%}
+</div>

@@ -1,0 +1,24 @@
+{
+  "sections": {
+    "main": {
+      "type": "vf-pdp",
+      "blocks": {
+        "proof_vet": {
+          "type": "trust_badge",
+          "settings": { "enabled": true, "icon": "shield-check", "badge_text": "Vet-approved formula" }
+        },
+        "proof_tested": {
+          "type": "trust_badge",
+          "settings": { "enabled": true, "icon": "beaker", "badge_text": "Third-party tested" }
+        },
+        "proof_grade": {
+          "type": "trust_badge",
+          "settings": { "enabled": true, "icon": "leaf", "badge_text": "Human-grade ingredients" }
+        }
+      },
+      "block_order": ["proof_vet", "proof_tested", "proof_grade"],
+      "settings": {}
+    }
+  },
+  "order": ["main"]
+}

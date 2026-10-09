@@ -1,0 +1,119 @@
+{%- comment -%}
+  Vettofit PDP · structured data (Product + Offer[] + AggregateRating, BreadcrumbList, FAQPage).
+  Fixes vs NM v6.1:
+  - image[] no longer emits a trailing comma when a video sits among the first 5 media (invalid JSON).
+  - aggregateRating only when BOTH a rating and a real review count exist (no "reviewCount: 1" default).
+  - Offers are an array of Offer (eligible for merchant listings) priced in the active market currency.
+  - FAQPage built from the same sources as the visible accordion (product vf.faq + FAQ blocks).
+  Params: product, s, blocks, current, rating_val, rating_count
+{%- endcomment -%}
+{%- liquid
+  assign bc_collection = collection | default: product.collections.first
+  assign brand_name = s.seo_brand | default: product.vendor
+  assign desc = product.description | strip_html | strip_newlines | strip | truncate: 5000
+  assign currency = cart.currency.iso_code | default: shop.currency
+  assign cur_sku = current.sku | default: current.id | append: ''
+-%}
+{%- if s.seo_enable_product_schema -%}
+  {%- assign img_n = 0 -%}
+  {%- capture img_json -%}
+    {%- for m in product.media -%}
+      {%- if m.media_type == 'image' and img_n < 5 -%}
+        {%- if img_n > 0 -%},{%- endif -%}
+        {{- m | image_url: width: 1200 | prepend: 'https:' | json -}}
+        {%- assign img_n = img_n | plus: 1 -%}
+      {%- endif -%}
+    {%- endfor -%}
+  {%- endcapture -%}
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org/",
+      "@type": "Product",
+      "name": {{ product.title | json }},
+      "url": {{ request.origin | append: product.url | json }},
+      "description": {{ desc | json }},
+      "sku": {{ cur_sku | json }},
+      "productID": {{ product.id | append: '' | json }}
+      {%- if img_n > 0 -%},"image": [{{ img_json }}]{%- endif -%}
+      {%- if brand_name != blank -%},"brand": { "@type": "Brand", "name": {{ brand_name | json }} }{%- endif -%}
+      {%- if s.seo_gtin != blank -%},"gtin13": {{ s.seo_gtin | json }}{%- endif -%}
+      {%- if s.seo_mpn != blank -%},"mpn": {{ s.seo_mpn | json }}{%- endif -%}
+      {%- if s.seo_color != blank -%},"color": {{ s.seo_color | json }}{%- endif -%}
+      {%- if s.seo_material != blank -%},"material": {{ s.seo_material | json }}{%- endif -%}
+      {%- if rating_val > 0 and rating_count > 0 -%}
+        ,"aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": {{ rating_val | round: 2 }},
+          "bestRating": 5,
+          "worstRating": 1,
+          "reviewCount": {{ rating_count }}
+        }
+      {%- endif -%}
+      ,"offers": [
+        {%- for v in product.variants -%}
+          {%- assign v_sku = v.sku | default: v.id | append: '' -%}
+          {
+            "@type": "Offer",
+            "name": {{ v.title | json }},
+            "sku": {{ v_sku | json }},
+            {%- if v.barcode != blank -%}"gtin": {{ v.barcode | json }},{%- endif -%}
+            "price": {{ v.price | divided_by: 100.0 }},
+            "priceCurrency": {{ currency | json }},
+            "availability": "{% if v.available %}https://schema.org/InStock{% else %}https://schema.org/OutOfStock{% endif %}",
+            "itemCondition": "https://schema.org/NewCondition",
+            "url": {{ request.origin | append: v.url | json }}
+          }{%- unless forloop.last -%},{%- endunless -%}
+        {%- endfor -%}
+      ]
+    }
+  </script>
+  {%- if bc_collection -%}
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": {{ request.origin | append: routes.root_url | json }} },
+          { "@type": "ListItem", "position": 2, "name": {{ bc_collection.title | json }}, "item": {{ request.origin | append: bc_collection.url | json }} },
+          { "@type": "ListItem", "position": 3, "name": {{ product.title | json }}, "item": {{ request.origin | append: product.url | json }} }
+        ]
+      }
+    </script>
+  {%- endif -%}
+{%- endif -%}
+
+{%- if s.seo_enable_faq_schema and s.show_faqs -%}
+  {%- assign faq_n = 0 -%}
+  {%- capture faq_json -%}
+    {%- for f in product.metafields.vf.faq.value -%}
+      {%- assign fq = f.question.value | strip_html | strip_newlines | strip -%}
+      {%- if fq != blank -%}
+        {%- if f.answer.type == 'rich_text_field' -%}
+          {%- capture fa -%}{{ f.answer | metafield_tag }}{%- endcapture -%}
+        {%- else -%}
+          {%- assign fa = f.answer.value -%}
+        {%- endif -%}
+        {%- assign fa = fa | strip_html | strip_newlines | strip -%}
+        {%- if faq_n > 0 -%},{%- endif -%}
+        {"@type": "Question", "name": {{ fq | json }}, "acceptedAnswer": {"@type": "Answer", "text": {{ fa | json }}}}
+        {%- assign faq_n = faq_n | plus: 1 -%}
+      {%- endif -%}
+    {%- endfor -%}
+    {%- for b in blocks -%}
+      {%- if b.type == 'faq' and b.settings.enabled -%}
+        {%- assign bq = b.settings.q | strip_html | strip_newlines | strip -%}
+        {%- assign ba = b.settings.a | strip_html | strip_newlines | strip -%}
+        {%- if bq != blank -%}
+          {%- if faq_n > 0 -%},{%- endif -%}
+          {"@type": "Question", "name": {{ bq | json }}, "acceptedAnswer": {"@type": "Answer", "text": {{ ba | json }}}}
+          {%- assign faq_n = faq_n | plus: 1 -%}
+        {%- endif -%}
+      {%- endif -%}
+    {%- endfor -%}
+  {%- endcapture -%}
+  {%- if faq_n > 0 -%}
+    <script type="application/ld+json">
+      {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{{ faq_json }}]}
+    </script>
+  {%- endif -%}
+{%- endif -%}

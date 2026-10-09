@@ -1,0 +1,86 @@
+{%- comment -%}
+  Vettofit PDP · Pairs well with (cross-sell).
+  Source 1: product-reference list metafield vf.pairs_with (curated, server-rendered).
+  Source 2 (fallback, optional): Shopify complementary recommendations, fetched by
+  vf-pdp.js when the zone nears the viewport. Needs Search & Discovery "complementary products".
+  No bundle discount is implied: "Add both" adds two lines at their normal prices.
+  Params: product, sid, s, current
+{%- endcomment -%}
+{%- liquid
+  assign pairs = product.metafields.vf.pairs_with.value
+  assign pair_limit = s.pairs_limit | default: 3
+  assign pair_count = 0
+  for p in pairs
+    if p.available and p.id != product.id
+      assign pair_count = pair_count | plus: 1
+    endif
+  endfor
+  assign pairs_title = s.pairs_title | default: 'Pairs well with'
+-%}
+{%- if s.show_pairs -%}
+  {%- if pair_count > 0 -%}
+    <section class="vf-zone vf-pairs" aria-labelledby="VfPairsH-{{ sid }}" data-vf-pairs data-auto="false">
+      <div class="vf-container">
+        <header class="vf-zone__head">
+          <p class="vf-eyebrow">Complete the routine</p>
+          <h2 class="vf-h2" id="VfPairsH-{{ sid }}">{{ pairs_title }}</h2>
+        </header>
+        <ul class="vf-pairs__grid" role="list" data-vf-pairs-list>
+          {%- assign shown = 0 -%}
+          {%- assign first_pair_id = '' -%}
+          {%- assign first_pair_title = '' -%}
+          {%- for p in pairs -%}
+            {%- if p.available and p.id != product.id and shown < pair_limit -%}
+              {%- assign shown = shown | plus: 1 -%}
+              {%- assign pv = p.selected_or_first_available_variant -%}
+              {%- if first_pair_id == blank -%}
+                {%- assign first_pair_id = pv.id -%}
+                {%- assign first_pair_title = p.title -%}
+              {%- endif -%}
+              <li>
+                <article class="vf-pcard">
+                  <a class="vf-pcard__media" href="{{ p.url }}" tabindex="-1" aria-hidden="true">
+                    {%- if p.featured_media -%}
+                      {{ p.featured_media.preview_image | image_url: width: 600 | image_tag: widths: '240,360,480,600', sizes: '(min-width: 1024px) 22vw, (min-width: 480px) 45vw, 90vw', loading: 'lazy', alt: '', class: 'vf-pcard__img' }}
+                    {%- endif -%}
+                  </a>
+                  <div class="vf-pcard__body">
+                    <h3 class="vf-pcard__title"><a href="{{ p.url }}">{{ p.title }}</a></h3>
+                    {%- if p.metafields.vf.outcome_line.value != blank -%}
+                      <p class="vf-pcard__line">{{ p.metafields.vf.outcome_line.value }}</p>
+                    {%- endif -%}
+                    <p class="vf-pcard__price">{{ pv.price | money }}</p>
+                    <button type="button" class="vf-btn vf-btn--secondary vf-btn--sm vf-pcard__add" data-vf-quick-add="{{ pv.id }}">
+                      Add<span class="vf-sr"> {{ p.title | escape }}</span> to cart
+                    </button>
+                  </div>
+                </article>
+              </li>
+            {%- endif -%}
+          {%- endfor -%}
+        </ul>
+        {%- if current.available and first_pair_id != blank -%}
+          <div class="vf-pairs__bundle">
+            <p>Make it a routine: <strong>{{ product.title }}</strong> + <strong>{{ first_pair_title }}</strong></p>
+            <button type="button" class="vf-btn vf-btn--secondary" data-vf-add-both="{{ first_pair_id }}">Add both to cart</button>
+          </div>
+        {%- endif -%}
+      </div>
+    </section>
+  {%- elsif s.pairs_auto -%}
+    <div class="vf-pairs__sentinel" data-vf-pairs-sentinel aria-hidden="true"></div>
+    <section class="vf-zone vf-pairs" aria-labelledby="VfPairsH-{{ sid }}" data-vf-pairs data-auto="true" data-limit="{{ pair_limit }}" hidden>
+      <div class="vf-container">
+        <header class="vf-zone__head">
+          <p class="vf-eyebrow">Complete the routine</p>
+          <h2 class="vf-h2" id="VfPairsH-{{ sid }}">{{ pairs_title }}</h2>
+        </header>
+        <ul class="vf-pairs__grid" role="list" data-vf-pairs-list></ul>
+      </div>
+    </section>
+  {%- elsif request.design_mode -%}
+    <section class="vf-zone vf-pairs">
+      <div class="vf-container"><p class="vf-ph">[PLACEHOLDER] Pairs well with · add products to vf.pairs_with, or enable automatic complementary recommendations.</p></div>
+    </section>
+  {%- endif -%}
+{%- endif -%}

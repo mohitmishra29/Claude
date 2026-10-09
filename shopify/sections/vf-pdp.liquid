@@ -1,0 +1,727 @@
+{%- comment -%}
+  Vettofit PDP · v1.0 (replaces "NM PDP v6.1")
+  Brand book v4.0 · Ch. 5 (claims), Ch. 6 (visual identity), Ch. 9 (Shopify system) — binding.
+  Client overrides: Helvetica family; Razorpay checkout hand-off; Judge.me reviews.
+
+  Files:  sections/vf-pdp.liquid
+          snippets/vf-icon, vf-fonts, vf-pdp-gallery, vf-pdp-buybox, vf-pdp-story,
+                   vf-pdp-proof, vf-pdp-faq, vf-pdp-pairs, vf-pdp-schema
+          assets/vf-tokens.css (shared token layer), vf-pdp.css, vf-pdp.js (deferred)
+
+  Preserved from v6.1: variant picker + OOS guard, AJAX add-to-cart with section rendering
+  (cart-drawer / cart-icon-bubble / cart-notification), quantity control + per-variant cap,
+  badge metafields (custom.badge_enabled / custom.badge_text), rating fallbacks (reviews.rating,
+  Judge.me, Loox), trust badge / FAQ / Mfg blocks, banner, Product / Offer / AggregateRating /
+  BreadcrumbList / FAQPage JSON-LD, meta description + canonical overrides, Theme Editor toggles.
+  See docs/02-code-audit.md for what changed and why.
+{%- endcomment -%}
+{%- liquid
+  assign s = section.settings
+  assign sid = section.id
+-%}
+
+{%- if product != blank -%}
+  {%- liquid
+    assign current = product.selected_or_first_available_variant
+    assign mf = product.metafields.vf
+
+    assign show_gallery = false
+    if s.show_top and s.show_gallery
+      assign show_gallery = true
+    endif
+    assign show_summary = false
+    if s.show_top and s.show_summary
+      assign show_summary = true
+    endif
+    assign two_cols = false
+    if show_gallery and show_summary
+      assign two_cols = true
+    endif
+
+    # ── Badge (preserved logic: metafield first, then section default) ──
+    assign mf_badge_enabled = false
+    if product.metafields.custom.badge_enabled
+      if product.metafields.custom.badge_enabled == true or product.metafields.custom.badge_enabled.value == true
+        assign mf_badge_enabled = true
+      endif
+    endif
+    assign mf_badge_text_html = ''
+    if product.metafields.custom.badge_text
+      if product.metafields.custom.badge_text.value
+        assign mf_badge_text_html = product.metafields.custom.badge_text | metafield_tag
+      else
+        assign mf_badge_text_html = product.metafields.custom.badge_text
+      endif
+    endif
+    assign show_badge = false
+    assign badge_html = ''
+    if mf_badge_enabled and mf_badge_text_html != blank
+      assign show_badge = true
+      assign badge_html = mf_badge_text_html
+    elsif s.badge_show_default and s.badge_rich != blank
+      assign show_badge = true
+      assign badge_html = s.badge_rich
+    endif
+
+    # ── Rating (preserved fallbacks: reviews.rating → Judge.me → Loox) ──
+    assign rating_val = 0
+    assign rating_count = 0
+    assign r_mf = product.metafields.reviews.rating
+    if r_mf != blank
+      assign r_obj = r_mf.value
+      if r_obj.rating != blank
+        assign rating_val = r_obj.rating | times: 1.0
+        assign r_max = r_obj.scale_max | times: 1.0
+        if r_max > 0 and r_max != 5
+          assign rating_val = rating_val | times: 5 | divided_by: r_max
+        endif
+      else
+        assign rating_val = r_mf.value | times: 1.0
+      endif
+      assign rating_count = product.metafields.reviews.rating_count.value | plus: 0
+    endif
+    if rating_val == 0
+      assign jm_badge = product.metafields.judgeme.badge | append: '' | replace: '"', "'"
+      if jm_badge contains 'data-average-rating'
+        assign rating_val = jm_badge | split: "data-average-rating='" | last | split: "'" | first | times: 1.0
+        assign rating_count = jm_badge | split: "data-number-of-reviews='" | last | split: "'" | first | plus: 0
+      elsif product.metafields.judgeme.badge_average
+        assign rating_val = product.metafields.judgeme.badge_average | times: 1.0
+      elsif product.metafields.loox.avg_rating
+        assign rating_val = product.metafields.loox.avg_rating | times: 1.0
+        assign rating_count = product.metafields.loox.num_reviews | plus: 0
+      endif
+    endif
+    assign rating_pct = rating_val | times: 20 | at_most: 100
+    assign rating_display = rating_val | round: 1
+
+    # ── Species (dogs + cats by default, Ch. 2.1) ──
+    assign species_raw = mf.species.value | join: ',' | downcase
+    assign has_dog = false
+    assign has_cat = false
+    if species_raw contains 'dog'
+      assign has_dog = true
+    endif
+    if species_raw contains 'cat'
+      assign has_cat = true
+    endif
+    assign species_label = ''
+    assign species_words = ''
+    if has_dog and has_cat
+      assign species_label = 'For dogs and cats'
+      assign species_words = 'Dogs and cats'
+    elsif has_dog
+      assign species_label = 'For dogs'
+      assign species_words = 'Dogs'
+    elsif has_cat
+      assign species_label = 'For cats'
+      assign species_words = 'Cats'
+    elsif species_raw contains 'multi'
+      assign species_label = 'For pets'
+      assign species_words = 'Dogs, cats and other companions'
+    endif
+
+    # ── Need → one category accent (Ch. 6.3–6.4) ──
+    assign need_label = mf.need_primary.value | default: ''
+    assign accent_key = s.accent_override
+    if accent_key == 'auto' or accent_key == blank
+      assign need_key = need_label | handleize
+      assign accent_key = ''
+      if need_key contains 'skin' or need_key contains 'coat'
+        assign accent_key = 'skin-coat'
+      elsif need_key contains 'gut' or need_key contains 'digest'
+        assign accent_key = 'gut'
+      elsif need_key contains 'daily' or need_key contains 'vital'
+        assign accent_key = 'daily'
+      elsif need_key contains 'calm'
+        assign accent_key = 'calm'
+      elsif need_key contains 'dental'
+        assign accent_key = 'dental'
+      elsif need_key contains 'joint' or need_key contains 'mobility'
+        assign accent_key = 'joints'
+      elsif need_key contains 'immun'
+        assign accent_key = 'immunity'
+      elsif need_key contains 'groom'
+        assign accent_key = 'grooming'
+      endif
+    elsif accent_key == 'none'
+      assign accent_key = ''
+    endif
+
+    # ── Evidence present? (drives the "See the evidence" link) ──
+    assign has_evidence = false
+    if s.show_evidence
+      if mf.vet_reviewer.value != blank or mf.evidence.value != blank
+        assign has_evidence = true
+      endif
+    endif
+
+    # ── Reviews zone content ──
+    assign app_block_count = 0
+    for b in section.blocks
+      if b.type == '@app'
+        assign app_block_count = app_block_count | plus: 1
+      endif
+    endfor
+    assign jm_widget = product.metafields.judgeme.widget
+  -%}
+
+  {{ 'vf-tokens.css' | asset_url | stylesheet_tag }}
+  {{ 'vf-pdp.css' | asset_url | stylesheet_tag }}
+  {%- if s.use_webfont -%}{%- render 'vf-fonts' -%}{%- endif -%}
+  <script src="{{ 'vf-pdp.js' | asset_url }}" defer></script>
+
+  <div
+    id="VfPdp-{{ sid }}"
+    class="vf-pdp{% if accent_key != blank %} vf-accent--{{ accent_key }}{% endif %}"
+    data-vf-pdp
+    data-section-id="{{ sid }}"
+    style="--vf-ratio: {{ s.gallery_ratio | default: '1 / 1' }}; --vf-fit: {{ s.gallery_fit | default: 'contain' }}; --vf-sticky-top: {{ s.sticky_offset }}px; --vf-banner-h-d: {{ s.banner_h_desktop }}px; --vf-banner-h-m: {{ s.banner_h_mobile }}px;"
+  >
+    {%- comment -%} ── 1 · Breadcrumb ── {%- endcomment -%}
+    {%- if s.show_breadcrumb -%}
+      {%- assign bc_collection = collection | default: product.collections.first -%}
+      <nav class="vf-container vf-crumbs" aria-label="Breadcrumb">
+        <ol role="list">
+          <li><a href="{{ routes.root_url }}">Home</a></li>
+          {%- if bc_collection -%}<li><a href="{{ bc_collection.url }}">{{ bc_collection.title }}</a></li>{%- endif -%}
+          <li><span aria-current="page">{{ product.title }}</span></li>
+        </ol>
+      </nav>
+    {%- endif -%}
+
+    {%- comment -%} ── 2 · Above the fold ── {%- endcomment -%}
+    {%- if s.show_top -%}
+      <div class="vf-container">
+        <div class="vf-hero{% unless two_cols %} vf-hero--single{% endunless %}">
+          {%- if show_gallery -%}
+            <div class="vf-hero__media">
+              {%- render 'vf-pdp-gallery', product: product, sid: sid, s: s -%}
+            </div>
+          {%- endif -%}
+          {%- if show_summary -%}
+            <div class="vf-hero__buy" data-vf-buybox>
+              {%- render 'vf-pdp-buybox',
+                product: product,
+                sid: sid,
+                s: s,
+                blocks: section.blocks,
+                current: current,
+                rating_val: rating_val,
+                rating_count: rating_count,
+                rating_pct: rating_pct,
+                rating_display: rating_display,
+                show_badge: show_badge,
+                badge_html: badge_html,
+                species_label: species_label,
+                need_label: need_label,
+                show_evidence_link: has_evidence
+              -%}
+            </div>
+          {%- endif -%}
+        </div>
+      </div>
+    {%- endif -%}
+    {%- unless show_summary -%}
+      <div class="vf-container"><h1 class="vf-buy__title vf-title-standalone">{{ product.title }}</h1></div>
+    {%- endunless -%}
+
+    {%- comment -%} ── 3–5 · Quick fit, Benefits, About, Why it works ── {%- endcomment -%}
+    {%- render 'vf-pdp-story', product: product, sid: sid, s: s, species_words: species_words, need_label: need_label -%}
+
+    {%- comment -%} ── 6–8 · Evidence, How to use, What to expect ── {%- endcomment -%}
+    {%- render 'vf-pdp-proof', product: product, sid: sid, s: s, species_words: species_words -%}
+
+    {%- comment -%} ── 9 · Reviews (Judge.me app block renders here) ── {%- endcomment -%}
+    {%- if s.show_reviews -%}
+      {%- if app_block_count > 0 or jm_widget != blank or rating_val > 0 or request.design_mode -%}
+        <section class="vf-zone vf-zone--white vf-reviews" id="VfReviews-{{ sid }}" aria-labelledby="VfRevH-{{ sid }}" tabindex="-1">
+          <div class="vf-container">
+            <header class="vf-zone__head vf-reviews__head">
+              <p class="vf-eyebrow">From pet parents</p>
+              <h2 class="vf-h2" id="VfRevH-{{ sid }}">{{ s.reviews_title | default: 'Reviews' }}</h2>
+              {%- if rating_val > 0 -%}
+                <p class="vf-reviews__summary">
+                  <span class="vf-reviews__score">{{ rating_display }}</span>
+                  <span class="vf-stars vf-stars--lg" style="--vf-rating: {{ rating_pct }}%;" aria-hidden="true">
+                    <span class="vf-stars__base">{%- for i in (1..5) -%}{%- render 'vf-icon', name: 'star', size: 20 -%}{%- endfor -%}</span>
+                    <span class="vf-stars__fill">{%- for i in (1..5) -%}{%- render 'vf-icon', name: 'star', size: 20 -%}{%- endfor -%}</span>
+                  </span>
+                  <span class="vf-reviews__count">
+                    <span class="vf-sr">Rated {{ rating_display }} out of 5. </span>
+                    {%- if rating_count > 0 -%}Based on {{ rating_count }} reviews{%- endif -%}
+                  </span>
+                </p>
+              {%- endif -%}
+            </header>
+            <div class="vf-reviews__widget">
+              {%- for block in section.blocks -%}
+                {%- if block.type == '@app' -%}
+                  {% render block %}
+                {%- endif -%}
+              {%- endfor -%}
+              {%- if app_block_count == 0 -%}
+                {%- if jm_widget != blank -%}
+                  <div id="judgeme_product_reviews" class="jdgm-widget jdgm-review-widget" data-id="{{ product.id }}">{{ jm_widget }}</div>
+                {%- elsif request.design_mode -%}
+                  <p class="vf-ph">[PLACEHOLDER] Add the Judge.me "Review widget" app block to this section. Filters and photo reviews are configured in Judge.me.</p>
+                {%- endif -%}
+              {%- endif -%}
+            </div>
+          </div>
+        </section>
+      {%- endif -%}
+    {%- endif -%}
+
+    {%- comment -%} ── 10 · FAQ ── {%- endcomment -%}
+    {%- render 'vf-pdp-faq', product: product, sid: sid, s: s, blocks: section.blocks -%}
+
+    {%- comment -%} ── 11 · Pairs well with ── {%- endcomment -%}
+    {%- render 'vf-pdp-pairs', product: product, sid: sid, s: s, current: current -%}
+
+    {%- comment -%} ── 12a · Manufacturing details (preserved: blocks + fallback; adds vf.mfg_details) ── {%- endcomment -%}
+    {%- liquid
+      assign mfg_mf = mf.mfg_details
+      assign any_mfg = false
+      for b in section.blocks
+        if b.type == 'mfg' and b.settings.enabled
+          assign any_mfg = true
+          break
+        endif
+      endfor
+      assign mfg_fb = s.mfg_fallback_rich1 | append: s.mfg_fallback_rich2 | append: s.mfg_fallback_rich3 | strip_html | strip
+      assign mfg_mode = ''
+      if mfg_mf != blank
+        assign mfg_mode = 'metafield'
+      elsif s.use_mfg_fallback and mfg_fb != blank
+        assign mfg_mode = 'fallback'
+      elsif any_mfg
+        assign mfg_mode = 'blocks'
+      elsif mfg_fb != blank
+        assign mfg_mode = 'fallback'
+      endif
+    -%}
+    {%- if s.show_mfg -%}
+      {%- if mfg_mode != blank or request.design_mode -%}
+        <section class="vf-zone vf-mfg" aria-label="{{ s.mfg_title | default: 'Manufacturing details' | escape }}">
+          <div class="vf-container">
+            <details class="vf-mfg__card">
+              <summary class="vf-acc__q">
+                <span class="vf-mfg__title">
+                  {%- if s.mfg_icon != blank -%}
+                    {{ s.mfg_icon | image_url: width: 64 | image_tag: width: 24, height: 24, alt: '', loading: 'lazy' }}
+                  {%- else -%}
+                    {%- render 'vf-icon', name: 'box', size: 22 -%}
+                  {%- endif -%}
+                  {{ s.mfg_title | default: 'Manufacturing details' }}
+                </span>
+                {%- render 'vf-icon', name: 'chevron-down', size: 20 -%}
+              </summary>
+              <div class="vf-acc__a">
+                {%- case mfg_mode -%}
+                  {%- when 'metafield' -%}
+                    <div class="vf-rte">
+                      {%- if mfg_mf.type == 'rich_text_field' -%}{{ mfg_mf | metafield_tag }}{%- else -%}{{ mfg_mf.value | escape | newline_to_br }}{%- endif -%}
+                    </div>
+                  {%- when 'blocks' -%}
+                    <dl class="vf-mfg__list">
+                      {%- for b in section.blocks -%}
+                        {%- if b.type == 'mfg' and b.settings.enabled -%}
+                          <div class="vf-mfg__row" {{ b.shopify_attributes }}>
+                            <dt>{{ b.settings.title }}</dt>
+                            <dd class="vf-rte">{{ b.settings.text }}</dd>
+                          </div>
+                        {%- endif -%}
+                      {%- endfor -%}
+                    </dl>
+                  {%- when 'fallback' -%}
+                    <div class="vf-rte">{{ s.mfg_fallback_rich1 }}{{ s.mfg_fallback_rich2 }}{{ s.mfg_fallback_rich3 }}</div>
+                  {%- else -%}
+                    <p class="vf-ph">[PLACEHOLDER] Manufacturing details · vf.mfg_details, Mfg blocks or fallback text. Only list certifications you can document.</p>
+                {%- endcase -%}
+              </div>
+            </details>
+          </div>
+        </section>
+      {%- endif -%}
+    {%- endif -%}
+
+    {%- comment -%} ── 12b · Banner (preserved) ── {%- endcomment -%}
+    {%- if s.show_banner -%}
+      {%- if s.banner_img_desktop != blank or s.banner_img_mobile != blank -%}
+        {%- liquid
+          assign banner_main = s.banner_img_desktop | default: s.banner_img_mobile
+          assign banner_alt = s.banner_alt | default: ''
+        -%}
+        <section class="vf-banner">
+          <div class="vf-container">
+            {%- if s.banner_link != blank -%}
+              <a class="vf-banner__frame" href="{{ s.banner_link }}"{% if s.banner_new_tab %} target="_blank" rel="noopener"{% endif %}>
+            {%- else -%}
+              <div class="vf-banner__frame">
+            {%- endif -%}
+              <picture>
+                {%- if s.banner_img_mobile != blank and s.banner_img_desktop != blank -%}
+                  <source
+                    media="(max-width: 767px)"
+                    srcset="{{ s.banner_img_mobile | image_url: width: 750 }} 750w, {{ s.banner_img_mobile | image_url: width: 1100 }} 1100w"
+                    sizes="100vw"
+                    width="{{ s.banner_img_mobile.width }}"
+                    height="{{ s.banner_img_mobile.height }}"
+                  >
+                {%- endif -%}
+                {{ banner_main | image_url: width: 2000 | image_tag: widths: '750,1100,1600,2000', sizes: '(min-width: 1440px) 1300px, 100vw', loading: 'lazy', alt: banner_alt, class: 'vf-banner__img' }}
+              </picture>
+              {%- if s.banner_new_tab and s.banner_link != blank -%}<span class="vf-sr"> (opens in a new tab)</span>{%- endif -%}
+            {%- if s.banner_link != blank -%}</a>{%- else -%}</div>{%- endif -%}
+          </div>
+        </section>
+      {%- endif -%}
+    {%- endif -%}
+
+    {%- comment -%} ── 13 · Mobile/tablet sticky purchase bar (shown after the main CTA scrolls away) ── {%- endcomment -%}
+    {%- if show_summary and s.show_sticky -%}
+      {%- assign sticky_variant = current.title -%}
+      {%- if product.has_only_default_variant -%}{%- assign sticky_variant = '' -%}{%- endif -%}
+      <div class="vf-sticky" data-vf-sticky inert aria-hidden="true">
+        <div class="vf-sticky__inner">
+          <div class="vf-sticky__info">
+            <p class="vf-sticky__title">{{ product.title }}</p>
+            <p class="vf-sticky__meta">
+              <span data-vf-sticky-variant>{{ sticky_variant }}</span>
+              <span class="vf-sticky__price" data-vf-sticky-price>{{ current.price | money }}</span>
+            </p>
+          </div>
+          {%- if s.sticky_show_buy and s.show_buy_now -%}
+            <button type="button" class="vf-btn vf-btn--secondary vf-btn--compact" data-vf-sticky-buy{% unless current.available %} hidden{% endunless %}>{{ s.buy_label | default: 'Buy now' }}</button>
+          {%- endif -%}
+          <button type="button" class="vf-btn vf-btn--primary vf-btn--compact" data-vf-sticky-add{% unless current.available %} disabled{% endunless %}>
+            <span data-vf-add-label>{% if current.available %}{{ s.add_label | default: 'Add to cart' }}{% else %}{{ s.oos_label | default: 'Back soon' }}{% endif %}</span>
+          </button>
+        </div>
+      </div>
+    {%- endif -%}
+
+    {%- comment -%} Checkout hand-off for Buy now. Third-party checkouts (Razorpay Magic Checkout,
+      GoKwik, Shiprocket) intercept the theme's [name="checkout"] submit; with no interceptor the
+      form posts to /cart and Shopify redirects to its native checkout. {%- endcomment -%}
+    <form action="{{ routes.cart_url }}" method="post" hidden data-vf-checkout-form>
+      <button type="submit" name="checkout" value="1" tabindex="-1" data-vf-checkout-submit>Checkout</button>
+    </form>
+
+    <p class="vf-sr" data-vf-live aria-live="polite" aria-atomic="true"></p>
+    <div class="vf-toast" data-vf-toast aria-hidden="true"></div>
+
+    <script type="application/json" data-vf-data>
+      {
+        "sectionId": {{ sid | json }},
+        "productId": {{ product.id }},
+        "title": {{ product.title | json }},
+        "brand": {{ s.seo_brand | default: product.vendor | json }},
+        "type": {{ product.type | json }},
+        "currency": {{ cart.currency.iso_code | json }},
+        "optionCount": {% if product.has_only_default_variant %}0{% else %}{{ product.options.size }}{% endif %},
+        "rootUrl": {{ routes.root_url | json }},
+        "cartUrl": {{ routes.cart_url | json }},
+        "cartAddUrl": {{ routes.cart_add_url | append: '.js' | json }},
+        "cartJsUrl": {{ routes.cart_url | append: '.js' | json }},
+        "recsUrl": {{ routes.product_recommendations_url | append: '.json' | json }},
+        "maxPerVariant": {{ s.max_per_variant | default: 0 }},
+        "checkoutMode": {{ s.checkout_mode | default: 'cart_form' | json }},
+        "analytics": {{ s.analytics_datalayer | json }},
+        "labels": {
+          "add": {{ s.add_label | default: 'Add to cart' | json }},
+          "oos": {{ s.oos_label | default: 'Back soon' | json }},
+          "unavailable": "Choose another option",
+          "limitButton": "Limit reached",
+          "adding": "Adding to your cart",
+          "added": "Added to your cart.",
+          "addedBoth": "Both added to your cart.",
+          "error": "Something went wrong. Your cart is safe. Try again.",
+          "optionOos": " — back soon",
+          "optionNone": " — unavailable",
+          "save": "Save",
+          "salePrice": "Sale price",
+          "price": "Price",
+          "dosePrefix": "Daily amount for",
+          "doseNone": "That weight isn’t in the table. Check with your vet.",
+          "pinInvalid": "Enter a 6-digit pincode.",
+          "pinChecking": "Checking…",
+          "pinOk": "We deliver to this pincode.",
+          "pinNo": "We can’t deliver to this pincode yet.",
+          "pinError": "We couldn’t check right now. Try again, or continue to checkout to confirm."
+        }
+      }
+    </script>
+  </div>
+
+  {%- render 'vf-pdp-schema', product: product, s: s, blocks: section.blocks, current: current, rating_val: rating_val, rating_count: rating_count -%}
+
+  {%- comment -%} Meta description + canonical overrides (preserved). Prefer Shopify's SEO fields;
+    see docs/08 for a head-level alternative that crawlers read without JavaScript. {%- endcomment -%}
+  {%- if s.seo_meta_description != blank or s.seo_canonical_override != blank -%}
+    <script>
+      (function () {
+        {%- if s.seo_meta_description != blank -%}
+          var c = {{ s.seo_meta_description | strip_html | strip_newlines | strip | truncate: 160 | json }};
+          var m = document.querySelector('meta[name="description"]');
+          if (m) { m.setAttribute('content', c); } else { m = document.createElement('meta'); m.name = 'description'; m.content = c; document.head.appendChild(m); }
+        {%- endif -%}
+        {%- if s.seo_canonical_override != blank -%}
+          var h = {{ s.seo_canonical_override | strip | json }};
+          var l = document.querySelector('link[rel="canonical"]');
+          if (l) { l.setAttribute('href', h); } else { l = document.createElement('link'); l.rel = 'canonical'; l.href = h; document.head.appendChild(l); }
+        {%- endif -%}
+      })();
+    </script>
+  {%- endif -%}
+{%- elsif request.design_mode -%}
+  <div class="vf-pdp-empty">Select a product to preview this section.</div>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Vettofit PDP",
+  "tag": "section",
+  "class": "vf-pdp-section",
+  "enabled_on": { "templates": ["product"] },
+  "settings": [
+    { "type": "header", "content": "Layout" },
+    { "type": "checkbox", "id": "show_top", "label": "Show top area (gallery + buy box)", "default": true },
+    { "type": "checkbox", "id": "show_gallery", "label": "Show gallery", "default": true },
+    { "type": "checkbox", "id": "show_summary", "label": "Show buy box", "default": true },
+    { "type": "checkbox", "id": "show_breadcrumb", "label": "Show breadcrumb", "default": false, "info": "Leave off if your theme already shows one." },
+    { "type": "range", "id": "sticky_offset", "label": "Sticky buy box top offset (desktop)", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 24, "info": "Increase if your header is sticky." },
+    {
+      "type": "select",
+      "id": "accent_override",
+      "label": "Category accent",
+      "options": [
+        { "value": "auto", "label": "Automatic from vf.need_primary" },
+        { "value": "skin-coat", "label": "Skin & Coat" },
+        { "value": "gut", "label": "Gut" },
+        { "value": "daily", "label": "Daily" },
+        { "value": "calm", "label": "Calm" },
+        { "value": "dental", "label": "Dental" },
+        { "value": "joints", "label": "Joints" },
+        { "value": "immunity", "label": "Immunity" },
+        { "value": "grooming", "label": "Grooming" },
+        { "value": "none", "label": "None" }
+      ],
+      "default": "auto",
+      "info": "One accent per product (brand book 6.4)."
+    },
+
+    { "type": "header", "content": "Gallery" },
+    {
+      "type": "select",
+      "id": "gallery_fit",
+      "label": "Image fit",
+      "options": [
+        { "value": "contain", "label": "Contain: show the full image (packshots)" },
+        { "value": "cover", "label": "Cover: fill and crop (lifestyle)" }
+      ],
+      "default": "contain"
+    },
+    {
+      "type": "select",
+      "id": "gallery_ratio",
+      "label": "Image aspect ratio",
+      "options": [
+        { "value": "1 / 1", "label": "1:1 square (recommended)" },
+        { "value": "4 / 5", "label": "4:5 portrait" },
+        { "value": "3 / 4", "label": "3:4 portrait (tall)" }
+      ],
+      "default": "1 / 1"
+    },
+    { "type": "checkbox", "id": "gallery_zoom", "label": "Enable full-screen zoom", "default": true },
+
+    { "type": "header", "content": "Buy box" },
+    { "type": "checkbox", "id": "show_species_chip", "label": "Show species chip", "default": true, "info": "From metafield vf.species." },
+    { "type": "checkbox", "id": "show_rating", "label": "Show rating", "default": true },
+    { "type": "text", "id": "tax_note", "label": "Price note", "default": "Inclusive of all taxes" },
+    { "type": "checkbox", "id": "show_compare_at", "label": "Show compare-at price and savings", "default": true, "info": "Shown as a small, muted strikethrough. No % off pill (editorial before promotional)." },
+    { "type": "checkbox", "id": "show_unit_price", "label": "Show unit price", "default": true, "info": "Needs Shopify unit price measurement on the variant." },
+    { "type": "range", "id": "max_per_variant", "label": "Max quantity per variant in cart", "min": 0, "max": 20, "step": 1, "default": 10, "info": "0 = no limit." },
+
+    { "type": "header", "content": "Badge" },
+    { "type": "paragraph", "content": "Product metafields custom.badge_enabled + custom.badge_text take priority." },
+    { "type": "checkbox", "id": "badge_show_default", "label": "Show default badge", "default": false, "info": "Only use a badge you can substantiate (e.g. a real best-seller rank)." },
+    { "type": "inline_richtext", "id": "badge_rich", "label": "Default badge text", "default": "Best seller" },
+
+    { "type": "header", "content": "Buttons and labels" },
+    { "type": "text", "id": "add_label", "label": "Add to cart label", "default": "Add to cart" },
+    { "type": "checkbox", "id": "show_buy_now", "label": "Show Buy now", "default": true },
+    { "type": "text", "id": "buy_label", "label": "Buy now label", "default": "Buy now" },
+    {
+      "type": "select",
+      "id": "checkout_mode",
+      "label": "Buy now checkout hand-off",
+      "options": [
+        { "value": "cart_form", "label": "Cart checkout button (works with Razorpay Magic Checkout)" },
+        { "value": "url", "label": "Direct /checkout URL (native Shopify checkout)" }
+      ],
+      "default": "cart_form",
+      "info": "Test Buy now on an unpublished theme after any checkout app change."
+    },
+    { "type": "text", "id": "oos_label", "label": "Out-of-stock button label", "default": "Back soon" },
+    { "type": "text", "id": "oos_message", "label": "Out-of-stock message", "default": "Back soon. Get an alert when it returns." },
+    { "type": "url", "id": "oos_alert_url", "label": "Back-in-stock alert link", "info": "Optional. Without it, the message drops the alert promise." },
+    { "type": "text", "id": "limit_message", "label": "Cart limit message", "default": "You have the maximum for this item in your cart." },
+
+    { "type": "header", "content": "Subscribe & save" },
+    { "type": "paragraph", "content": "Uses Shopify selling plans (Shopify Subscriptions, Appstle, Seal, Recharge). Hidden when the product has no plans." },
+    { "type": "checkbox", "id": "show_subscription", "label": "Show subscription option", "default": true },
+    {
+      "type": "select",
+      "id": "subscription_default",
+      "label": "Selected by default",
+      "options": [
+        { "value": "onetime", "label": "One-time purchase" },
+        { "value": "subscribe", "label": "Subscribe & save" }
+      ],
+      "default": "onetime"
+    },
+    { "type": "text", "id": "onetime_label", "label": "One-time label", "default": "One-time purchase" },
+    { "type": "text", "id": "sub_label", "label": "Subscription label", "default": "Subscribe & save" },
+    { "type": "text", "id": "sub_note", "label": "Subscription terms line", "info": "e.g. how to pause or cancel. Must match your subscription app's policy." },
+
+    { "type": "header", "content": "Delivery, payment and support" },
+    { "type": "text", "id": "delivery_text", "label": "Delivery promise", "info": "e.g. dispatch time and delivery window. Only state what operations can meet." },
+    { "type": "text", "id": "pincode_endpoint", "label": "Pincode check endpoint", "info": "Same-origin app proxy path, e.g. /apps/delivery/check. Hidden when blank. See docs/08." },
+    { "type": "text", "id": "payments_text", "label": "Payments line", "info": "e.g. UPI, cards, net banking and COD." },
+    { "type": "text", "id": "returns_text", "label": "Returns line" },
+    { "type": "text", "id": "support_whatsapp", "label": "WhatsApp number", "info": "International format, digits only, e.g. 919876543210." },
+    { "type": "text", "id": "support_label", "label": "Support link label", "default": "Questions about fit or dosage? Chat with our team", "info": "Say 'vet' only if a vet answers." },
+    { "type": "text", "id": "support_hours", "label": "Support hours", "info": "e.g. Mon–Sat, 10am–7pm IST" },
+
+    { "type": "header", "content": "Mobile sticky bar" },
+    { "type": "checkbox", "id": "show_sticky", "label": "Show sticky purchase bar (below 1024px)", "default": true },
+    { "type": "checkbox", "id": "sticky_show_buy", "label": "Include Buy now in sticky bar", "default": false },
+
+    { "type": "header", "content": "Page zones" },
+    { "type": "checkbox", "id": "show_quickfit", "label": "Show quick fit", "default": true },
+    { "type": "text", "id": "quickfit_title", "label": "Quick fit heading", "default": "At a glance" },
+    { "type": "checkbox", "id": "show_benefits", "label": "Show benefits", "default": true },
+    { "type": "text", "id": "benefits_title", "label": "Benefits heading", "default": "What it supports" },
+    { "type": "checkbox", "id": "show_desc", "label": "Show product description", "default": true },
+    { "type": "text", "id": "desc_title", "label": "Description heading", "default": "The details" },
+    { "type": "image_picker", "id": "desc_icon", "label": "Description heading icon" },
+    { "type": "checkbox", "id": "desc_collapsed", "label": "Collapse description", "default": false },
+    { "type": "checkbox", "id": "show_ingredients", "label": "Show ingredients", "default": true },
+    { "type": "text", "id": "ingredients_title", "label": "Ingredients heading", "default": "What’s inside" },
+    { "type": "checkbox", "id": "show_evidence", "label": "Show evidence band", "default": true },
+    { "type": "text", "id": "evidence_title", "label": "Evidence heading", "default": "What earns your trust" },
+    { "type": "text", "id": "evidence_intro", "label": "Evidence intro line" },
+    { "type": "checkbox", "id": "show_howto", "label": "Show how to use", "default": true },
+    { "type": "text", "id": "howto_title", "label": "How to use heading", "default": "How to use" },
+    { "type": "checkbox", "id": "show_calculator", "label": "Show weight calculator", "default": true },
+    { "type": "checkbox", "id": "show_expect", "label": "Show what to expect", "default": true },
+    { "type": "text", "id": "expect_title", "label": "What to expect heading", "default": "What to expect" },
+    { "type": "text", "id": "expect_note", "label": "What to expect note", "default": "Every pet responds differently. Use this as a guide to what to watch, not a promise of results." },
+    { "type": "checkbox", "id": "show_reviews", "label": "Show reviews", "default": true },
+    { "type": "text", "id": "reviews_title", "label": "Reviews heading", "default": "Reviews" },
+    { "type": "checkbox", "id": "show_pairs", "label": "Show pairs well with", "default": true },
+    { "type": "text", "id": "pairs_title", "label": "Pairs heading", "default": "Pairs well with" },
+    { "type": "checkbox", "id": "pairs_auto", "label": "Use Shopify complementary recommendations when vf.pairs_with is empty", "default": true },
+    { "type": "range", "id": "pairs_limit", "label": "Products to show", "min": 2, "max": 4, "step": 1, "default": 3 },
+
+    { "type": "header", "content": "FAQs" },
+    { "type": "checkbox", "id": "show_faqs", "label": "Show FAQs", "default": true },
+    { "type": "inline_richtext", "id": "faqs_title_rich", "label": "FAQs heading", "default": "Questions, answered" },
+
+    { "type": "header", "content": "Manufacturing details" },
+    { "type": "checkbox", "id": "show_mfg", "label": "Show manufacturing details", "default": true },
+    { "type": "text", "id": "mfg_title", "label": "Heading", "default": "Manufacturing details" },
+    { "type": "image_picker", "id": "mfg_icon", "label": "Heading icon" },
+    { "type": "checkbox", "id": "use_mfg_fallback", "label": "Use fallback text instead of blocks", "default": false, "info": "Product metafield vf.mfg_details always wins when filled." },
+    { "type": "richtext", "id": "mfg_fallback_rich1", "label": "Fallback line 1" },
+    { "type": "richtext", "id": "mfg_fallback_rich2", "label": "Fallback line 2" },
+    { "type": "richtext", "id": "mfg_fallback_rich3", "label": "Fallback line 3" },
+
+    { "type": "header", "content": "Banner" },
+    { "type": "checkbox", "id": "show_banner", "label": "Show banner", "default": false },
+    { "type": "image_picker", "id": "banner_img_desktop", "label": "Desktop image" },
+    { "type": "image_picker", "id": "banner_img_mobile", "label": "Mobile image" },
+    { "type": "url", "id": "banner_link", "label": "Link" },
+    { "type": "text", "id": "banner_alt", "label": "Alt text", "info": "Describe the image. Leave blank only if it is purely decorative." },
+    { "type": "checkbox", "id": "banner_new_tab", "label": "Open link in new tab", "default": false },
+    { "type": "range", "id": "banner_h_desktop", "min": 200, "max": 600, "step": 10, "unit": "px", "label": "Height (desktop)", "default": 360 },
+    { "type": "range", "id": "banner_h_mobile", "min": 140, "max": 480, "step": 10, "unit": "px", "label": "Height (mobile)", "default": 220 },
+
+    { "type": "header", "content": "Typography" },
+    { "type": "checkbox", "id": "use_webfont", "label": "Use licensed Helvetica Now webfont", "default": false, "info": "Upload the WOFF2 files first (see snippets/vf-fonts.liquid). Otherwise the Helvetica system stack is used." },
+
+    { "type": "header", "content": "Analytics" },
+    { "type": "checkbox", "id": "analytics_datalayer", "label": "Push view_item, add_to_cart and begin_checkout to dataLayer", "default": true, "info": "GA4 ecommerce format. Avoid double counting if the Google & YouTube app already sends these." },
+
+    { "type": "header", "content": "SEO · AEO · GEO · LLM" },
+    { "type": "paragraph", "content": "Product, Offer, AggregateRating, BreadcrumbList and FAQPage JSON-LD are generated on each page load." },
+    { "type": "checkbox", "id": "seo_enable_product_schema", "label": "Output Product JSON-LD", "default": true, "info": "Product + per-variant Offer + AggregateRating + BreadcrumbList." },
+    { "type": "checkbox", "id": "seo_enable_faq_schema", "label": "Output FAQPage JSON-LD", "default": true },
+    { "type": "text", "id": "seo_brand", "label": "Brand name", "default": "Vettofit" },
+    { "type": "text", "id": "seo_gtin", "label": "GTIN-13 / barcode", "info": "Variant barcodes are also emitted per offer." },
+    { "type": "text", "id": "seo_mpn", "label": "MPN" },
+    { "type": "text", "id": "seo_color", "label": "Primary colour" },
+    { "type": "text", "id": "seo_material", "label": "Primary material" },
+    { "type": "text", "id": "seo_meta_description", "label": "Meta description override (≤ 160 chars)", "info": "Prefer Shopify's own SEO field. This override is applied with JavaScript." },
+    { "type": "text", "id": "seo_canonical_override", "label": "Canonical URL override", "info": "Leave blank to use the product URL." }
+  ],
+  "blocks": [
+    { "type": "@app" },
+    {
+      "type": "trust_badge",
+      "name": "Proof chip",
+      "limit": 6,
+      "settings": [
+        { "type": "checkbox", "id": "enabled", "label": "Enable", "default": true },
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Icon",
+          "options": [
+            { "value": "shield-check", "label": "Shield (vet-approved)" },
+            { "value": "beaker", "label": "Beaker (third-party tested)" },
+            { "value": "leaf", "label": "Leaf (human-grade ingredients)" },
+            { "value": "study", "label": "Document (clinically studied)" },
+            { "value": "check", "label": "Check" }
+          ],
+          "default": "shield-check"
+        },
+        { "type": "image_picker", "id": "badge_icon", "label": "Custom icon (optional)", "info": "Monoline, 1.5–2px stroke. Overrides the icon above." },
+        { "type": "inline_richtext", "id": "badge_text", "label": "Text", "default": "Vet-approved formula", "info": "Approved territories only: vet-approved formula, made with human-grade ingredients, made with clinically studied ingredients, third-party tested for [attribute]." }
+      ]
+    },
+    {
+      "type": "mfg",
+      "name": "Mfg detail",
+      "limit": 12,
+      "settings": [
+        { "type": "checkbox", "id": "enabled", "label": "Enable", "default": true },
+        { "type": "text", "id": "title", "label": "Line title", "default": "Facility" },
+        { "type": "richtext", "id": "text", "label": "Line text", "default": "<p>[PLACEHOLDER: facility and certification — confirm before publishing]</p>" }
+      ]
+    },
+    {
+      "type": "faq",
+      "name": "FAQ",
+      "limit": 50,
+      "settings": [
+        { "type": "checkbox", "id": "enabled", "label": "Enable", "default": true },
+        { "type": "inline_richtext", "id": "q", "label": "Question", "default": "How long does delivery take?" },
+        { "type": "richtext", "id": "a", "label": "Answer", "default": "<p>[PLACEHOLDER: delivery answer — confirm with operations]</p>" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Vettofit PDP",
+      "blocks": [
+        { "type": "trust_badge", "settings": { "icon": "shield-check", "badge_text": "Vet-approved formula" } },
+        { "type": "trust_badge", "settings": { "icon": "beaker", "badge_text": "Third-party tested" } },
+        { "type": "trust_badge", "settings": { "icon": "leaf", "badge_text": "Human-grade ingredients" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

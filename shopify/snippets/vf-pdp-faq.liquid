@@ -1,0 +1,75 @@
+{%- comment -%}
+  Vettofit PDP · FAQ (brand book 9.6) — native <details>/<summary> accordion.
+  Sources, in order: product-specific vf.faq metaobjects, then section FAQ blocks (shared).
+  The FAQPage JSON-LD in vf-pdp-schema uses the same two sources, so markup and schema match.
+  Microdata removed on purpose: it duplicated the JSON-LD FAQPage.
+  Params: product, sid, s, blocks
+{%- endcomment -%}
+{%- liquid
+  assign pfaqs = product.metafields.vf.faq.value
+  assign pf_count = 0
+  if pfaqs != blank
+    assign pf_count = pfaqs.size
+  endif
+  assign any_block_faq = false
+  for b in blocks
+    if b.type == 'faq' and b.settings.enabled
+      assign any_block_faq = true
+      break
+    endif
+  endfor
+  assign show = false
+  if pf_count > 0 or any_block_faq or request.design_mode
+    assign show = true
+  endif
+  assign wa = s.support_whatsapp | remove: '+' | remove: ' ' | remove: '-' | remove: '(' | remove: ')'
+  assign wa_msg = 'Hi Vettofit, I have a question about ' | append: product.title
+-%}
+{%- if s.show_faqs and show -%}
+  <section class="vf-zone vf-faq" aria-labelledby="VfFaqH-{{ sid }}" data-vf-faq>
+    <div class="vf-container vf-faq__grid">
+      <div class="vf-faq__intro">
+        <h2 class="vf-h2" id="VfFaqH-{{ sid }}">{{ s.faqs_title_rich | default: 'Questions, answered' }}</h2>
+        {%- if wa != blank -%}
+          <p class="vf-faq__help">
+            Still deciding?
+            <a class="vf-textlink" href="https://wa.me/{{ wa }}?text={{ wa_msg | url_encode }}" target="_blank" rel="noopener">Chat with our team<span class="vf-sr"> (opens WhatsApp)</span></a>
+          </p>
+        {%- endif -%}
+      </div>
+      <div class="vf-faq__list">
+        <div class="vf-faq__controls">
+          <button type="button" class="vf-textbtn" data-vf-faq-all="open">Expand all</button>
+          <button type="button" class="vf-textbtn" data-vf-faq-all="close">Collapse all</button>
+        </div>
+        <div class="vf-acc">
+          {%- for f in pfaqs -%}
+            {%- if f.question.value != blank -%}
+              <details class="vf-acc__item">
+                <summary class="vf-acc__q"><span>{{ f.question.value }}</span>{%- render 'vf-icon', name: 'chevron-down', size: 20 -%}</summary>
+                <div class="vf-acc__a vf-rte">
+                  {%- if f.answer.type == 'rich_text_field' -%}
+                    {{ f.answer | metafield_tag }}
+                  {%- else -%}
+                    {{ f.answer.value | escape | newline_to_br }}
+                  {%- endif -%}
+                </div>
+              </details>
+            {%- endif -%}
+          {%- endfor -%}
+          {%- for b in blocks -%}
+            {%- if b.type == 'faq' and b.settings.enabled -%}
+              <details class="vf-acc__item" {{ b.shopify_attributes }}>
+                <summary class="vf-acc__q"><span>{{ b.settings.q }}</span>{%- render 'vf-icon', name: 'chevron-down', size: 20 -%}</summary>
+                <div class="vf-acc__a vf-rte">{{ b.settings.a }}</div>
+              </details>
+            {%- endif -%}
+          {%- endfor -%}
+          {%- if pf_count == 0 and any_block_faq == false -%}
+            <p class="vf-ph">[PLACEHOLDER] Add product FAQs (vf.faq → vf_faq) or FAQ blocks. Cover safety, combination use, age, species, allergies, subscriptions and shipping.</p>
+          {%- endif -%}
+        </div>
+      </div>
+    </div>
+  </section>
+{%- endif -%}

@@ -1,0 +1,192 @@
+{%- comment -%}
+  Vettofit PDP · story zones (brand book 9.6): Quick fit → Benefits → About → Why it works.
+  Every zone hides when its metafields are empty. In the Theme Editor (design mode)
+  empty zones show labelled placeholders so merchandisers can see where content goes.
+  Params: product, sid, s, species_words, need_label
+{%- endcomment -%}
+{%- liquid
+  assign mf = product.metafields.vf
+  assign design = request.design_mode
+
+  assign fit_who = mf.who_for.value | default: species_words
+  assign fit_format = mf.format.value
+  assign fit_flavour = mf.flavour.value
+  assign fit_routine = mf.routine.value
+  assign fit_askvet = mf.ask_vet_first.value
+  assign fit_count = 0
+  if fit_who != blank
+    assign fit_count = fit_count | plus: 1
+  endif
+  if fit_format != blank
+    assign fit_count = fit_count | plus: 1
+  endif
+  if fit_flavour != blank
+    assign fit_count = fit_count | plus: 1
+  endif
+  if fit_routine != blank
+    assign fit_count = fit_count | plus: 1
+  endif
+  if fit_askvet != blank
+    assign fit_count = fit_count | plus: 1
+  endif
+
+  assign benefits = mf.benefits.value
+  assign b_count = 0
+  if benefits != blank
+    assign b_count = benefits.size
+  endif
+  if b_count > 5
+    assign b_count = 5
+  endif
+
+  assign ings = mf.ingredients.value
+  assign ing_count = 0
+  if ings != blank
+    assign ing_count = ings.size
+  endif
+  assign ing_img = mf.ingredients_image.value
+  assign full_ings = mf.full_ingredients.value
+  assign mechanism = mf.mechanism.value
+-%}
+
+{%- comment -%} ── 3 · Quick fit ── {%- endcomment -%}
+{%- if s.show_quickfit -%}
+  {%- if fit_count > 1 or design -%}
+    <section class="vf-zone vf-zone--white vf-fit" aria-labelledby="VfFitH-{{ sid }}">
+      <div class="vf-container">
+        <h2 class="vf-eyebrow vf-fit__title" id="VfFitH-{{ sid }}">{{ s.quickfit_title | default: 'At a glance' }}</h2>
+        <dl class="vf-fit__list vf-cols-{{ fit_count | at_least: 1 }}">
+          {%- if fit_who != blank -%}
+            <div class="vf-fit__item"><dt>Made for</dt><dd>{{ fit_who }}</dd></div>
+          {%- endif -%}
+          {%- if fit_format != blank -%}
+            <div class="vf-fit__item"><dt>Format</dt><dd>{{ fit_format }}</dd></div>
+          {%- endif -%}
+          {%- if fit_flavour != blank -%}
+            <div class="vf-fit__item"><dt>Flavour</dt><dd>{{ fit_flavour }}</dd></div>
+          {%- endif -%}
+          {%- if fit_routine != blank -%}
+            <div class="vf-fit__item"><dt>Daily routine</dt><dd>{{ fit_routine }}</dd></div>
+          {%- endif -%}
+          {%- if fit_askvet != blank -%}
+            <div class="vf-fit__item vf-fit__item--vet">
+              <dt>{%- render 'vf-icon', name: 'alert', size: 16 -%}Ask your vet first if</dt>
+              <dd>{{ fit_askvet }}</dd>
+            </div>
+          {%- endif -%}
+          {%- if design and fit_count < 5 -%}
+            <div class="vf-fit__item vf-ph"><dt>Placeholder</dt><dd>Fill vf.who_for, vf.format, vf.flavour, vf.routine, vf.ask_vet_first</dd></div>
+          {%- endif -%}
+        </dl>
+      </div>
+    </section>
+  {%- endif -%}
+{%- endif -%}
+
+{%- comment -%} ── 4 · Benefits ── {%- endcomment -%}
+{%- if s.show_benefits -%}
+  {%- if b_count > 0 or design -%}
+    <section class="vf-zone vf-benefits" aria-labelledby="VfBenefitsH-{{ sid }}">
+      <div class="vf-container">
+        <header class="vf-zone__head">
+          {%- if need_label != blank -%}<p class="vf-eyebrow">{{ need_label }}</p>{%- endif -%}
+          <h2 class="vf-h2" id="VfBenefitsH-{{ sid }}">{{ s.benefits_title | default: 'What it supports' }}</h2>
+        </header>
+        {%- if b_count > 0 -%}
+          <ul class="vf-benefits__grid vf-cols-{{ b_count }}" role="list">
+            {%- for b in benefits limit: 5 -%}
+              {%- assign b_icon = b.icon.value | default: 'check' -%}
+              <li class="vf-benefit">
+                <span class="vf-benefit__icon">{%- render 'vf-icon', name: b_icon, size: 24 -%}</span>
+                <h3 class="vf-h4">{{ b.title.value }}</h3>
+                {%- if b.support.value != blank -%}<p class="vf-benefit__text">{{ b.support.value }}</p>{%- endif -%}
+              </li>
+            {%- endfor -%}
+          </ul>
+        {%- else -%}
+          <p class="vf-ph">[PLACEHOLDER: needs vet/claim approval] Add 3–5 vf_benefit entries to vf.benefits (title + support line + icon). Use support verbs only: supports, helps maintain, contributes to.</p>
+        {%- endif -%}
+      </div>
+    </section>
+  {%- endif -%}
+{%- endif -%}
+
+{%- comment -%} ── About (product description — the fallback narrative) ── {%- endcomment -%}
+{%- if s.show_desc and product.description != blank -%}
+  <section class="vf-zone vf-about" aria-labelledby="VfAboutH-{{ sid }}">
+    <div class="vf-container">
+      <div class="vf-about__inner">
+        <header class="vf-zone__head vf-zone__head--row">
+          {%- if s.desc_icon != blank -%}
+            {{ s.desc_icon | image_url: width: 64 | image_tag: width: 24, height: 24, alt: '', loading: 'lazy' }}
+          {%- endif -%}
+          <h2 class="vf-h3" id="VfAboutH-{{ sid }}">{{ s.desc_title | default: 'The details' }}</h2>
+        </header>
+        {%- if s.desc_collapsed -%}
+          <details class="vf-about__more">
+            <summary class="vf-textlink">Read the full description</summary>
+            <div class="vf-rte">{{ product.description }}</div>
+          </details>
+        {%- else -%}
+          <div class="vf-rte">{{ product.description }}</div>
+        {%- endif -%}
+      </div>
+    </div>
+  </section>
+{%- endif -%}
+
+{%- comment -%} ── 5 · Why it works / ingredients ── {%- endcomment -%}
+{%- if s.show_ingredients -%}
+  {%- if ing_count > 0 or full_ings != blank or design -%}
+    <section class="vf-zone vf-zone--white vf-ingredients" aria-labelledby="VfIngH-{{ sid }}">
+      <div class="vf-container vf-ingredients__grid{% if ing_img != blank %} has-media{% endif %}">
+        {%- if ing_img != blank -%}
+          <figure class="vf-ingredients__media">
+            {{ ing_img | image_url: width: 1200 | image_tag: widths: '480,720,960,1200', sizes: '(min-width: 1024px) 40vw, 100vw', loading: 'lazy', class: 'vf-ingredients__img' }}
+          </figure>
+        {%- endif -%}
+        <div class="vf-ingredients__body">
+          <header class="vf-zone__head">
+            <p class="vf-eyebrow">Why it works</p>
+            <h2 class="vf-h2" id="VfIngH-{{ sid }}">{{ s.ingredients_title | default: 'What’s inside' }}</h2>
+            {%- if mechanism != blank -%}<p class="vf-lead">{{ mechanism }}</p>{%- endif -%}
+          </header>
+
+          {%- if ing_count > 0 -%}
+            <ul class="vf-ings" role="list">
+              {%- for i in ings -%}
+                <li class="vf-ing">
+                  {%- if i.image.value != blank -%}
+                    <span class="vf-ing__thumb">{{ i.image.value | image_url: width: 160 | image_tag: width: 64, height: 64, loading: 'lazy', alt: '' }}</span>
+                  {%- endif -%}
+                  <div class="vf-ing__text">
+                    <div class="vf-ing__head">
+                      <h3 class="vf-h4">{{ i.name.value }}</h3>
+                      {%- if i.amount.value != blank -%}<span class="vf-ing__amount">{{ i.amount.value }}</span>{%- endif -%}
+                    </div>
+                    {%- if i.role.value != blank -%}<p class="vf-ing__role">{{ i.role.value }}</p>{%- endif -%}
+                    {%- if i.source.value != blank -%}<p class="vf-ing__source">Source: {{ i.source.value }}</p>{%- endif -%}
+                    {%- if i.evidence_url.value != blank -%}
+                      <a class="vf-textlink" href="{{ i.evidence_url.value }}" target="_blank" rel="noopener">
+                        Read the research<span class="vf-sr"> on {{ i.name.value }} (opens in a new tab)</span>{%- render 'vf-icon', name: 'arrow-right', size: 16 -%}
+                      </a>
+                    {%- endif -%}
+                  </div>
+                </li>
+              {%- endfor -%}
+            </ul>
+          {%- elsif design -%}
+            <p class="vf-ph">[PLACEHOLDER] Add vf_ingredient entries to vf.ingredients (name, amount, role, source, image, evidence link).</p>
+          {%- endif -%}
+
+          {%- if full_ings != blank -%}
+            <details class="vf-disclosure">
+              <summary class="vf-disclosure__summary">Full ingredient list{%- render 'vf-icon', name: 'chevron-down', size: 18 -%}</summary>
+              <div class="vf-disclosure__body vf-rte">{{ full_ings | escape | newline_to_br }}</div>
+            </details>
+          {%- endif -%}
+        </div>
+      </div>
+    </section>
+  {%- endif -%}
+{%- endif -%}

@@ -1,0 +1,1074 @@
+{%- comment -%}
+  Vettofit pump story — sections/vf-pump-story.liquid
+  Built from "Vettofit Landing Page — Shopify Section Technical Guide", section 3 (Pump story),
+  and "Landing Page Guidelines", moment 3 (The Pump).
+
+  Desktop: a pinned scene about two screens tall. Animation on the left (columns 1–6),
+           three steps highlighting in turn on the right (columns 8–12), tied to scroll.
+           The pump presses, one drop falls along the teal Signal Line onto food.
+  Mobile:  three tap-through frames (pump, drop, bowl) with dots. Swipe works.
+           No scroll-scrubbing.
+  Reduced motion: all three steps shown side by side as still frames.
+
+  Built-in animation is inline SVG + CSS (a few KB), so it stays far under the 150KB budget.
+  The pack follows the Dog / Cat switch (event "vf:species-change", ?pet=, localStorage vf_pet).
+  A step that uses a Proof entry shows only the approved wording, and hides it if the entry has
+  no Claim ID or is past its expiry date.
+{%- endcomment -%}
+
+{%- liquid
+  assign mode = section.settings.animation
+  assign dog_product = section.settings.product
+  assign cat_product = section.settings.cat_product
+  if cat_product == blank and dog_product != blank
+    assign cat_product = dog_product.metafields.vf.sibling_product.value
+  endif
+
+  assign drip_x = 206 | plus: section.settings.drip_nudge
+  assign step_blocks = section.blocks | where: 'type', 'step'
+  assign step_count = step_blocks.size
+  assign today_num = 'now' | date: '%Y%m%d' | plus: 0
+
+  assign cta_href = section.settings.cta_link
+  if section.settings.cta_target == 'dose'
+    assign cta_href = '#vf-dose'
+  endif
+-%}
+
+{%- comment -%} ---------- The built-in pump scene (reused for the still frames) ---------- {%- endcomment -%}
+{%- capture stage -%}
+  <div class="vf-stage" data-stage>
+    <div class="vf-stage__pack" data-pack>
+      {%- if dog_product != blank and dog_product.featured_image != blank -%}
+        {{ dog_product.featured_image | image_url: width: 900 | image_tag: widths: '300, 450, 600, 900', sizes: '(min-width: 990px) 30vw, 50vw', loading: 'lazy', alt: '', class: 'vf-stage__img is-on', data-species: 'dog' }}
+      {%- endif -%}
+      {%- if cat_product != blank and cat_product.featured_image != blank -%}
+        {{ cat_product.featured_image | image_url: width: 900 | image_tag: widths: '300, 450, 600, 900', sizes: '(min-width: 990px) 30vw, 50vw', loading: 'lazy', alt: '', class: 'vf-stage__img', data-species: 'cat' }}
+      {%- endif -%}
+      {%- if dog_product == blank or dog_product.featured_image == blank -%}
+        <svg class="vf-stage__bottle" viewBox="0 0 120 220" aria-hidden="true">
+          <path d="M52 8h22v10h22v10H74v10H52z" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/>
+          <rect x="54" y="38" width="18" height="16" fill="none" stroke="currentColor" stroke-width="2.5"/>
+          <path d="M34 66c0-7 6-12 13-12h32c7 0 13 5 13 12v136c0 6-5 10-10 10H44c-6 0-10-4-10-10z" fill="none" stroke="currentColor" stroke-width="2.5"/>
+          <rect x="42" y="104" width="42" height="56" rx="6" fill="var(--vf-accent, #FF8A74)" opacity="0.9"/>
+        </svg>
+      {%- endif -%}
+    </div>
+    <svg class="vf-stage__svg" viewBox="0 0 400 400" aria-hidden="true" focusable="false">
+      <path class="vf-stage__line" d="M{{ drip_x }} 52 H296 V284" data-line/>
+      <circle class="vf-stage__origin" cx="{{ drip_x }}" cy="52" r="3.5"/>
+      <path class="vf-stage__bowl" d="M226 304 Q232 364 296 368 Q360 364 366 304"/>
+      <ellipse class="vf-stage__food" cx="296" cy="304" rx="64" ry="11"/>
+      <ellipse class="vf-stage__rim" cx="296" cy="304" rx="70" ry="13"/>
+      <ellipse class="vf-stage__sheen" cx="296" cy="304" rx="30" ry="5.5" data-sheen/>
+      <ellipse class="vf-stage__ripple" cx="296" cy="304" rx="22" ry="4.5" data-ripple/>
+      <g data-drop transform="translate(296 284)">
+        <path class="vf-stage__drop" d="M0 -12 C4 -6 8 -1 8 4 A8 8 0 0 1 -8 4 C-8 -1 -4 -6 0 -12Z"/>
+      </g>
+    </svg>
+  </div>
+{%- endcapture -%}
+
+{%- comment -%} ---------- Build the step list (desktop) and the frames (mobile / still) ---------- {%- endcomment -%}
+{%- liquid
+  assign desk_steps = ''
+  assign frames = ''
+  assign dots = ''
+  assign photo_layers = ''
+-%}
+{%- for block in step_blocks -%}
+  {%- liquid
+    assign step_text = block.settings.text
+    assign proof_label = ''
+    assign proof_problem = ''
+    if block.settings.proof != blank
+      assign proof = block.settings.proof
+      assign claim = proof.claim_id.value
+      assign wording = proof.approved_wording | metafield_text
+      assign expired = false
+      if proof.expiry_date.value != blank
+        assign exp_num = proof.expiry_date.value | date: '%Y%m%d' | plus: 0
+        if exp_num < today_num
+          assign expired = true
+        endif
+      endif
+      if claim == blank
+        assign proof_problem = 'This step is hidden: its Proof entry has no Claim ID.'
+      elsif expired
+        assign proof_problem = 'This step is hidden: its Proof entry is past its expiry date.'
+      elsif wording == blank
+        assign proof_problem = 'This step is hidden: its Proof entry has no approved wording.'
+      endif
+      if proof_problem != ''
+        assign step_text = ''
+      else
+        assign step_text = wording
+        assign proof_label = proof.type.value
+      endif
+    endif
+    assign num = forloop.index | prepend: '0'
+  -%}
+
+  {%- capture caption -%}
+    <span class="vf-step__num">{{ num }}{% if proof_label != blank %}<span class="vf-step__proof">{{ proof_label }}</span>{% endif %}</span>
+    {%- if block.settings.title != blank -%}<h3 class="vf-step__title">{{ block.settings.title }}</h3>{%- endif -%}
+    {%- if step_text != blank -%}<p class="vf-step__text">{{ step_text }}</p>{%- endif -%}
+    {%- if proof_problem != '' and request.design_mode -%}<p class="vf-pump__note">{{ proof_problem }} (Only you see this note.)</p>{%- endif -%}
+  {%- endcapture -%}
+
+  {%- capture one_step -%}
+    <li class="vf-step{% if forloop.first %} is-active{% endif %}" data-step data-index="{{ forloop.index0 }}" data-block-id="{{ block.id }}" {{ block.shopify_attributes }}>{{ caption }}</li>
+  {%- endcapture -%}
+
+  {%- capture one_frame -%}
+    <li class="vf-frame" data-frame data-index="{{ forloop.index0 }}" data-block-id="{{ block.id }}" aria-roledescription="slide" aria-label="{{ forloop.index }} of {{ step_count }}">
+      {%- if mode == 'builtin' -%}
+        <div class="vf-frame__media" data-next aria-hidden="true">{{ stage }}</div>
+      {%- elsif mode == 'photos' -%}
+        <div class="vf-frame__media vf-frame__media--photo" data-next>
+          {%- if block.settings.photo != blank -%}
+            {{ block.settings.photo | image_url: width: 900 | image_tag: widths: '400, 600, 900', sizes: '(min-width: 990px) 30vw, 86vw', loading: 'lazy', class: 'vf-frame__photo' }}
+          {%- elsif request.design_mode -%}
+            <p class="vf-pump__note">Add a photo to this step (Three photos mode). (Only you see this note.)</p>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+      <div class="vf-frame__caption">{{ caption }}</div>
+    </li>
+  {%- endcapture -%}
+
+  {%- capture one_dot -%}
+    <button class="vf-dot{% if forloop.first %} is-active{% endif %}" type="button" data-dot data-index="{{ forloop.index0 }}" aria-label="Step {{ forloop.index }}"{% if forloop.first %} aria-current="true"{% endif %}><span></span></button>
+  {%- endcapture -%}
+
+  {%- if mode == 'photos' and block.settings.photo != blank -%}
+    {%- capture one_photo -%}
+      {{ block.settings.photo | image_url: width: 1200 | image_tag: widths: '600, 900, 1200', sizes: '(min-width: 990px) 45vw, 100vw', loading: 'lazy', class: 'vf-visual__photo', data-photo: forloop.index0 }}
+    {%- endcapture -%}
+    {%- assign photo_layers = photo_layers | append: one_photo -%}
+  {%- endif -%}
+
+  {%- liquid
+    assign desk_steps = desk_steps | append: one_step
+    assign frames = frames | append: one_frame
+    assign dots = dots | append: one_dot
+  -%}
+{%- endfor -%}
+
+<vf-pump-story
+  id="vf-pump-{{ section.id }}"
+  class="vf-pump vf-scheme--{{ section.settings.color_scheme }} vf-pump--{{ mode }} vf-pump--{{ section.settings.scroll_length }} vf-space-below--{{ section.settings.space_below }}"
+  data-mode="{{ mode }}"
+  data-steps="{{ step_count }}"
+>
+  <div class="vf-pump__track">
+    <div class="vf-pump__pin" data-pin>
+      <div class="vf-pump__grid">
+
+        {%- comment -%} Left: the animation (desktop pinned scene; video also shows on mobile) {%- endcomment -%}
+        <div class="vf-pump__visual">
+          {%- case mode -%}
+            {%- when 'builtin' -%}
+              <div class="vf-visual__card" role="img" aria-label="{{ section.settings.animation_alt | escape }}">
+                {{ stage }}
+              </div>
+            {%- when 'video' -%}
+              <div class="vf-visual__card vf-visual__card--video">
+                {%- if section.settings.video != blank -%}
+                  {{ section.settings.video | video_tag: muted: true, loop: true, playsinline: true, autoplay: false, controls: false, preload: 'none', class: 'vf-visual__video', aria-label: section.settings.animation_alt }}
+                {%- elsif request.design_mode -%}
+                  <p class="vf-pump__note">Pick a video under "Video". (Only you see this note.)</p>
+                {%- endif -%}
+              </div>
+            {%- when 'photos' -%}
+              <div class="vf-visual__card vf-visual__card--photos">{{ photo_layers }}</div>
+          {%- endcase -%}
+        </div>
+
+        {%- comment -%} Right: headline and the three steps {%- endcomment -%}
+        <div class="vf-pump__copy">
+          {%- if section.settings.headline != blank -%}
+            <h2 class="vf-pump__headline">{{ section.settings.headline }}</h2>
+          {%- endif -%}
+          <span class="vf-pump__signal" aria-hidden="true"></span>
+          {%- if section.settings.subtext != blank -%}
+            <p class="vf-pump__sub">{{ section.settings.subtext }}</p>
+          {%- endif -%}
+
+          {%- if step_count > 0 -%}
+            <ol class="vf-pump__steps" role="list">{{ desk_steps }}</ol>
+
+            <div class="vf-pump__frames-wrap">
+              <ol class="vf-pump__frames" role="list" data-frames aria-roledescription="carousel" aria-label="{{ section.settings.headline | escape }}">{{ frames }}</ol>
+              {%- if step_count > 1 -%}
+                <div class="vf-pump__dots">{{ dots }}</div>
+              {%- endif -%}
+            </div>
+          {%- elsif request.design_mode -%}
+            <p class="vf-pump__note">Add up to three Step blocks. (Only you see this note.)</p>
+          {%- endif -%}
+
+          {%- if section.settings.cta_label != blank and cta_href != blank -%}
+            <a class="vf-pump__cta" href="{{ cta_href }}" data-cta data-target="{{ section.settings.cta_target }}">
+              <span>{{ section.settings.cta_label }}</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg>
+            </a>
+          {%- endif -%}
+
+          {%- if request.design_mode and mode == 'builtin' and dog_product == blank -%}
+            <p class="vf-pump__note">Pick a product under "Product shown" so the real pack appears. (Only you see this note.)</p>
+          {%- endif -%}
+        </div>
+      </div>
+    </div>
+  </div>
+</vf-pump-story>
+
+<style>
+  /* ---------- Brand colour schemes ---------- */
+  .vf-pump.vf-scheme--chalk  { --p-bg: var(--vf-chalk, #F7F5EF); --p-card: var(--vf-white, #FFFFFF); --p-fg: var(--vf-carbon, #111111); --p-muted: rgba(17,17,17,.68); --p-line: rgba(17,17,17,.14); --p-btn-bg: var(--vf-carbon, #111111); --p-btn-fg: #FFFFFF; }
+  .vf-pump.vf-scheme--white  { --p-bg: var(--vf-white, #FFFFFF); --p-card: var(--vf-chalk, #F7F5EF); --p-fg: var(--vf-carbon, #111111); --p-muted: rgba(17,17,17,.68); --p-line: rgba(17,17,17,.14); --p-btn-bg: var(--vf-carbon, #111111); --p-btn-fg: #FFFFFF; }
+  .vf-pump.vf-scheme--plum   { --p-bg: var(--vf-plum, #2B1B3A); --p-card: var(--vf-white, #FFFFFF); --p-fg: #FFFFFF; --p-muted: rgba(255,255,255,.76); --p-line: rgba(255,255,255,.18); --p-btn-bg: var(--vf-chalk, #F7F5EF); --p-btn-fg: var(--vf-carbon, #111111); }
+  .vf-pump.vf-scheme--carbon { --p-bg: var(--vf-carbon, #111111); --p-card: var(--vf-white, #FFFFFF); --p-fg: var(--vf-chalk, #F7F5EF); --p-muted: rgba(247,245,239,.74); --p-line: rgba(247,245,239,.16); --p-btn-bg: var(--vf-teal, #09D1C7); --p-btn-fg: var(--vf-carbon, #111111); }
+
+  .vf-pump {
+    --p-signal: var(--vf-teal, #09D1C7);
+    --p-accent: var(--vf-accent, #FF8A74);
+    --p-ink: var(--vf-carbon, #111111);
+    --p-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+    --p-track: 220vh;
+    --p-gutter: 16px;
+    display: block;
+    background: var(--p-bg);
+    color: var(--p-fg);
+    font-family: var(--vf-font-body, "Inter", var(--font-body-family, system-ui, -apple-system, "Segoe UI", sans-serif));
+    -webkit-font-smoothing: antialiased;
+  }
+  .vf-pump--short { --p-track: 160vh; }
+  .vf-pump *, .vf-pump *::before, .vf-pump *::after { box-sizing: border-box; }
+  .vf-space-below--none   { padding-bottom: 0; }
+  .vf-space-below--small  { padding-bottom: 24px; }
+  .vf-space-below--medium { padding-bottom: 48px; }
+  .vf-space-below--large  { padding-bottom: 80px; }
+
+  /* ---------- Default layout (mobile, reduced motion, no JS) ---------- */
+  .vf-pump__pin { padding: 48px 0 24px; }
+  .vf-pump__grid {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 0 var(--p-gutter);
+  }
+  .vf-pump__visual { display: none; }
+  .vf-pump--video .vf-pump__visual { display: block; margin-bottom: 24px; }
+  .vf-pump__steps { display: none; }
+
+  .vf-pump__headline {
+    margin: 0;
+    font-family: var(--vf-font-display, "Inter Display", "Inter", var(--font-heading-family, system-ui, sans-serif));
+    font-weight: 700;
+    font-size: clamp(30px, 6vw + 8px, 36px);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    text-transform: none;
+    color: var(--p-fg);
+    max-width: 16ch;
+  }
+  .vf-pump__signal {
+    display: block;
+    width: 56px;
+    height: 2px;
+    margin: 18px 0 0;
+    background: var(--p-signal);
+    border-radius: 2px;
+  }
+  .vf-pump__sub {
+    margin: 16px 0 0;
+    max-width: 46ch;
+    font-size: 17px;
+    line-height: 1.5;
+    color: var(--p-muted);
+  }
+
+  /* Frames: swipe row on mobile */
+  .vf-pump__frames-wrap { margin-top: 28px; }
+  .vf-pump__frames {
+    display: flex;
+    gap: 12px;
+    margin: 0 calc(-1 * var(--p-gutter));
+    padding: 0 var(--p-gutter);
+    list-style: none;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding: 0 var(--p-gutter);
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .vf-pump__frames::-webkit-scrollbar { display: none; }
+  .vf-frame {
+    flex: 0 0 86%;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .vf-frame__media {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    background: var(--p-card);
+    border-radius: 24px;
+    overflow: hidden;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .vf-frame__photo { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+  .vf-pump__dots { display: flex; justify-content: center; gap: 4px; margin-top: 12px; }
+  .vf-dot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+  .vf-dot span {
+    display: block;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--p-line);
+    transition: width 220ms var(--p-ease), background-color 220ms ease;
+  }
+  .vf-dot.is-active span { width: 24px; background: var(--p-signal); }
+
+  /* Step captions (shared) */
+  .vf-step__num {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--p-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .vf-step__proof {
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--p-line);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--p-fg);
+  }
+  .vf-step__title {
+    margin: 8px 0 0;
+    font-family: var(--vf-font-display, "Inter Display", "Inter", var(--font-heading-family, system-ui, sans-serif));
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    text-transform: none;
+    color: var(--p-fg);
+  }
+  .vf-step__text {
+    margin: 8px 0 0;
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--p-muted);
+  }
+
+  /* Button: primary = Carbon fill, white text */
+  .vf-pump__cta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 48px;
+    margin-top: 24px;
+    padding: 0 24px;
+    border-radius: 14px;
+    background: var(--p-btn-bg);
+    color: var(--p-btn-fg);
+    font-size: 16px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: transform 180ms var(--p-ease), opacity 180ms ease;
+  }
+  .vf-pump__cta svg { width: 18px; height: 18px; transition: transform 180ms var(--p-ease); }
+  @media (hover: hover) {
+    .vf-pump__cta:hover { transform: translateY(-1px); }
+    .vf-pump__cta:hover svg { transform: translateX(2px); }
+  }
+  .vf-pump__cta[hidden] { display: none; }
+  .vf-pump a:focus-visible,
+  .vf-pump button:focus-visible,
+  .vf-frame__media:focus-visible {
+    outline: 2px solid var(--p-fg);
+    outline-offset: 3px;
+  }
+
+  /* ---------- The built-in scene ---------- */
+  .vf-stage {
+    position: absolute;
+    inset: 0;
+    color: var(--p-ink);
+  }
+  .vf-stage__pack {
+    position: absolute;
+    left: 6%;
+    top: 8%;
+    width: 46%;
+    height: 70%;
+    will-change: transform;
+  }
+  .vf-stage__img,
+  .vf-stage__bottle {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: right top;
+    opacity: 0;
+    transition: opacity 450ms ease;
+  }
+  .vf-stage__img.is-on,
+  .vf-stage__bottle { opacity: 1; }
+  .vf-stage__svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .vf-stage__line {
+    fill: none;
+    stroke: var(--p-signal);
+    stroke-width: 2px;
+    vector-effect: non-scaling-stroke;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .vf-stage__line.is-js { vector-effect: none; }
+  .vf-stage__origin { fill: var(--p-signal); }
+  .vf-stage__bowl { fill: #FFFFFF; stroke: var(--p-ink); stroke-width: 2px; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+  .vf-stage__food { fill: #EADFCC; }
+  .vf-stage__rim { fill: none; stroke: var(--p-ink); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+  .vf-stage__sheen { fill: var(--p-accent); opacity: 0.9; }
+  .vf-stage__ripple { fill: none; stroke: var(--p-accent); stroke-width: 2px; vector-effect: non-scaling-stroke; opacity: 0; transform-box: fill-box; transform-origin: center; }
+  .vf-stage__drop { fill: var(--p-accent); }
+  [data-drop] { opacity: 0; }
+
+  /* ---------- Desktop ---------- */
+  @media (min-width: 990px) {
+    .vf-pump { --p-gutter: clamp(48px, 5vw, 80px); }
+    .vf-pump__pin { padding: 96px 0 64px; }
+    .vf-pump__headline { font-size: clamp(38px, 1.6vw + 18px, 48px); }
+
+    /* Still frames side by side (reduced motion, or before the script runs) */
+    .vf-pump__frames {
+      display: grid;
+      grid-template-columns: repeat(var(--p-cols, 3), minmax(0, 1fr));
+      gap: 24px;
+      margin: 0;
+      padding: 0;
+      overflow: visible;
+    }
+    .vf-pump[data-steps="1"] { --p-cols: 1; }
+    .vf-pump[data-steps="2"] { --p-cols: 2; }
+    .vf-frame__media { cursor: default; }
+    .vf-pump__dots { display: none; }
+    .vf-pump__cta { display: inline-flex; width: auto; }
+    .vf-pump--video:not(.is-pinned) .vf-pump__visual { max-width: 720px; }
+
+    /* Pinned scroll scene */
+    .vf-pump.is-pinned .vf-pump__track { height: var(--p-track); position: relative; }
+    .vf-pump.is-pinned .vf-pump__pin {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      height: 100svh;
+      padding: 72px 0 32px;
+      display: flex;
+      align-items: center;
+    }
+    .vf-pump.is-pinned .vf-pump__grid {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      column-gap: clamp(24px, 2.2vw, 32px);
+      align-items: center;
+    }
+    .vf-pump.is-pinned .vf-pump__visual { display: block; grid-column: 1 / span 6; margin: 0; }
+    .vf-pump.is-pinned .vf-pump__copy { grid-column: 8 / span 5; }
+    .vf-pump.is-pinned .vf-pump__frames-wrap { display: none; }
+    .vf-pump.is-pinned .vf-pump__steps { display: block; }
+
+    .vf-visual__card {
+      position: relative;
+      width: 100%;
+      max-width: min(100%, calc(100svh - 160px));
+      aspect-ratio: 1 / 1;
+      margin: 0 auto;
+      background: var(--p-card);
+      border-radius: 24px;
+      overflow: hidden;
+    }
+    .vf-pump__steps {
+      list-style: none;
+      margin: 40px 0 0;
+      padding: 0;
+    }
+    .vf-step {
+      position: relative;
+      padding: 18px 0 18px 24px;
+      opacity: 0.42;
+      transition: opacity 260ms ease;
+    }
+    .vf-step::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--p-line);
+    }
+    .vf-step::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--p-signal);
+      transform: scaleY(0);
+      transform-origin: top center;
+      transition: transform 260ms var(--p-ease);
+    }
+    .vf-step.is-active { opacity: 1; }
+    .vf-step.is-active::after { transform: scaleY(1); }
+    .vf-step__title { font-size: 24px; }
+    .vf-step__text { font-size: 17px; }
+  }
+
+  /* Video & photos inside the visual card */
+  .vf-visual__card { position: relative; aspect-ratio: 1 / 1; background: var(--p-card); border-radius: 24px; overflow: hidden; }
+  .vf-visual__video,
+  .vf-visual__card--video video { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .vf-visual__photo {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 450ms ease;
+  }
+  .vf-visual__photo.is-on { opacity: 1; }
+
+  .vf-pump__note {
+    margin: 12px 0 0;
+    padding: 8px 12px;
+    background: #FFF4B8;
+    color: #111111;
+    font-size: 13px;
+    line-height: 1.4;
+    border-radius: 10px;
+  }
+  .vf-frame__media .vf-pump__note { position: absolute; left: 12px; right: 12px; top: 12px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .vf-pump *, .vf-pump *::before, .vf-pump *::after {
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+    }
+  }
+</style>
+
+<script>
+  (function () {
+    if (customElements.get('vf-pump-story')) return;
+
+    function clamp(n) { return n < 0 ? 0 : n > 1 ? 1 : n; }
+
+    /* Draws the scene for progress p (0 → 1): press, drop along the Signal Line, land in the bowl. */
+    function setStage(stage, p) {
+      if (!stage) return;
+      if (!stage._els) {
+        var line = stage.querySelector('[data-line]');
+        stage._els = {
+          pack: stage.querySelector('[data-pack]'),
+          line: line,
+          len: line ? line.getTotalLength() : 0,
+          drop: stage.querySelector('[data-drop]'),
+          ripple: stage.querySelector('[data-ripple]'),
+          sheen: stage.querySelector('[data-sheen]')
+        };
+      }
+      var e = stage._els;
+      var press = clamp((p - 0.04) / 0.2);
+      var lineT = clamp((p - 0.12) / 0.5);
+      var dropT = clamp((p - 0.3) / 0.36);
+      var land = clamp((p - 0.66) / 0.2);
+
+      if (e.pack) e.pack.style.transform = 'translateY(' + (Math.sin(Math.PI * press) * 6).toFixed(2) + 'px)';
+      if (e.line) {
+        /* Keep the Signal Line exactly 2px wide at any size */
+        var w = stage.getBoundingClientRect().width;
+        if (w > 0) e.line.style.strokeWidth = (800 / w).toFixed(3);
+        e.line.classList.add('is-js');
+        e.line.style.strokeDasharray = e.len.toFixed(1);
+        e.line.style.strokeDashoffset = (e.len * (1 - lineT)).toFixed(2);
+      }
+      if (e.drop && e.line) {
+        var pt = e.line.getPointAtLength(dropT * e.len);
+        var grow = clamp((p - 0.22) / 0.08);
+        var visible = p > 0.22 && dropT < 1;
+        e.drop.setAttribute('transform', 'translate(' + pt.x.toFixed(1) + ' ' + pt.y.toFixed(1) + ') scale(' + (0.4 + grow * 0.6).toFixed(2) + ')');
+        e.drop.style.opacity = visible ? 1 : 0;
+      }
+      if (e.ripple) {
+        e.ripple.style.opacity = land > 0 && land < 1 ? (1 - land).toFixed(3) : 0;
+        e.ripple.style.transform = 'scale(' + (0.6 + land * 1.6).toFixed(3) + ')';
+      }
+      if (e.sheen) e.sheen.style.opacity = (land * 0.9).toFixed(3);
+    }
+
+    class VfPumpStory extends HTMLElement {
+      connectedCallback() {
+        var self = this;
+        this.mode = this.dataset.mode;
+        this.n = Math.max(1, parseInt(this.dataset.steps, 10) || 3);
+        this.desk = window.matchMedia('(min-width: 990px)');
+        this.rm = window.matchMedia('(prefers-reduced-motion: reduce)');
+        this.track = this.querySelector('.vf-pump__track');
+        this.pin = this.querySelector('[data-pin]');
+        this.mainStage = this.querySelector('.vf-pump__visual [data-stage]');
+        this.steps = Array.prototype.slice.call(this.querySelectorAll('[data-step]'));
+        this.frames = Array.prototype.slice.call(this.querySelectorAll('[data-frame]'));
+        this.framesEl = this.querySelector('[data-frames]');
+        this.dots = Array.prototype.slice.call(this.querySelectorAll('[data-dot]'));
+        this.photos = Array.prototype.slice.call(this.querySelectorAll('[data-photo]'));
+        this.video = this.querySelector('.vf-pump__visual video');
+        this.activeFrame = 0;
+        this.forced = null;
+        this.fallback = false;
+        this.ticking = false;
+
+        this.h = {
+          scroll: this.onScroll.bind(this),
+          layout: this.layout.bind(this),
+          species: this.onSpecies.bind(this),
+          blockSelect: this.onBlockSelect.bind(this),
+          blockDeselect: this.onBlockDeselect.bind(this)
+        };
+
+        /* Only listen to scroll while the section is near the screen. */
+        this.io = new IntersectionObserver(function (entries) {
+          var on = entries[0].isIntersecting;
+          if (on && !self.listening) { window.addEventListener('scroll', self.h.scroll, { passive: true }); self.listening = true; self.onScroll(); }
+          if (!on && self.listening) { window.removeEventListener('scroll', self.h.scroll); self.listening = false; }
+          self.toggleVideo(on);
+        }, { rootMargin: '200px 0px' });
+        this.io.observe(this);
+
+        [this.desk, this.rm].forEach(function (mq) { if (mq.addEventListener) mq.addEventListener('change', self.h.layout); });
+        document.addEventListener('vf:species-change', this.h.species);
+        document.addEventListener('shopify:block:select', this.h.blockSelect);
+        document.addEventListener('shopify:block:deselect', this.h.blockDeselect);
+
+        this.setupFrames();
+        this.setupCta();
+        this.applySpecies(this.initialSpecies());
+        this.layout();
+      }
+
+      disconnectedCallback() {
+        var self = this;
+        if (this.io) this.io.disconnect();
+        window.removeEventListener('scroll', this.h.scroll);
+        [this.desk, this.rm].forEach(function (mq) { if (mq.removeEventListener) mq.removeEventListener('change', self.h.layout); });
+        document.removeEventListener('vf:species-change', this.h.species);
+        document.removeEventListener('shopify:block:select', this.h.blockSelect);
+        document.removeEventListener('shopify:block:deselect', this.h.blockDeselect);
+      }
+
+      /* Step i covers progress START..END on the timeline */
+      endOf(i) { return (i + 1) / this.n; }
+      startOf(i) { return i / this.n; }
+
+      layout() {
+        var pinned = this.desk.matches && !this.rm.matches && !this.fallback && this.mode !== 'none';
+        this.classList.toggle('is-pinned', pinned);
+        var self = this;
+        /* Still frames show the end of their step */
+        this.frames.forEach(function (f, i) { setStage(f.querySelector('[data-stage]'), self.endOf(i)); });
+        if (pinned) this.onScroll();
+        else setStage(this.mainStage, 1);
+        this.toggleVideo(true);
+      }
+
+      onScroll() {
+        if (this.ticking) return;
+        this.ticking = true;
+        var self = this;
+        requestAnimationFrame(function () { self.ticking = false; self.update(); });
+      }
+
+      update() {
+        if (!this.classList.contains('is-pinned')) return;
+        var r = this.track.getBoundingClientRect();
+        var vh = window.innerHeight;
+
+        /* Some themes block "sticky". If the scene isn't pinning, show still frames instead. */
+        if (r.top < -60 && r.bottom > vh + 60) {
+          var pinTop = this.pin.getBoundingClientRect().top;
+          if (Math.abs(pinTop) > 4) { this.fallback = true; this.layout(); return; }
+        }
+
+        var p = this.forced !== null ? this.endOf(this.forced) - 0.001 : clamp(-r.top / Math.max(1, r.height - vh));
+        this.render(p);
+      }
+
+      render(p) {
+        setStage(this.mainStage, p);
+        var idx = Math.min(this.n - 1, Math.floor(p * this.n));
+        this.steps.forEach(function (s, i) { s.classList.toggle('is-active', i === idx); });
+        this.photos.forEach(function (ph) { ph.classList.toggle('is-on', parseInt(ph.dataset.photo, 10) === idx); });
+      }
+
+      /* ---------- Mobile frames ---------- */
+      setupFrames() {
+        var self = this;
+        if (!this.framesEl || !this.frames.length) return;
+
+        this.frameIo = new IntersectionObserver(function (entries) {
+          entries.forEach(function (en) {
+            if (en.isIntersecting && en.intersectionRatio > 0.6) self.setFrame(parseInt(en.target.dataset.index, 10));
+          });
+        }, { root: this.framesEl, threshold: [0.6] });
+        this.frames.forEach(function (f) { self.frameIo.observe(f); });
+
+        this.dots.forEach(function (d) {
+          d.addEventListener('click', function () { self.goTo(parseInt(d.dataset.index, 10)); });
+        });
+        this.querySelectorAll('[data-next]').forEach(function (m) {
+          m.addEventListener('click', function () {
+            if (self.desk.matches) return;
+            self.goTo((self.activeFrame + 1) % self.frames.length);
+          });
+        });
+      }
+
+      goTo(i) {
+        var f = this.frames[i];
+        if (!f || !this.framesEl) return;
+        var pad = parseFloat(getComputedStyle(this.framesEl).paddingLeft) || 0;
+        var left = this.framesEl.scrollLeft + f.getBoundingClientRect().left - this.framesEl.getBoundingClientRect().left - pad;
+        this.framesEl.scrollTo({ left: left, behavior: this.rm.matches ? 'auto' : 'smooth' });
+      }
+
+      setFrame(i) {
+        if (i === this.activeFrame && this._frameInit) return;
+        this._frameInit = true;
+        this.activeFrame = i;
+        this.dots.forEach(function (d, k) {
+          d.classList.toggle('is-active', k === i);
+          if (k === i) d.setAttribute('aria-current', 'true'); else d.removeAttribute('aria-current');
+        });
+        if (this.desk.matches || this.rm.matches) return;
+        /* Play this frame's part of the story once */
+        var stage = this.frames[i] && this.frames[i].querySelector('[data-stage]');
+        if (!stage) return;
+        var from = this.startOf(i), to = this.endOf(i), t0 = null, dur = 900;
+        if (stage._raf) cancelAnimationFrame(stage._raf);
+        var step = function (ts) {
+          if (t0 === null) t0 = ts;
+          var k = clamp((ts - t0) / dur);
+          setStage(stage, from + (to - from) * k);
+          if (k < 1) stage._raf = requestAnimationFrame(step);
+        };
+        stage._raf = requestAnimationFrame(step);
+      }
+
+      /* ---------- Video: plays only while on screen, never under reduced motion ---------- */
+      toggleVideo(on) {
+        if (!this.video) return;
+        if (on && !this.rm.matches) {
+          var pr = this.video.play();
+          if (pr && pr.catch) pr.catch(function () {});
+        } else {
+          this.video.pause();
+        }
+      }
+
+      /* ---------- Dog / Cat ---------- */
+      initialSpecies() {
+        var s = null;
+        try { s = new URLSearchParams(window.location.search).get('pet'); } catch (e) {}
+        if (s !== 'dog' && s !== 'cat') { try { s = localStorage.getItem('vf_pet'); } catch (e) {} }
+        return s === 'cat' ? 'cat' : 'dog';
+      }
+
+      onSpecies(e) {
+        var d = (e && e.detail) || {};
+        this.applySpecies(d.species || d.pet || d.value);
+      }
+
+      applySpecies(species) {
+        if (species !== 'dog' && species !== 'cat') return;
+        this.querySelectorAll('[data-pack]').forEach(function (pack) {
+          var imgs = pack.querySelectorAll('[data-species]');
+          if (!imgs.length) return;
+          var hasMatch = pack.querySelector('[data-species="' + species + '"]');
+          imgs.forEach(function (img) {
+            img.classList.toggle('is-on', hasMatch ? img.dataset.species === species : img.dataset.species === 'dog');
+          });
+        });
+      }
+
+      /* ---------- Button ---------- */
+      setupCta() {
+        var cta = this.querySelector('[data-cta]');
+        if (!cta || cta.dataset.target !== 'dose') return;
+        var check = function () {
+          var ok = !!document.getElementById('vf-dose');
+          var editor = window.Shopify && window.Shopify.designMode;
+          cta.hidden = !ok && !editor;
+        };
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', check);
+        else check();
+      }
+
+      /* ---------- Theme editor: show the step you're editing ---------- */
+      onBlockSelect(e) {
+        var id = e.detail && e.detail.blockId;
+        var step = id && this.querySelector('[data-step][data-block-id="' + id + '"]');
+        if (!step) return;
+        var i = parseInt(step.dataset.index, 10);
+        if (this.classList.contains('is-pinned')) { this.forced = i; this.render(this.endOf(i) - 0.001); }
+        else this.goTo(i);
+      }
+
+      onBlockDeselect() {
+        this.forced = null;
+        this.onScroll();
+      }
+    }
+
+    customElements.define('vf-pump-story', VfPumpStory);
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Vettofit pump story",
+  "tag": "section",
+  "class": "vf-pump-section",
+  "enabled_on": {
+    "templates": ["page", "index", "product", "collection"]
+  },
+  "max_blocks": 3,
+  "settings": [
+    {
+      "type": "select",
+      "id": "color_scheme",
+      "label": "Colour scheme",
+      "info": "Brand colours only. Chalk is the default for this section.",
+      "options": [
+        { "value": "chalk", "label": "Chalk" },
+        { "value": "white", "label": "White" },
+        { "value": "plum", "label": "Night Plum" },
+        { "value": "carbon", "label": "Carbon" }
+      ],
+      "default": "chalk"
+    },
+    {
+      "type": "text",
+      "id": "headline",
+      "label": "Headline",
+      "info": "Under 8 words.",
+      "default": "Two seconds. That's the whole routine."
+    },
+    {
+      "type": "text",
+      "id": "subtext",
+      "label": "Supporting line",
+      "info": "Optional. One sentence under the headline. Leave empty to hide."
+    },
+    {
+      "type": "header",
+      "content": "Animation"
+    },
+    {
+      "type": "select",
+      "id": "animation",
+      "label": "Animation type",
+      "info": "Built-in uses the page's need colour automatically.",
+      "options": [
+        { "value": "builtin", "label": "Built-in pump animation" },
+        { "value": "video", "label": "Video" },
+        { "value": "photos", "label": "Three photos" }
+      ],
+      "default": "builtin"
+    },
+    {
+      "type": "video",
+      "id": "video",
+      "label": "Video",
+      "info": "Muted, under 10 seconds.",
+      "visible_if": "{{ section.settings.animation == 'video' }}"
+    },
+    {
+      "type": "product",
+      "id": "product",
+      "label": "Product shown",
+      "info": "Pick the dog salmon oil. The pack in the animation follows the Dog / Cat switch.",
+      "visible_if": "{{ section.settings.animation == 'builtin' }}"
+    },
+    {
+      "type": "product",
+      "id": "cat_product",
+      "label": "Cat product (optional)",
+      "info": "Leave empty to use the product's linked cat version (sibling product metafield).",
+      "visible_if": "{{ section.settings.animation == 'builtin' }}"
+    },
+    {
+      "type": "range",
+      "id": "drip_nudge",
+      "label": "Drip start: move left or right",
+      "info": "Slide until the teal line starts right at the pump's nozzle in your pack photo.",
+      "min": -80,
+      "max": 20,
+      "step": 2,
+      "default": 0,
+      "visible_if": "{{ section.settings.animation == 'builtin' }}"
+    },
+    {
+      "type": "text",
+      "id": "animation_alt",
+      "label": "Animation description",
+      "info": "Read aloud by screen readers. Describe what happens.",
+      "default": "One pump of salmon oil drips onto a bowl of food."
+    },
+    {
+      "type": "select",
+      "id": "scroll_length",
+      "label": "Scroll length",
+      "info": "Short suits pages with less content.",
+      "options": [
+        { "value": "short", "label": "Short" },
+        { "value": "standard", "label": "Standard" }
+      ],
+      "default": "standard"
+    },
+    {
+      "type": "header",
+      "content": "Button"
+    },
+    {
+      "type": "text",
+      "id": "cta_label",
+      "label": "Button text",
+      "info": "2–4 words, sentence case. Leave empty to hide the button.",
+      "default": "Get my dose"
+    },
+    {
+      "type": "select",
+      "id": "cta_target",
+      "label": "Button goes to",
+      "info": "\"Dose dial\" scrolls to the How many pumps? section on this page. The button hides itself if that section isn't on the page.",
+      "options": [
+        { "value": "dose", "label": "Dose dial on this page" },
+        { "value": "custom", "label": "Custom link" }
+      ],
+      "default": "dose"
+    },
+    {
+      "type": "url",
+      "id": "cta_link",
+      "label": "Custom link",
+      "visible_if": "{{ section.settings.cta_target == 'custom' }}"
+    },
+    {
+      "type": "header",
+      "content": "Spacing"
+    },
+    {
+      "type": "select",
+      "id": "space_below",
+      "label": "Space below",
+      "options": [
+        { "value": "none", "label": "None" },
+        { "value": "small", "label": "Small" },
+        { "value": "medium", "label": "Medium" },
+        { "value": "large", "label": "Large" }
+      ],
+      "default": "medium"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "step",
+      "name": "Step",
+      "limit": 3,
+      "settings": [
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Step title",
+          "info": "Best under 5 words."
+        },
+        {
+          "type": "inline_richtext",
+          "id": "text",
+          "label": "Step text",
+          "info": "One or two short sentences. Ignored if you pick a Proof entry below."
+        },
+        {
+          "type": "metaobject",
+          "id": "proof",
+          "label": "Proof (optional)",
+          "metaobject_type": "vf_evidence",
+          "info": "Pick a vet-approved claim. Its approved wording replaces the step text, so health wording can't drift."
+        },
+        {
+          "type": "image_picker",
+          "id": "photo",
+          "label": "Photo",
+          "info": "Only used for \"Three photos\". Square works best.",
+          "visible_if": "{{ section.settings.animation == 'photos' }}"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Vettofit pump story",
+      "blocks": [
+        {
+          "type": "step",
+          "settings": {
+            "title": "Wild-caught salmon oil",
+            "text": "Omega-3 fatty acids from wild-caught salmon oil."
+          }
+        },
+        {
+          "type": "step",
+          "settings": {
+            "title": "One press, onto food",
+            "text": "Press once over their bowl. No spoon, no mess."
+          }
+        },
+        {
+          "type": "step",
+          "settings": {
+            "title": "Once a day, by weight",
+            "text": "Pump onto food once a day, based on body weight."
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

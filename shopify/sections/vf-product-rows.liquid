@@ -248,9 +248,10 @@
 
             {%- comment -%} Benefits from the product's vf.benefits metafield {%- endcomment -%}
             {%- assign benefits = product.metafields.vf.benefits.value -%}
+            {%- assign benefits_limit = block.settings.benefits_count | default: 3 | plus: 0 -%}
             {%- if benefits != blank -%}
               <ul class="vf-benefits" role="list">
-                {%- for bnf in benefits limit: block.settings.benefits_count -%}
+                {%- for bnf in benefits limit: benefits_limit -%}
                   {%- assign icon = bnf.icon.value | downcase -%}
                   <li class="vf-benefit">
                     <span class="vf-benefit__icon" aria-hidden="true">
@@ -1217,14 +1218,15 @@
           "default": "none"
         },
         {
-          "type": "range",
+          "type": "select",
           "id": "benefits_count",
           "label": "Benefits shown",
           "info": "Top items from the product's benefits metafield.",
-          "min": 2,
-          "max": 3,
-          "step": 1,
-          "default": 3
+          "options": [
+            { "value": "2", "label": "2" },
+            { "value": "3", "label": "3" }
+          ],
+          "default": "3"
         }
       ]
     }

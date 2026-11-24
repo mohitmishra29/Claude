@@ -1,0 +1,1483 @@
+{%- comment -%}
+  Vettofit header — sections/vf-header.liquid
+  Built from "Vettofit Landing Page — Shopify Section Technical Guide", section 1 (Header).
+
+  Desktop: logo left, menu centre, search / account / cart right. 72px tall, 60px when sticky.
+  Mobile:  menu button left, logo centre, cart right. 56px tall.
+           Menu opens as a full-height sheet: Dogs / Cats shortcuts, the menu, search,
+           account, then support and WhatsApp links.
+
+  Brand rules built in (owners can't break them from the editor):
+  - Only the four brand colour schemes. No free colour picker.
+  - Fonts and text sizes are fixed. Sentence case is never forced to capitals.
+  - Logo is never re-coloured, stretched or cropped.
+  - Flat surfaces, no neumorphism, no gradients. Teal is used only as the 2px "Signal Line"
+    under the active menu item and for the Dogs / Cats selection.
+  - Every tap target is at least 44×44px. Motion 160–280ms, switched off under reduced motion.
+  - Native <details>/<summary> menus and <dialog> drawer, light JavaScript, no apps.
+{%- endcomment -%}
+
+{%- liquid
+  assign menu = linklists[section.settings.menu]
+  assign feature_cards = section.blocks | where: 'type', 'feature_card'
+
+  assign overlay = false
+  if section.settings.transparent
+    if section.settings.transparent_scope == 'all' or template.name == 'index'
+      assign overlay = true
+    endif
+  endif
+
+  assign wa_number = section.settings.whatsapp_number | remove: '+' | remove: ' ' | remove: '-' | remove: '(' | remove: ')'
+  assign dark_scheme = false
+  if section.settings.color_scheme == 'plum' or section.settings.color_scheme == 'carbon'
+    assign dark_scheme = true
+  endif
+  assign has_light_logo = false
+  if section.settings.logo_light != blank
+    if overlay or dark_scheme
+      assign has_light_logo = true
+    endif
+  endif
+-%}
+
+<vf-header
+  id="vf-header-{{ section.id }}"
+  class="vf-hdr vf-scheme--{{ section.settings.color_scheme }} vf-logo--{{ section.settings.logo_size }}{% if overlay %} vf-hdr--overlay{% endif %}{% if dark_scheme %} vf-hdr--dark{% endif %}{% if section.settings.show_border %} vf-hdr--border{% endif %}"
+  data-sticky="{{ section.settings.sticky }}"
+  data-cart-action="{{ section.settings.cart_action }}"
+  data-cart-url="{{ routes.cart_url }}"
+>
+  <div class="vf-hdr__bar" data-bar>
+    <div class="vf-hdr__inner{% if section.settings.header_width == 'full' %} vf-hdr__inner--full{% endif %}">
+
+      {%- comment -%} Mobile: menu button (left) {%- endcomment -%}
+      <button
+        class="vf-hdr__icon vf-hdr__burger"
+        type="button"
+        aria-label="{{ section.settings.drawer_heading | default: 'Menu' | escape }}"
+        aria-controls="vf-drawer-{{ section.id }}"
+        aria-expanded="false"
+        data-open-drawer
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true">
+          <line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/>
+        </svg>
+      </button>
+
+      {%- comment -%} Logo {%- endcomment -%}
+      <a class="vf-hdr__logo{% if has_light_logo %} has-light{% endif %}" href="{{ routes.root_url }}" aria-label="{{ shop.name | escape }} home">
+        {%- if section.settings.logo != blank -%}
+          {{
+            section.settings.logo
+            | image_url: width: 600
+            | image_tag:
+              widths: '160, 240, 320, 480, 600',
+              sizes: '(min-width: 990px) 240px, 180px',
+              class: 'vf-hdr__logo-img vf-hdr__logo-img--main',
+              alt: shop.name,
+              loading: 'eager',
+              fetchpriority: 'high'
+          }}
+          {%- if has_light_logo -%}
+            {{
+              section.settings.logo_light
+              | image_url: width: 600
+              | image_tag:
+                widths: '160, 240, 320, 480, 600',
+                sizes: '(min-width: 990px) 240px, 180px',
+                class: 'vf-hdr__logo-img vf-hdr__logo-img--light',
+                alt: shop.name,
+                loading: 'eager'
+            }}
+          {%- endif -%}
+        {%- else -%}
+          <span class="vf-hdr__logo-text">{{ shop.name }}</span>
+        {%- endif -%}
+      </a>
+
+      {%- comment -%} Desktop: main menu (centre) {%- endcomment -%}
+      <nav class="vf-hdr__nav" aria-label="Main">
+        {%- if menu.links.size > 0 -%}
+          <ul class="vf-nav" role="list">
+            {%- for link in menu.links -%}
+              {%- liquid
+                assign card_found = false
+                assign this_title = link.title | strip | downcase
+                for b in feature_cards
+                  assign wanted = b.settings.menu_item | strip | downcase
+                  if card_found == false and wanted != blank and wanted == this_title
+                    assign card = b
+                    assign card_found = true
+                  endif
+                endfor
+                assign is_active = false
+                if link.active or link.child_active
+                  assign is_active = true
+                endif
+              -%}
+              <li class="vf-nav__item">
+                {%- if link.links.size > 0 or card_found -%}
+                  <details class="vf-nav__details" data-dropdown data-href="{{ link.url }}">
+                    <summary class="vf-nav__link{% if is_active %} is-active{% endif %}">
+                      <span>{{ link.title }}</span>
+                      <svg class="vf-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                    </summary>
+                    <div class="vf-nav__panel{% if card_found %} has-card{% endif %}">
+                      <div class="vf-nav__cols">
+                        {%- if link.url != '#' -%}
+                          <a class="vf-nav__panel-title" href="{{ link.url }}">{{ link.title }}</a>
+                        {%- endif -%}
+                        {%- if link.links.size > 0 -%}
+                          <ul class="vf-nav__sub" role="list">
+                            {%- for child in link.links -%}
+                              <li>
+                                <a class="vf-nav__sublink{% if child.active %} is-active{% endif %}" href="{{ child.url }}"{% if child.active %} aria-current="page"{% endif %}>{{ child.title }}</a>
+                                {%- if child.links.size > 0 -%}
+                                  <ul class="vf-nav__sub vf-nav__sub--deep" role="list">
+                                    {%- for grandchild in child.links -%}
+                                      <li><a class="vf-nav__sublink vf-nav__sublink--deep" href="{{ grandchild.url }}"{% if grandchild.active %} aria-current="page"{% endif %}>{{ grandchild.title }}</a></li>
+                                    {%- endfor -%}
+                                  </ul>
+                                {%- endif -%}
+                              </li>
+                            {%- endfor -%}
+                          </ul>
+                        {%- endif -%}
+                      </div>
+                      {%- if card_found -%}
+                        {%- assign card_alt = card.settings.heading | escape -%}
+                        <a class="vf-card" href="{{ card.settings.link | default: link.url }}" data-block-id="{{ card.id }}" {{ card.shopify_attributes }}>
+                          {%- if card.settings.image != blank -%}
+                            {{ card.settings.image | image_url: width: 640 | image_tag: widths: '320, 480, 640', sizes: '260px', class: 'vf-card__img', loading: 'lazy', alt: card_alt }}
+                          {%- endif -%}
+                          {%- if card.settings.heading != blank -%}<span class="vf-card__heading">{{ card.settings.heading }}</span>{%- endif -%}
+                          {%- if card.settings.text != blank -%}<span class="vf-card__text">{{ card.settings.text }}</span>{%- endif -%}
+                        </a>
+                      {%- endif -%}
+                    </div>
+                  </details>
+                {%- else -%}
+                  <a class="vf-nav__link{% if is_active %} is-active{% endif %}" href="{{ link.url }}"{% if link.active %} aria-current="page"{% endif %}>
+                    <span>{{ link.title }}</span>
+                  </a>
+                {%- endif -%}
+              </li>
+            {%- endfor -%}
+          </ul>
+        {%- endif -%}
+      </nav>
+
+      {%- comment -%} Right: search / account / cart {%- endcomment -%}
+      <div class="vf-hdr__actions">
+        {%- if section.settings.show_search -%}
+          <a class="vf-hdr__icon vf-hide-mobile" href="{{ routes.search_url }}" aria-label="{{ section.settings.search_placeholder | default: 'Search' | escape }}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><line x1="20" y1="20" x2="15.8" y2="15.8"/></svg>
+          </a>
+        {%- endif -%}
+        {%- if section.settings.show_account and shop.customer_accounts_enabled -%}
+          <a class="vf-hdr__icon vf-hide-mobile" href="{{ routes.account_url }}" aria-label="{{ section.settings.account_label | default: 'Account' | escape }}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c1.2-3.6 4-5.5 7.5-5.5s6.3 1.9 7.5 5.5"/></svg>
+          </a>
+        {%- endif -%}
+        <a class="vf-hdr__icon vf-hdr__cart" href="{{ routes.cart_url }}" aria-label="Cart, {{ cart.item_count }} items" data-cart-link>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1.2 11.1a1.6 1.6 0 0 1-1.6 1.4H7.8a1.6 1.6 0 0 1-1.6-1.4L5 8z"/><path d="M9 10V7a3 3 0 0 1 6 0v3"/></svg>
+          {%- if section.settings.show_cart_count -%}
+            <span class="vf-hdr__count{% if cart.item_count == 0 %} is-empty{% endif %}" data-cart-count aria-hidden="true">{{ cart.item_count }}</span>
+          {%- endif -%}
+        </a>
+      </div>
+    </div>
+
+    {%- if request.design_mode -%}
+      {%- if section.settings.logo == blank or menu.links.size == 0 -%}
+        <p class="vf-hdr__note">
+          {%- if section.settings.logo == blank -%}Add the approved Vettofit logo under Logo. {% endif -%}
+          {%- if menu.links.size == 0 -%}Pick a menu under Menu.{%- endif -%}
+          <span> (Only you see this note.)</span>
+        </p>
+      {%- endif -%}
+    {%- endif -%}
+  </div>
+
+  {%- comment -%} ---------- Mobile menu sheet ---------- {%- endcomment -%}
+  <dialog class="vf-drawer" id="vf-drawer-{{ section.id }}" aria-label="{{ section.settings.drawer_heading | default: 'Menu' | escape }}" data-drawer>
+    <div class="vf-drawer__sheet">
+      <div class="vf-drawer__top">
+        <span class="vf-drawer__title">{{ section.settings.drawer_heading }}</span>
+        <button class="vf-hdr__icon" type="button" aria-label="Close" data-close-drawer>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="vf-drawer__body">
+        {%- if section.settings.show_species -%}
+          {%- if section.settings.dogs_link != blank or section.settings.cats_link != blank -%}
+            <div class="vf-species">
+              {%- if section.settings.dogs_link != blank -%}
+                <a class="vf-species__chip{% if request.path == section.settings.dogs_link %} is-current{% endif %}" href="{{ section.settings.dogs_link }}">{{ section.settings.dogs_label }}</a>
+              {%- endif -%}
+              {%- if section.settings.cats_link != blank -%}
+                <a class="vf-species__chip{% if request.path == section.settings.cats_link %} is-current{% endif %}" href="{{ section.settings.cats_link }}">{{ section.settings.cats_label }}</a>
+              {%- endif -%}
+            </div>
+          {%- elsif request.design_mode -%}
+            <p class="vf-hdr__note vf-hdr__note--inline">Add links for the Dogs and Cats buttons under "Mobile menu". (Only you see this note.)</p>
+          {%- endif -%}
+        {%- endif -%}
+
+        {%- if menu.links.size > 0 -%}
+          <ul class="vf-mnav" role="list">
+            {%- for link in menu.links -%}
+              {%- liquid
+                assign card_found = false
+                assign this_title = link.title | strip | downcase
+                for b in feature_cards
+                  assign wanted = b.settings.menu_item | strip | downcase
+                  if card_found == false and wanted != blank and wanted == this_title
+                    assign card = b
+                    assign card_found = true
+                  endif
+                endfor
+              -%}
+              <li class="vf-mnav__item">
+                {%- if link.links.size > 0 or card_found -%}
+                  <details class="vf-mnav__details"{% if link.child_active %} open{% endif %}>
+                    <summary class="vf-mnav__link">
+                      <span>{{ link.title }}</span>
+                      <svg class="vf-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                    </summary>
+                    <ul class="vf-mnav__sub" role="list">
+                      {%- if link.url != '#' -%}
+                        <li><a class="vf-mnav__sublink vf-mnav__sublink--strong" href="{{ link.url }}">{{ link.title }}</a></li>
+                      {%- endif -%}
+                      {%- for child in link.links -%}
+                        <li>
+                          <a class="vf-mnav__sublink" href="{{ child.url }}"{% if child.active %} aria-current="page"{% endif %}>{{ child.title }}</a>
+                          {%- if child.links.size > 0 -%}
+                            <ul class="vf-mnav__deep" role="list">
+                              {%- for grandchild in child.links -%}
+                                <li><a class="vf-mnav__sublink vf-mnav__sublink--deep" href="{{ grandchild.url }}"{% if grandchild.active %} aria-current="page"{% endif %}>{{ grandchild.title }}</a></li>
+                              {%- endfor -%}
+                            </ul>
+                          {%- endif -%}
+                        </li>
+                      {%- endfor -%}
+                      {%- if card_found -%}
+                        {%- assign card_alt = card.settings.heading | escape -%}
+                        <li>
+                          <a class="vf-card vf-card--mobile" href="{{ card.settings.link | default: link.url }}" data-block-id="{{ card.id }}">
+                            {%- if card.settings.image != blank -%}
+                              {{ card.settings.image | image_url: width: 640 | image_tag: widths: '320, 480, 640', sizes: '100px', class: 'vf-card__img', loading: 'lazy', alt: card_alt }}
+                            {%- endif -%}
+                            <span class="vf-card__copy">
+                              {%- if card.settings.heading != blank -%}<span class="vf-card__heading">{{ card.settings.heading }}</span>{%- endif -%}
+                              {%- if card.settings.text != blank -%}<span class="vf-card__text">{{ card.settings.text }}</span>{%- endif -%}
+                            </span>
+                          </a>
+                        </li>
+                      {%- endif -%}
+                    </ul>
+                  </details>
+                {%- else -%}
+                  <a class="vf-mnav__link{% if link.active %} is-active{% endif %}" href="{{ link.url }}"{% if link.active %} aria-current="page"{% endif %}>
+                    <span>{{ link.title }}</span>
+                  </a>
+                {%- endif -%}
+              </li>
+            {%- endfor -%}
+          </ul>
+        {%- endif -%}
+
+        {%- if section.settings.show_search -%}
+          <form class="vf-msearch" action="{{ routes.search_url }}" method="get" role="search">
+            <label class="vf-visually-hidden" for="vf-msearch-{{ section.id }}">{{ section.settings.search_placeholder }}</label>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><line x1="20" y1="20" x2="15.8" y2="15.8"/></svg>
+            <input id="vf-msearch-{{ section.id }}" type="search" name="q" placeholder="{{ section.settings.search_placeholder | escape }}" autocomplete="off">
+          </form>
+        {%- endif -%}
+      </div>
+
+      <div class="vf-drawer__foot">
+        {%- if section.settings.show_account and shop.customer_accounts_enabled -%}
+          <a class="vf-drawer__row" href="{{ routes.account_url }}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c1.2-3.6 4-5.5 7.5-5.5s6.3 1.9 7.5 5.5"/></svg>
+            <span>{{ section.settings.account_label }}</span>
+          </a>
+        {%- endif -%}
+        {%- if section.settings.support_link != blank and section.settings.support_label != blank -%}
+          <a class="vf-drawer__row" href="{{ section.settings.support_link }}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.5a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.6"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg>
+            <span>{{ section.settings.support_label }}</span>
+          </a>
+        {%- endif -%}
+        {%- if wa_number != blank -%}
+          <a class="vf-drawer__row" href="https://wa.me/{{ wa_number }}?text={{ section.settings.whatsapp_message | url_encode }}" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11.5a8 8 0 0 1-11.8 7L4 20l1.5-4.1A8 8 0 1 1 20 11.5z"/></svg>
+            <span>{{ section.settings.whatsapp_label }}</span>
+          </a>
+        {%- endif -%}
+      </div>
+    </div>
+  </dialog>
+</vf-header>
+
+<style>
+  /* ---------- Brand colour schemes (the only four allowed) ---------- */
+  .vf-hdr {
+    --vf-signal: var(--vf-teal, #09D1C7);
+    --vf-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .vf-scheme--chalk {
+    --vf-bg: var(--vf-chalk, #F7F5EF);
+    --vf-surface: var(--vf-white, #FFFFFF);
+    --vf-fg: var(--vf-carbon, #111111);
+    --vf-fg-muted: rgba(17, 17, 17, 0.72);
+    --vf-line: rgba(17, 17, 17, 0.12);
+    --vf-hover: rgba(17, 17, 17, 0.06);
+    --vf-badge-bg: var(--vf-carbon, #111111);
+    --vf-badge-fg: #FFFFFF;
+    --vf-focus: var(--vf-carbon, #111111);
+  }
+  .vf-scheme--white {
+    --vf-bg: var(--vf-white, #FFFFFF);
+    --vf-surface: var(--vf-white, #FFFFFF);
+    --vf-fg: var(--vf-carbon, #111111);
+    --vf-fg-muted: rgba(17, 17, 17, 0.72);
+    --vf-line: rgba(17, 17, 17, 0.12);
+    --vf-hover: rgba(17, 17, 17, 0.06);
+    --vf-badge-bg: var(--vf-carbon, #111111);
+    --vf-badge-fg: #FFFFFF;
+    --vf-focus: var(--vf-carbon, #111111);
+  }
+  .vf-scheme--plum {
+    --vf-bg: var(--vf-plum, #2B1B3A);
+    --vf-surface: var(--vf-plum, #2B1B3A);
+    --vf-fg: #FFFFFF;
+    --vf-fg-muted: rgba(255, 255, 255, 0.78);
+    --vf-line: rgba(255, 255, 255, 0.16);
+    --vf-hover: rgba(255, 255, 255, 0.1);
+    --vf-badge-bg: var(--vf-teal, #09D1C7);
+    --vf-badge-fg: var(--vf-carbon, #111111);
+    --vf-focus: var(--vf-teal, #09D1C7);
+  }
+  .vf-scheme--carbon {
+    --vf-bg: var(--vf-carbon, #111111);
+    --vf-surface: var(--vf-carbon, #111111);
+    --vf-fg: var(--vf-chalk, #F7F5EF);
+    --vf-fg-muted: rgba(247, 245, 239, 0.76);
+    --vf-line: rgba(247, 245, 239, 0.14);
+    --vf-hover: rgba(247, 245, 239, 0.1);
+    --vf-badge-bg: var(--vf-teal, #09D1C7);
+    --vf-badge-fg: var(--vf-carbon, #111111);
+    --vf-focus: var(--vf-teal, #09D1C7);
+  }
+
+  /* ---------- Sizes (locked) ---------- */
+  .vf-hdr {
+    --vf-h: 56px;
+    --vf-h-stuck: 56px;
+    --vf-cur-h: var(--vf-h);
+    --vf-logo-h: 28px;
+    position: relative;
+    display: block;
+    height: var(--vf-h);
+    z-index: 60;
+    font-family: var(--vf-font-body, "Inter", var(--font-body-family, system-ui, -apple-system, "Segoe UI", sans-serif));
+    -webkit-font-smoothing: antialiased;
+  }
+  .vf-hdr.vf-logo--small  { --vf-logo-h: 24px; }
+  .vf-hdr.vf-logo--large  { --vf-logo-h: 34px; }
+  .vf-hdr *, .vf-hdr *::before, .vf-hdr *::after { box-sizing: border-box; }
+  .vf-hdr--overlay { height: 0; }
+  .vf-hdr.is-stuck { --vf-cur-h: var(--vf-h-stuck); }
+
+  @media (min-width: 990px) {
+    .vf-hdr { --vf-h: 72px; --vf-h-stuck: 60px; --vf-logo-h: 36px; }
+    .vf-hdr.vf-logo--small { --vf-logo-h: 30px; }
+    .vf-hdr.vf-logo--large { --vf-logo-h: 44px; }
+    .vf-hdr.is-stuck { --vf-logo-h: 30px; }
+    .vf-hdr.is-stuck.vf-logo--small { --vf-logo-h: 26px; }
+    .vf-hdr.is-stuck.vf-logo--large { --vf-logo-h: 36px; }
+  }
+
+  /* ---------- The bar ---------- */
+  .vf-hdr__bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--vf-cur-h);
+    background: var(--vf-bg);
+    color: var(--vf-fg);
+    border-bottom: 1px solid transparent;
+    transition:
+      height 220ms var(--vf-ease),
+      transform 260ms var(--vf-ease),
+      background-color 220ms ease,
+      color 220ms ease,
+      box-shadow 220ms ease,
+      border-color 220ms ease;
+  }
+  .vf-hdr--border .vf-hdr__bar { border-bottom-color: var(--vf-line); }
+  .vf-hdr.is-stuck .vf-hdr__bar {
+    position: fixed;
+    box-shadow: 0 10px 24px -18px rgba(17, 17, 17, 0.35);
+  }
+  .vf-hdr.is-hidden .vf-hdr__bar { transform: translateY(-101%); box-shadow: none; }
+  .vf-hdr.is-instant .vf-hdr__bar { transition: none; }
+
+  /* See-through over a dark banner (until the shopper scrolls or opens a menu) */
+  .vf-hdr--overlay:not(.is-stuck):not(.is-panel-open) .vf-hdr__bar {
+    --vf-fg: #FFFFFF;
+    --vf-fg-muted: rgba(255, 255, 255, 0.88);
+    --vf-hover: rgba(255, 255, 255, 0.14);
+    --vf-badge-bg: var(--vf-teal, #09D1C7);
+    --vf-badge-fg: var(--vf-carbon, #111111);
+    --vf-focus: #FFFFFF;
+    background: transparent;
+    border-bottom-color: transparent;
+  }
+  .vf-hdr__logo-img--light { display: none; }
+  .vf-hdr--dark .has-light .vf-hdr__logo-img--main,
+  .vf-hdr--overlay:not(.is-stuck):not(.is-panel-open) .has-light .vf-hdr__logo-img--main { display: none; }
+  .vf-hdr--dark .has-light .vf-hdr__logo-img--light { display: block; }
+  .vf-hdr--overlay:not(.is-stuck):not(.is-panel-open) .has-light .vf-hdr__logo-img--light { display: block; }
+
+  .vf-hdr__inner {
+    height: 100%;
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 0 max(8px, env(safe-area-inset-left)) 0 max(8px, env(safe-area-inset-right));
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    grid-template-areas: "menu logo actions";
+    align-items: center;
+    column-gap: 8px;
+  }
+  .vf-hdr__inner--full { max-width: none; }
+  .vf-hdr__burger { grid-area: menu; justify-self: start; }
+  .vf-hdr__logo { grid-area: logo; }
+  .vf-hdr__nav { grid-area: nav; display: none; }
+  .vf-hdr__actions { grid-area: actions; justify-self: end; display: flex; align-items: center; gap: 2px; }
+  .vf-hide-mobile { display: none !important; }
+
+  @media (min-width: 990px) {
+    .vf-hdr__inner {
+      padding: 0 clamp(24px, 4vw, 64px);
+      grid-template-areas: "logo nav actions";
+      column-gap: 24px;
+    }
+    .vf-hdr .vf-hdr__burger { display: none; }
+    .vf-hdr__logo { justify-self: start; }
+    .vf-hdr__nav { display: block; }
+    .vf-hide-mobile { display: inline-flex !important; }
+  }
+
+  /* ---------- Logo (never stretched, cropped or recoloured) ---------- */
+  .vf-hdr__logo {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 4px 6px;
+    color: var(--vf-fg);
+    text-decoration: none;
+    border-radius: 14px;
+  }
+  .vf-hdr__logo-img {
+    display: block;
+    height: var(--vf-logo-h);
+    width: auto;
+    max-width: 180px;
+    object-fit: contain;
+    transition: height 220ms var(--vf-ease);
+  }
+  @media (min-width: 990px) { .vf-hdr__logo-img { max-width: 260px; } }
+  .vf-hdr__logo-text {
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  /* ---------- Icon buttons (44×44 minimum) ---------- */
+  .vf-hdr__icon {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 14px;
+    background: transparent;
+    color: var(--vf-fg);
+    cursor: pointer;
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 180ms ease, transform 180ms ease;
+  }
+  .vf-hdr__icon svg { width: 22px; height: 22px; display: block; }
+  @media (hover: hover) { .vf-hdr__icon:hover { background: var(--vf-hover); } }
+  .vf-hdr__icon:active { transform: translateY(1px); }
+
+  .vf-hdr__count {
+    position: absolute;
+    top: 5px;
+    right: 3px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--vf-badge-bg);
+    color: var(--vf-badge-fg);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 18px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    transition: transform 200ms var(--vf-ease), opacity 200ms ease;
+  }
+  .vf-hdr__count.is-empty { transform: scale(0); opacity: 0; }
+
+  /* ---------- Desktop menu ---------- */
+  .vf-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .vf-nav__item { position: relative; }
+  .vf-nav__details > summary { list-style: none; }
+  .vf-nav__details > summary::-webkit-details-marker { display: none; }
+  .vf-nav__link {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 44px;
+    padding: 0 14px;
+    border-radius: 14px;
+    color: var(--vf-fg-muted);
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: 0;
+    text-transform: none;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color 180ms ease;
+  }
+  .vf-nav__link::after {
+    content: "";
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 6px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--vf-signal);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 200ms var(--vf-ease);
+  }
+  .vf-nav__link:hover,
+  .vf-nav__details[open] > .vf-nav__link,
+  .vf-nav__link.is-active { color: var(--vf-fg); }
+  .vf-nav__link.is-active::after { transform: scaleX(1); }
+  .vf-nav__details .vf-nav__link::after { right: 34px; }
+  .vf-chev { width: 16px; height: 16px; flex-shrink: 0; transition: transform 200ms var(--vf-ease); }
+  .vf-nav__details[open] .vf-chev { transform: rotate(180deg); }
+
+  .vf-nav__panel {
+    position: absolute;
+    top: calc(50% + var(--vf-cur-h) / 2);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 24px;
+    min-width: 240px;
+    padding: 20px;
+    background: var(--vf-surface);
+    color: var(--vf-fg);
+    border: 1px solid var(--vf-line);
+    border-radius: 24px;
+    box-shadow: 0 24px 48px -24px rgba(17, 17, 17, 0.35);
+    animation: vf-panel-in 200ms var(--vf-ease);
+  }
+  .vf-nav__panel::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    height: 24px;
+  }
+  @keyframes vf-panel-in {
+    from { opacity: 0; transform: translate(-50%, -4px); }
+    to   { opacity: 1; transform: translate(-50%, 0); }
+  }
+  .vf-nav__cols { display: flex; flex-direction: column; min-width: 180px; }
+  .vf-nav__panel-title {
+    display: block;
+    padding: 6px 0 10px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid var(--vf-line);
+    color: var(--vf-fg);
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .vf-nav__sub { list-style: none; margin: 0; padding: 0; }
+  .vf-nav__sub--deep { padding-left: 12px; }
+  .vf-nav__sublink {
+    display: block;
+    padding: 8px 0;
+    color: var(--vf-fg-muted);
+    font-size: 15px;
+    line-height: 1.3;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color 180ms ease;
+  }
+  .vf-nav__sublink--deep { font-size: 14px; padding: 6px 0; }
+  .vf-nav__sublink:hover,
+  .vf-nav__sublink.is-active,
+  .vf-nav__panel-title:hover { color: var(--vf-fg); }
+  .vf-nav__sublink.is-active { text-decoration: underline; text-decoration-color: var(--vf-signal); text-decoration-thickness: 2px; text-underline-offset: 6px; }
+
+  /* Feature card */
+  .vf-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 240px;
+    color: var(--vf-fg);
+    text-decoration: none;
+  }
+  .vf-card__img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border-radius: 14px;
+    margin-bottom: 6px;
+    background: var(--vf-hover);
+  }
+  .vf-card__heading { font-size: 16px; font-weight: 600; line-height: 1.25; }
+  .vf-card__text { font-size: 14px; line-height: 1.4; color: var(--vf-fg-muted); }
+  @media (hover: hover) { .vf-card:hover .vf-card__heading { text-decoration: underline; text-decoration-color: var(--vf-signal); text-decoration-thickness: 2px; text-underline-offset: 4px; } }
+
+  /* ---------- Mobile sheet ---------- */
+  html.vf-lock { overflow: hidden; }
+  .vf-drawer {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--vf-fg);
+    overflow: hidden;
+  }
+  .vf-drawer::backdrop { background: rgba(17, 17, 17, 0.45); }
+  .vf-drawer__sheet {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: min(100%, 420px);
+    display: flex;
+    flex-direction: column;
+    background: var(--vf-bg);
+    color: var(--vf-fg);
+    transform: translateX(-100%);
+    transition: transform 280ms var(--vf-ease);
+    font-family: var(--vf-font-body, "Inter", var(--font-body-family, system-ui, -apple-system, "Segoe UI", sans-serif));
+  }
+  .vf-drawer.is-open .vf-drawer__sheet { transform: none; }
+  .vf-drawer__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    padding: 0 8px 0 20px;
+    border-bottom: 1px solid var(--vf-line);
+    flex-shrink: 0;
+  }
+  .vf-drawer__title { font-size: 17px; font-weight: 600; }
+  .vf-drawer__body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 16px 20px 24px;
+  }
+
+  .vf-species { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .vf-species__chip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    padding: 0 16px;
+    border: 1px solid var(--vf-fg);
+    border-radius: 999px;
+    color: var(--vf-fg);
+    font-size: 16px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+  }
+  .vf-species__chip:active,
+  .vf-species__chip.is-current {
+    background: var(--vf-signal);
+    border-color: var(--vf-signal);
+    color: var(--vf-carbon, #111111);
+  }
+
+  .vf-mnav { list-style: none; margin: 0; padding: 0; }
+  .vf-mnav__item { border-bottom: 1px solid var(--vf-line); }
+  .vf-mnav__details > summary { list-style: none; }
+  .vf-mnav__details > summary::-webkit-details-marker { display: none; }
+  .vf-mnav__link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 56px;
+    color: var(--vf-fg);
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    text-decoration: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .vf-mnav__link.is-active span {
+    text-decoration: underline;
+    text-decoration-color: var(--vf-signal);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 6px;
+  }
+  .vf-mnav__details[open] .vf-chev { transform: rotate(180deg); }
+  .vf-mnav__sub { list-style: none; margin: 0; padding: 0 0 12px; }
+  .vf-mnav__deep { list-style: none; margin: 0; padding: 0 0 4px 14px; }
+  .vf-mnav__sublink {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    color: var(--vf-fg-muted);
+    font-size: 17px;
+    text-decoration: none;
+  }
+  .vf-mnav__sublink--strong { color: var(--vf-fg); font-weight: 600; }
+  .vf-mnav__sublink--deep { font-size: 16px; }
+  .vf-mnav__sublink[aria-current="page"] { color: var(--vf-fg); }
+
+  .vf-card--mobile {
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    margin-top: 8px;
+    padding: 10px;
+    border: 1px solid var(--vf-line);
+    border-radius: 24px;
+    background: var(--vf-surface);
+  }
+  .vf-card--mobile .vf-card__img { width: 96px; flex-shrink: 0; margin: 0; }
+  .vf-card__copy { display: flex; flex-direction: column; gap: 4px; }
+
+  .vf-msearch {
+    position: relative;
+    margin-top: 20px;
+  }
+  .vf-msearch svg {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    width: 20px;
+    height: 20px;
+    transform: translateY(-50%);
+    color: var(--vf-fg-muted);
+    pointer-events: none;
+  }
+  .vf-msearch input {
+    width: 100%;
+    height: 48px;
+    padding: 0 14px 0 44px;
+    border: 1px solid var(--vf-line);
+    border-radius: 14px;
+    background: var(--vf-surface);
+    color: var(--vf-fg);
+    font: inherit;
+    font-size: 16px;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .vf-msearch input::placeholder { color: var(--vf-fg-muted); }
+
+  .vf-drawer__foot {
+    flex-shrink: 0;
+    padding: 8px 20px calc(12px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--vf-line);
+  }
+  .vf-drawer__row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 48px;
+    color: var(--vf-fg);
+    font-size: 16px;
+    font-weight: 500;
+    text-decoration: none;
+  }
+  .vf-drawer__row svg { width: 22px; height: 22px; flex-shrink: 0; }
+  .vf-drawer__foot:empty { display: none; }
+
+  /* ---------- Focus, editor note, helpers ---------- */
+  .vf-hdr a:focus-visible,
+  .vf-hdr button:focus-visible,
+  .vf-hdr summary:focus-visible,
+  .vf-hdr input:focus-visible {
+    outline: 2px solid var(--vf-focus);
+    outline-offset: 2px;
+  }
+  .vf-hdr__note {
+    position: absolute;
+    top: 100%;
+    left: 16px;
+    margin: 0;
+    padding: 6px 12px;
+    background: #FFF4B8;
+    color: #111111;
+    font-size: 13px;
+    line-height: 1.4;
+    border-radius: 0 0 10px 10px;
+  }
+  .vf-hdr__note span { opacity: 0.7; }
+  .vf-hdr__note--inline { position: static; border-radius: 10px; margin-bottom: 8px; }
+  .vf-visually-hidden {
+    position: absolute !important;
+    width: 1px; height: 1px;
+    margin: -1px; padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .vf-hdr *, .vf-hdr *::before, .vf-hdr *::after,
+    .vf-hdr .vf-hdr__bar, .vf-drawer__sheet {
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+    }
+  }
+</style>
+
+<script>
+  (function () {
+    if (customElements.get('vf-header')) return;
+
+    /* One shared watcher tells every header when the cart changes. */
+    if (!window.__vfCartWatch) {
+      window.__vfCartWatch = true;
+      var ping = function () { document.dispatchEvent(new CustomEvent('vf:cart:changed')); };
+      var nativeFetch = window.fetch;
+      if (nativeFetch) {
+        window.fetch = function () {
+          var input = arguments[0];
+          var url = '';
+          try { url = typeof input === 'string' ? input : (input && input.url) || ''; } catch (e) {}
+          var isCart = /\/cart\/(add|change|update|clear)(\.js)?([?/#]|$)/.test(url);
+          return nativeFetch.apply(this, arguments).then(function (res) {
+            if (isCart && res.ok) ping();
+            return res;
+          });
+        };
+      }
+      ['cart:updated', 'cart:refresh', 'cart:change', 'cart-drawer:refresh'].forEach(function (name) {
+        document.addEventListener(name, ping);
+      });
+    }
+
+    class VfHeader extends HTMLElement {
+      connectedCallback() {
+        this.bar = this.querySelector('[data-bar]');
+        this.drawer = this.querySelector('[data-drawer]');
+        this.burger = this.querySelector('[data-open-drawer]');
+        this.dropdowns = Array.prototype.slice.call(this.querySelectorAll('[data-dropdown]'));
+        this.mode = this.dataset.sticky || 'up';
+        this.desktopMq = window.matchMedia('(min-width: 990px)');
+        this.hoverMq = window.matchMedia('(hover: hover) and (pointer: fine)');
+        this.reduceMq = window.matchMedia('(prefers-reduced-motion: reduce)');
+        this.lastY = window.scrollY;
+        this.ticking = false;
+        this.stuck = false;
+        this.hidden = false;
+
+        this.handlers = {
+          scroll: this.onScroll.bind(this),
+          docClick: this.onDocClick.bind(this),
+          keydown: this.onKeydown.bind(this),
+          cartChanged: this.refreshCount.bind(this),
+          pageshow: this.refreshCount.bind(this),
+          blockSelect: this.onBlockSelect.bind(this),
+          blockDeselect: this.onBlockDeselect.bind(this),
+          mq: this.onBreakpoint.bind(this)
+        };
+
+        if (this.mode !== 'off') {
+          window.addEventListener('scroll', this.handlers.scroll, { passive: true });
+          this.update();
+        }
+        document.addEventListener('click', this.handlers.docClick);
+        document.addEventListener('keydown', this.handlers.keydown);
+        document.addEventListener('vf:cart:changed', this.handlers.cartChanged);
+        window.addEventListener('pageshow', this.handlers.pageshow);
+        document.addEventListener('shopify:block:select', this.handlers.blockSelect);
+        document.addEventListener('shopify:block:deselect', this.handlers.blockDeselect);
+        if (this.desktopMq.addEventListener) this.desktopMq.addEventListener('change', this.handlers.mq);
+
+        this.setupDropdowns();
+        this.setupDrawer();
+        this.setupCart();
+      }
+
+      disconnectedCallback() {
+        window.removeEventListener('scroll', this.handlers.scroll);
+        document.removeEventListener('click', this.handlers.docClick);
+        document.removeEventListener('keydown', this.handlers.keydown);
+        document.removeEventListener('vf:cart:changed', this.handlers.cartChanged);
+        window.removeEventListener('pageshow', this.handlers.pageshow);
+        document.removeEventListener('shopify:block:select', this.handlers.blockSelect);
+        document.removeEventListener('shopify:block:deselect', this.handlers.blockDeselect);
+        if (this.desktopMq.removeEventListener) this.desktopMq.removeEventListener('change', this.handlers.mq);
+        document.documentElement.classList.remove('vf-lock');
+      }
+
+      /* ---------- Sticky behaviour ---------- */
+      onScroll() {
+        if (this.ticking) return;
+        this.ticking = true;
+        var self = this;
+        requestAnimationFrame(function () { self.update(); self.ticking = false; });
+      }
+
+      busy() {
+        return this.dropdowns.some(function (d) { return d.open; }) || (this.drawer && this.drawer.open);
+      }
+
+      setState(stuck, hidden) {
+        if (stuck !== this.stuck) { this.stuck = stuck; this.classList.toggle('is-stuck', stuck); }
+        if (hidden !== this.hidden) { this.hidden = hidden; this.classList.toggle('is-hidden', hidden); }
+      }
+
+      instant() {
+        var self = this;
+        this.classList.add('is-instant');
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () { self.classList.remove('is-instant'); });
+        });
+      }
+
+      update() {
+        var top = this.getBoundingClientRect().top;
+        var y = window.scrollY;
+        var dy = y - this.lastY;
+        this.lastY = y;
+
+        if (top >= 0) { this.setState(false, false); return; }
+        if (this.mode === 'always') { this.setState(true, false); return; }
+
+        /* "Show when scrolling up" */
+        if (!this.stuck) {
+          var barH = this.bar.offsetHeight || 60;
+          if (top < -barH * 1.5) { this.instant(); this.setState(true, true); }
+          return;
+        }
+        if (this.busy()) { this.setState(true, false); return; }
+        if (dy > 4) this.setState(true, true);
+        else if (dy < -4) this.setState(true, false);
+      }
+
+      /* ---------- Desktop dropdowns ---------- */
+      setupDropdowns() {
+        var self = this;
+        this.dropdowns.forEach(function (d) {
+          var summary = d.querySelector('summary');
+          d.addEventListener('toggle', function () {
+            if (d.open) {
+              self.dropdowns.forEach(function (o) { if (o !== d) o.open = false; });
+            } else {
+              d._hover = false;
+            }
+            self.classList.toggle('is-panel-open', self.dropdowns.some(function (x) { return x.open; }));
+          });
+
+          d.addEventListener('mouseenter', function () {
+            if (!self.hoverMq.matches) return;
+            clearTimeout(d._timer);
+            if (!d.open) { d._hover = true; d.open = true; }
+          });
+          d.addEventListener('mouseleave', function () {
+            if (!self.hoverMq.matches) return;
+            clearTimeout(d._timer);
+            d._timer = setTimeout(function () { if (d._hover) d.open = false; }, 180);
+          });
+
+          /* Mouse users: hover shows the menu, clicking the top item goes to its page. */
+          summary.addEventListener('click', function (e) {
+            if (d._hover && d.open && e.detail > 0) {
+              e.preventDefault();
+              var href = d.dataset.href;
+              if (href && href !== '#') window.location.href = href;
+            }
+          });
+        });
+      }
+
+      closeDropdowns(focusSummary) {
+        this.dropdowns.forEach(function (d) {
+          if (d.open) {
+            d.open = false;
+            if (focusSummary) d.querySelector('summary').focus();
+          }
+        });
+      }
+
+      onDocClick(e) {
+        if (!this.contains(e.target)) this.closeDropdowns(false);
+      }
+
+      onKeydown(e) {
+        if (e.key === 'Escape') this.closeDropdowns(true);
+      }
+
+      /* ---------- Mobile sheet ---------- */
+      setupDrawer() {
+        var self = this;
+        if (!this.drawer || !this.burger) return;
+
+        this.burger.addEventListener('click', function () { self.openDrawer(); });
+        this.querySelectorAll('[data-close-drawer]').forEach(function (btn) {
+          btn.addEventListener('click', function () { self.closeDrawer(); });
+        });
+        this.drawer.addEventListener('click', function (e) {
+          if (e.target === self.drawer) { self.closeDrawer(); return; }
+          if (e.target.closest('a[href]')) self.closeDrawer(true);
+        });
+        this.drawer.addEventListener('cancel', function (e) {
+          e.preventDefault();
+          self.closeDrawer();
+        });
+        this.drawer.addEventListener('close', function () {
+          self.drawer.classList.remove('is-open');
+          document.documentElement.classList.remove('vf-lock');
+          self.burger.setAttribute('aria-expanded', 'false');
+        });
+      }
+
+      openDrawer() {
+        if (!this.drawer || this.drawer.open) return;
+        var self = this;
+        if (typeof this.drawer.showModal === 'function') this.drawer.showModal();
+        else this.drawer.setAttribute('open', '');
+        document.documentElement.classList.add('vf-lock');
+        this.burger.setAttribute('aria-expanded', 'true');
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () { self.drawer.classList.add('is-open'); });
+        });
+      }
+
+      closeDrawer(now) {
+        if (!this.drawer || !this.drawer.open) return;
+        var self = this;
+        this.drawer.classList.remove('is-open');
+        var wait = now || this.reduceMq.matches ? 0 : 280;
+        setTimeout(function () {
+          if (typeof self.drawer.close === 'function') self.drawer.close();
+          else { self.drawer.removeAttribute('open'); self.drawer.dispatchEvent(new Event('close')); }
+        }, wait);
+      }
+
+      onBreakpoint() {
+        if (this.desktopMq.matches) this.closeDrawer(true);
+        else this.closeDropdowns(false);
+      }
+
+      /* ---------- Cart ---------- */
+      setupCart() {
+        var self = this;
+        var link = this.querySelector('[data-cart-link]');
+        if (!link) return;
+        link.addEventListener('click', function (e) {
+          if (self.dataset.cartAction !== 'drawer') return;
+
+          /* 1. Vettofit cart drawer (vf-cart-drawer) or any drawer listening for this event */
+          var evt = new CustomEvent('vf:cart:open', { cancelable: true, bubbles: true, detail: { trigger: link } });
+          document.dispatchEvent(evt);
+          if (evt.defaultPrevented) { e.preventDefault(); return; }
+
+          /* 2. Shopify's Dawn-family themes */
+          var dawn = document.querySelector('cart-drawer');
+          if (dawn && typeof dawn.open === 'function') { e.preventDefault(); dawn.open(link); return; }
+
+          /* 3. No drawer on this theme yet: the link simply opens the cart page. */
+        });
+      }
+
+      refreshCount() {
+        var self = this;
+        clearTimeout(this._countTimer);
+        this._countTimer = setTimeout(function () {
+          var url = (self.dataset.cartUrl || '/cart') + '.js';
+          fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (cart) {
+              if (!cart) return;
+              var n = cart.item_count || 0;
+              self.querySelectorAll('[data-cart-count]').forEach(function (el) {
+                el.textContent = n;
+                el.classList.toggle('is-empty', n === 0);
+              });
+              var link = self.querySelector('[data-cart-link]');
+              if (link) link.setAttribute('aria-label', 'Cart, ' + n + ' items');
+            })
+            .catch(function () {});
+        }, 150);
+      }
+
+      /* ---------- Theme editor: show the feature card you're editing ---------- */
+      onBlockSelect(e) {
+        var id = e.detail && e.detail.blockId;
+        if (!id) return;
+        if (this.desktopMq.matches) {
+          var el = this.querySelector('.vf-nav [data-block-id="' + id + '"]');
+          var d = el && el.closest('details');
+          if (d) d.open = true;
+        } else {
+          var m = this.drawer && this.drawer.querySelector('[data-block-id="' + id + '"]');
+          if (m) {
+            this.openDrawer();
+            var md = m.closest('details');
+            if (md) md.open = true;
+          }
+        }
+      }
+
+      onBlockDeselect() {
+        this.closeDropdowns(false);
+        this.closeDrawer(true);
+      }
+    }
+
+    customElements.define('vf-header', VfHeader);
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Vettofit header",
+  "tag": "div",
+  "class": "vf-header-section",
+  "enabled_on": {
+    "groups": ["header"]
+  },
+  "max_blocks": 2,
+  "settings": [
+    {
+      "type": "header",
+      "content": "Logo"
+    },
+    {
+      "type": "image_picker",
+      "id": "logo",
+      "label": "Logo",
+      "info": "Use the approved master logo file only (SVG or PNG). Never a screenshot."
+    },
+    {
+      "type": "select",
+      "id": "logo_size",
+      "label": "Logo size",
+      "info": "Size is pre-set to keep the logo's clear space.",
+      "options": [
+        { "value": "small", "label": "Small" },
+        { "value": "medium", "label": "Medium" },
+        { "value": "large", "label": "Large" }
+      ],
+      "default": "medium"
+    },
+    {
+      "type": "header",
+      "content": "Menu"
+    },
+    {
+      "type": "link_list",
+      "id": "menu",
+      "label": "Menu",
+      "default": "main-menu",
+      "info": "Edit the menu itself in Content → Menus. Items with sub-items open as a dropdown."
+    },
+    {
+      "type": "header",
+      "content": "Look and behaviour"
+    },
+    {
+      "type": "select",
+      "id": "color_scheme",
+      "label": "Colour scheme",
+      "info": "Brand colours only. Chalk suits most pages.",
+      "options": [
+        { "value": "chalk", "label": "Chalk" },
+        { "value": "white", "label": "White" },
+        { "value": "plum", "label": "Night Plum" },
+        { "value": "carbon", "label": "Carbon" }
+      ],
+      "default": "chalk"
+    },
+    {
+      "type": "select",
+      "id": "header_width",
+      "label": "Width",
+      "options": [
+        { "value": "page", "label": "Page width" },
+        { "value": "full", "label": "Full width" }
+      ],
+      "default": "page"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_border",
+      "label": "Show thin line under header",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "sticky",
+      "label": "Sticky header",
+      "info": "\"Show when scrolling up\" hides the header while shoppers read and brings it back when they scroll up.",
+      "options": [
+        { "value": "always", "label": "Always" },
+        { "value": "up", "label": "Show when scrolling up" },
+        { "value": "off", "label": "Off" }
+      ],
+      "default": "up"
+    },
+    {
+      "type": "checkbox",
+      "id": "transparent",
+      "label": "See-through over the banner",
+      "info": "Only for pages whose first section is a dark photo. Menu text turns white until the shopper scrolls.",
+      "default": false
+    },
+    {
+      "type": "select",
+      "id": "transparent_scope",
+      "label": "Use see-through on",
+      "options": [
+        { "value": "home", "label": "Home page only" },
+        { "value": "all", "label": "Every page" }
+      ],
+      "default": "home",
+      "visible_if": "{{ section.settings.transparent }}"
+    },
+    {
+      "type": "image_picker",
+      "id": "logo_light",
+      "label": "Light logo",
+      "info": "The approved white version of the logo. Used on the see-through header and on Night Plum or Carbon. Leave empty to keep the normal logo.",
+      "visible_if": "{{ section.settings.transparent or section.settings.color_scheme == 'plum' or section.settings.color_scheme == 'carbon' }}"
+    },
+    {
+      "type": "header",
+      "content": "Icons"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_search",
+      "label": "Show search",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_account",
+      "label": "Show account icon",
+      "info": "Only appears if customer accounts are turned on in Settings → Customer accounts.",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_cart_count",
+      "label": "Show number of items on cart icon",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "cart_action",
+      "label": "When the cart icon is tapped",
+      "info": "\"Open cart drawer\" slides the cart in from the side. If your theme has no cart drawer yet, it opens the cart page instead.",
+      "options": [
+        { "value": "drawer", "label": "Open cart drawer" },
+        { "value": "page", "label": "Go to cart page" }
+      ],
+      "default": "drawer"
+    },
+    {
+      "type": "header",
+      "content": "Mobile menu"
+    },
+    {
+      "type": "text",
+      "id": "drawer_heading",
+      "label": "Menu heading",
+      "default": "Menu"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_species",
+      "label": "Species shortcuts in menu",
+      "info": "Adds Dogs and Cats buttons at the top of the mobile menu.",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "dogs_label",
+      "label": "Dogs button text",
+      "default": "Dogs",
+      "visible_if": "{{ section.settings.show_species }}"
+    },
+    {
+      "type": "url",
+      "id": "dogs_link",
+      "label": "Dogs button link",
+      "info": "Usually your dog collection.",
+      "visible_if": "{{ section.settings.show_species }}"
+    },
+    {
+      "type": "text",
+      "id": "cats_label",
+      "label": "Cats button text",
+      "default": "Cats",
+      "visible_if": "{{ section.settings.show_species }}"
+    },
+    {
+      "type": "url",
+      "id": "cats_link",
+      "label": "Cats button link",
+      "info": "Usually your cat collection.",
+      "visible_if": "{{ section.settings.show_species }}"
+    },
+    {
+      "type": "text",
+      "id": "search_placeholder",
+      "label": "Search box hint",
+      "default": "Search products",
+      "visible_if": "{{ section.settings.show_search }}"
+    },
+    {
+      "type": "text",
+      "id": "account_label",
+      "label": "Account link text",
+      "default": "Your account",
+      "visible_if": "{{ section.settings.show_account }}"
+    },
+    {
+      "type": "header",
+      "content": "Support (bottom of mobile menu)"
+    },
+    {
+      "type": "text",
+      "id": "support_label",
+      "label": "Support link text",
+      "default": "Help and support"
+    },
+    {
+      "type": "url",
+      "id": "support_link",
+      "label": "Support link",
+      "info": "Your contact or help page. Leave empty to hide."
+    },
+    {
+      "type": "text",
+      "id": "whatsapp_number",
+      "label": "WhatsApp number",
+      "info": "With country code, e.g. 91 98765 43210. Leave empty to hide."
+    },
+    {
+      "type": "text",
+      "id": "whatsapp_label",
+      "label": "WhatsApp link text",
+      "default": "Chat with us on WhatsApp",
+      "visible_if": "{{ section.settings.whatsapp_number != blank }}"
+    },
+    {
+      "type": "text",
+      "id": "whatsapp_message",
+      "label": "WhatsApp first message",
+      "info": "Pre-filled in the chat so shoppers just tap send.",
+      "default": "Hi Vettofit",
+      "visible_if": "{{ section.settings.whatsapp_number != blank }}"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "feature_card",
+      "name": "Menu feature card",
+      "limit": 2,
+      "settings": [
+        {
+          "type": "text",
+          "id": "menu_item",
+          "label": "Show under menu item",
+          "info": "Type the top-level menu item's name exactly as it appears, e.g. Shop.",
+          "default": "Shop"
+        },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Image",
+          "info": "Shown at 4:3. A real pet or the pack on Chalk works best."
+        },
+        {
+          "type": "text",
+          "id": "heading",
+          "label": "Heading",
+          "info": "Best under 5 words.",
+          "default": "Skin & Coat ritual"
+        },
+        {
+          "type": "text",
+          "id": "text",
+          "label": "Short line",
+          "info": "Best under 10 words.",
+          "default": "A two-second daily ritual."
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Link",
+          "info": "Leave empty to use the menu item's own link."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Vettofit header"
+    }
+  ]
+}
+{% endschema %}

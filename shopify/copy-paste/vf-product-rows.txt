@@ -1,75 +1,75 @@
 {%- comment -%}
-  Vettofit product rows — sections/vf-product-rows.liquid
-  Built from "Vettofit Landing Page — Shopify Section Technical Guide", section 3 (Product rows),
-  and the Landing Page Guidelines (blueprint row 3, conversion guardrails, mobile rules).
+  Vettofit product rows — sections/vf-product-rows.liquid  (v2, editorial split)
+  Built from "Vettofit Landing Page — Shopify Section Technical Guide", section 3 (Product rows)
+  and the Landing Page Guidelines. Visual direction borrowed from Graza's discipline:
+  one bold colour panel, one big product photo, one huge name, one button.
 
-  Desktop (1200px+): Graza-style alternating rows. Media in 7 columns, info in 5.
-  Tablet (750–1199px): same rows, 50 / 50.
-  Mobile (under 750px): swipeable cards at 85% width with a peek of the next card.
+  Desktop / tablet: 50 / 50 split bands. Colour panel on one side, photo on the other,
+  alternating. Optional "Slider" layout shows one product at a time with arrows.
+  Mobile: swipeable cards at 88% width with a peek of the next card.
 
-  Everything health-related comes from product data, never typed into the section:
-  - Benefits: product metafield vf.benefits (list of vf_benefit: title, support_line, icon)
-  - Cost per day: price ÷ days the bottle lasts.
-      days = volume_ml ÷ (vf.ml_per_pump × pumps for the example weight in vf.feeding_guide)
-      volume_ml: variant metafield vf.volume_ml, else product metafield vf.volume_ml.
-      If anything is missing, the line hides itself instead of showing a wrong number.
-  - Rating: Shopify's standard reviews.rating / reviews.rating_count metafields (filled by
-    most reviews apps automatically).
-  - Species: product metafield vf.species (Dog / Cat / Multi), used by "Show for: Automatic".
+  Search & AI friendly:
+  - Product + ItemList structured data (JSON-LD) with the REAL product name, price,
+    availability, brand, SKU / barcode and rating (only when the rating is visible).
+  - A "Product facts" list (<dl>) with pack size, daily amount, days per bottle and cost per
+    day, so answer engines and AI assistants can quote clear facts.
+  - Semantic headings (h2 → h3), descriptive links and image alt text.
+  - "Name on this page" changes only the visible name. Search data keeps the real name.
 
-  Buying: size chips, one-time vs subscribe (never pre-selected), Add to cart via AJAX.
-  Works without JavaScript too (normal form post to the cart).
+  Health facts come from product data, never typed into the section:
+  vf.benefits, vf.feeding_guide, vf.ml_per_pump, vf.volume_ml, vf.species, reviews.rating.
 {%- endcomment -%}
 
 {%- liquid
   assign ss = section.settings
   assign row_blocks = section.blocks | where: 'type', 'product_row'
-  assign visible_count = 0
+  assign real_count = 0
   for b in row_blocks
-    if b.settings.product != blank or request.design_mode
-      assign visible_count = visible_count | plus: 1
+    if b.settings.product != blank
+      assign real_count = real_count | plus: 1
     endif
   endfor
+  assign heading_id = 'vf-rows-h-' | append: section.id
+  assign ld_items = ''
+  assign ld_pos = 0
 -%}
 
 {%- capture star_svg -%}<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 1.6l2.5 5.3 5.8.7-4.3 4 1.1 5.7L10 14.5l-5.1 2.8 1.1-5.7-4.3-4 5.8-.7z"/></svg>{%- endcapture -%}
 
 <vf-product-rows
   id="vf-rows-{{ section.id }}"
-  class="vf-rows vf-scheme--{{ ss.color_scheme }} vf-rows--{{ ss.row_style }} vf-space-below--{{ ss.space_below }}"
+  class="vf-rows vf-scheme--{{ ss.color_scheme }} vf-rows--{{ ss.layout }} vf-rows--{{ ss.width }} vf-rows--{{ ss.row_style }} vf-align--{{ ss.text_align }} vf-space-below--{{ ss.space_below }}"
   data-action="{{ ss.button_action }}"
   data-cart-add="{{ routes.cart_add_url }}"
   data-cart-url="{{ routes.cart_url }}"
   data-design="{{ request.design_mode }}"
   data-added-text="{{ ss.added_note | escape }}"
   data-view-cart="{{ ss.view_cart_label | escape }}"
+  data-layout="{{ ss.layout }}"
 >
-  <div class="vf-rows__wrap">
-    {%- if ss.heading != blank or ss.intro != blank -%}
-      <header class="vf-rows__head">
-        {%- if ss.heading != blank -%}<h2 class="vf-rows__heading">{{ ss.heading }}</h2>{%- endif -%}
-        <span class="vf-rows__signal" aria-hidden="true"></span>
-        {%- if ss.intro != blank -%}<p class="vf-rows__intro">{{ ss.intro }}</p>{%- endif -%}
-      </header>
-    {%- endif -%}
+  <section class="vf-rows__inner" aria-labelledby="{{ heading_id }}">
+    <header class="vf-rows__head{% if ss.heading == blank and ss.intro == blank %} vf-vh{% endif %}">
+      <h2 class="vf-rows__heading" id="{{ heading_id }}">{{ ss.heading | default: shop.name }}</h2>
+      {%- if ss.heading != blank -%}<span class="vf-rows__signal" aria-hidden="true"></span>{%- endif -%}
+      {%- if ss.intro != blank -%}<p class="vf-rows__intro">{{ ss.intro }}</p>{%- endif -%}
+    </header>
 
-    <ul class="vf-rows__list" role="list" aria-label="{{ ss.heading | default: 'Products' | escape }}" data-list>
+    <div class="vf-rows__track" data-list role="list">
       {%- for block in row_blocks -%}
         {%- assign product = block.settings.product -%}
         {%- assign uid = section.id | append: '-' | append: block.id -%}
+        {%- assign panel = block.settings.panel_color -%}
 
         {%- if product == blank -%}
           {%- if request.design_mode -%}
-            <li class="vf-row vf-row--placeholder{% cycle '', ' is-flip' %}" data-row data-show="always" {{ block.shopify_attributes }}>
-              <div class="vf-row__media vf-row__media--contain">
-                {{ 'product-1' | placeholder_svg_tag: 'vf-row__ph' }}
-              </div>
-              <div class="vf-row__info">
-                <p class="vf-rows__note">Pick a product for this row. (Only you see this note.)</p>
-                <h3 class="vf-row__title">Your product</h3>
-                <p class="vf-row__price">—</p>
-              </div>
-            </li>
+            <article class="vf-row vf-panel--{{ panel }}{% cycle '', ' is-flip' %}" data-row data-show="always" role="listitem" {{ block.shopify_attributes }}>
+              <div class="vf-row__media vf-row__media--contain">{{ 'product-1' | placeholder_svg_tag: 'vf-row__ph' }}</div>
+              <div class="vf-row__panel"><div class="vf-row__content">
+                <p class="vf-row__eyebrow"><span>Product row</span></p>
+                <h3 class="vf-row__title">Pick a product</h3>
+                <p class="vf-rows__note">Choose a product for this row in the sidebar. (Only you see this note.)</p>
+              </div></div>
+            </article>
           {%- endif -%}
           {%- continue -%}
         {%- endif -%}
@@ -77,9 +77,6 @@
         {%- liquid
           assign variant = product.selected_or_first_available_variant
 
-          comment
-            Species: "Automatic" reads the product's species metafield.
-          endcomment
           assign species_raw = product.metafields.vf.species.value | downcase
           assign show_for = block.settings.show_for
           if show_for == 'auto'
@@ -93,12 +90,29 @@
           endif
 
           assign pet_word = ss.pet_word_any
+          assign pet_plural = ss.pet_plural_any
           assign weight = ss.cost_weight_dog
           if species_raw contains 'cat'
             assign pet_word = ss.pet_word_cat
+            assign pet_plural = ss.pet_plural_cat
             assign weight = ss.cost_weight_cat
           elsif species_raw contains 'dog'
             assign pet_word = ss.pet_word_dog
+            assign pet_plural = ss.pet_plural_dog
+          endif
+
+          comment
+            Display name: the landing-page override, else the product's own title.
+          endcomment
+          assign display_name = block.settings.display_name | default: product.title
+          assign name_class = ''
+          if display_name.size > 34
+            assign name_class = ' is-long'
+          endif
+
+          assign eyebrow = block.settings.eyebrow
+          if eyebrow == blank and species_raw != blank
+            assign eyebrow = ss.eyebrow_auto | replace: '[pets]', pet_plural
           endif
 
           comment
@@ -115,6 +129,7 @@
           endfor
           assign ml_pp = product.metafields.vf.ml_per_pump.value | default: 0 | times: 1.0
           assign daily_ml = ml_pp | times: pumps
+          assign pumps_int = pumps | round
 
           assign has_plans = false
           if ss.show_subscribe and product.selling_plan_groups.size > 0
@@ -140,27 +155,7 @@
           if video != blank
             assign media_fit = 'cover'
           endif
-        -%}
 
-        {%- comment -%} Per-variant data for live price / cost-per-day updates {%- endcomment -%}
-        {%- capture row_json -%}
-          {"variants":[
-            {%- for v in product.variants -%}
-              {%- liquid
-                assign vol = v.metafields.vf.volume_ml.value | default: product.metafields.vf.volume_ml.value | default: 0 | times: 1.0
-                assign days = 0
-                if vol > 0 and daily_ml > 0
-                  assign days = vol | divided_by: daily_ml | floor
-                endif
-              -%}
-              {"id":{{ v.id }},"available":{{ v.available | json }},"price":{{ v.price }},"compare":{{ v.compare_at_price | default: 0 }},"days":{{ days }},"plans":{
-                {%- for a in v.selling_plan_allocations -%}"{{ a.selling_plan.id }}":{{ a.price }}{% unless forloop.last %},{% endunless %}{%- endfor -%}
-              }}{% unless forloop.last %},{% endunless %}
-            {%- endfor -%}
-          ]}
-        {%- endcapture -%}
-
-        {%- liquid
           assign vol0 = variant.metafields.vf.volume_ml.value | default: product.metafields.vf.volume_ml.value | default: 0 | times: 1.0
           assign days0 = 0
           if vol0 > 0 and daily_ml > 0
@@ -171,10 +166,90 @@
             assign per_day_cents = variant.price | divided_by: days0 | divided_by: 100.0 | round | times: 100
             assign per_day0 = per_day_cents | money_without_trailing_zeros
           endif
+          assign size0 = variant.title
+          if product.has_only_default_variant
+            assign size0 = ''
+            if vol0 > 0
+              assign size0 = vol0 | round | append: ' ml'
+            endif
+          endif
+
+          assign rating = product.metafields.reviews.rating.value
+          assign rating_count = product.metafields.reviews.rating_count.value | default: 0
+          assign show_stars = false
+          if ss.show_rating and rating != blank and rating_count > 0
+            assign show_stars = true
+          endif
         -%}
 
-        <li
-          class="vf-row{% cycle '', ' is-flip' %}"
+        {%- comment -%} Per-variant data for live price / facts updates {%- endcomment -%}
+        {%- capture row_json -%}
+          {"variants":[
+            {%- for v in product.variants -%}
+              {%- liquid
+                assign vol = v.metafields.vf.volume_ml.value | default: product.metafields.vf.volume_ml.value | default: 0 | times: 1.0
+                assign days = 0
+                if vol > 0 and daily_ml > 0
+                  assign days = vol | divided_by: daily_ml | floor
+                endif
+                assign v_size = v.title
+                if product.has_only_default_variant
+                  assign v_size = ''
+                  if vol > 0
+                    assign v_size = vol | round | append: ' ml'
+                  endif
+                endif
+              -%}
+              {"id":{{ v.id }},"available":{{ v.available | json }},"price":{{ v.price }},"compare":{{ v.compare_at_price | default: 0 }},"days":{{ days }},"size":{{ v_size | json }},"plans":{
+                {%- for a in v.selling_plan_allocations -%}"{{ a.selling_plan.id }}":{{ a.price }}{% unless forloop.last %},{% endunless %}{%- endfor -%}
+              }}{% unless forloop.last %},{% endunless %}
+            {%- endfor -%}
+          ]}
+        {%- endcapture -%}
+
+        {%- comment -%} ---------- Structured data for this product (search engines & AI) ---------- {%- endcomment -%}
+        {%- liquid
+          assign ld_pos = ld_pos | plus: 1
+          assign ld_url = shop.url | append: product.url
+          assign ld_img = ''
+          if product.featured_image != blank
+            assign ld_img = product.featured_image | image_url: width: 1200 | prepend: 'https:'
+          endif
+          assign ld_desc = product.description | strip_html | strip_newlines | truncate: 300
+          if ld_desc == blank
+            assign ld_desc = block.settings.short_line | strip_html
+          endif
+        -%}
+        {%- capture ld_one -%}
+          {"@type":"ListItem","position":{{ ld_pos }},"item":{
+            "@type":"Product",
+            "name":{{ product.title | json }},
+            "url":{{ ld_url | json }},
+            {%- if ld_img != '' -%}"image":{{ ld_img | json }},{%- endif -%}
+            {%- if ld_desc != blank -%}"description":{{ ld_desc | json }},{%- endif -%}
+            {%- if product.vendor != blank -%}"brand":{"@type":"Brand","name":{{ product.vendor | json }}},{%- endif -%}
+            {%- if variant.sku != blank -%}"sku":{{ variant.sku | json }},{%- endif -%}
+            {%- if variant.barcode != blank -%}"gtin":{{ variant.barcode | json }},{%- endif -%}
+            {%- if product.type != blank -%}"category":{{ product.type | json }},{%- endif -%}
+            {%- if show_stars -%}"aggregateRating":{"@type":"AggregateRating","ratingValue":{{ rating.rating | json }},"bestRating":{{ rating.scale_max | default: 5 | json }},"ratingCount":{{ rating_count | json }}},{%- endif -%}
+            {%- if product.variants.size > 1 -%}
+              "offers":{"@type":"AggregateOffer","priceCurrency":{{ cart.currency.iso_code | json }},"lowPrice":{{ product.price_min | money_without_currency | remove: ',' | json }},"highPrice":{{ product.price_max | money_without_currency | remove: ',' | json }},"offerCount":{{ product.variants.size }},"availability":"https://schema.org/{% if product.available %}InStock{% else %}OutOfStock{% endif %}"}
+            {%- else -%}
+              "offers":{"@type":"Offer","url":{{ ld_url | json }},"priceCurrency":{{ cart.currency.iso_code | json }},"price":{{ variant.price | money_without_currency | remove: ',' | json }},"availability":"https://schema.org/{% if variant.available %}InStock{% else %}OutOfStock{% endif %}","itemCondition":"https://schema.org/NewCondition"}
+            {%- endif -%}
+          }}
+        {%- endcapture -%}
+        {%- liquid
+          if ld_items != ''
+            assign ld_items = ld_items | append: ','
+          endif
+          assign ld_items = ld_items | append: ld_one
+        -%}
+
+        <article
+          class="vf-row vf-panel--{{ panel }}{% cycle '', ' is-flip' %}"
+          role="listitem"
+          aria-labelledby="vf-name-{{ uid }}"
           data-row
           data-index="{{ forloop.index }}"
           data-show="{{ show_for }}"
@@ -182,10 +257,10 @@
           data-block-id="{{ block.id }}"
           {{ block.shopify_attributes }}
         >
-          {%- comment -%} ---------- Media ---------- {%- endcomment -%}
+          {%- comment -%} ---------- Photo / video side ---------- {%- endcomment -%}
           <div class="vf-row__media vf-row__media--{{ media_fit }}">
             {%- if video != blank -%}
-              {{ video | video_tag: muted: true, loop: true, playsinline: true, autoplay: false, controls: false, preload: 'none', class: 'vf-row__video', image_size: '900x' }}
+              {{ video | video_tag: muted: true, loop: true, playsinline: true, autoplay: false, controls: false, preload: 'none', class: 'vf-row__video', image_size: '1200x' }}
               <button class="vf-row__play" type="button" aria-label="Play video" aria-pressed="false" data-play>
                 <svg class="vf-i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
                 <svg class="vf-i-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="5.5" width="3.5" height="13" rx="1"/><rect x="13.5" y="5.5" width="3.5" height="13" rx="1"/></svg>
@@ -196,11 +271,15 @@
                 if img == blank
                   assign img = product.featured_image
                 endif
-                assign alt = img.alt | default: product.title | escape
+                assign alt = img.alt
+                if alt == blank
+                  assign alt = product.title
+                endif
+                assign alt = alt | escape
               -%}
               <a href="{{ product.url }}" class="vf-row__media-link" tabindex="-1" aria-hidden="true">
                 {%- if img != blank -%}
-                  {{ img | image_url: width: 1500 | image_tag: widths: '430, 600, 860, 1100, 1500', sizes: '(min-width: 1200px) 56vw, (min-width: 750px) 48vw, 85vw', loading: 'lazy', class: 'vf-row__img', alt: alt }}
+                  {{ img | image_url: width: 1600 | image_tag: widths: '430, 600, 860, 1100, 1600', sizes: '(min-width: 750px) 50vw, 88vw', loading: 'lazy', class: 'vf-row__img', alt: alt }}
                 {%- else -%}
                   {{ 'product-1' | placeholder_svg_tag: 'vf-row__ph' }}
                 {%- endif -%}
@@ -217,20 +296,26 @@
             {%- endif -%}
           </div>
 
-          {%- comment -%} ---------- Info ---------- {%- endcomment -%}
-          <div class="vf-row__info">
-            {%- if request.design_mode and show_for != 'always' -%}
-              <p class="vf-row__editor-tag">Shows when {{ show_for | capitalize }} is selected (Only you see this.)</p>
-            {%- endif -%}
+          {%- comment -%} ---------- Colour panel ---------- {%- endcomment -%}
+          <div class="vf-row__panel">
+            <div class="vf-row__content">
+              {%- if request.design_mode and show_for != 'always' -%}
+                <p class="vf-rows__note">Shows when {{ show_for | capitalize }} is selected. (Only you see this.)</p>
+              {%- endif -%}
 
-            <h3 class="vf-row__title"><a href="{{ product.url }}">{{ product.title }}</a></h3>
+              {%- if eyebrow != blank -%}
+                <p class="vf-row__eyebrow"><span>{{ eyebrow }}</span></p>
+              {%- endif -%}
 
-            {%- if ss.show_rating -%}
-              {%- liquid
-                assign rating = product.metafields.reviews.rating.value
-                assign rating_count = product.metafields.reviews.rating_count.value | default: 0
-              -%}
-              {%- if rating != blank and rating_count > 0 -%}
+              <h3 class="vf-row__title{{ name_class }}" id="vf-name-{{ uid }}">
+                <a href="{{ product.url }}" title="{{ product.title | escape }}">{{ display_name }}</a>
+              </h3>
+
+              {%- if block.settings.short_line != blank -%}
+                <p class="vf-row__line">{{ block.settings.short_line }}</p>
+              {%- endif -%}
+
+              {%- if show_stars -%}
                 {%- liquid
                   assign r_val = rating.rating | times: 1.0
                   assign r_max = rating.scale_max | default: 5 | times: 1.0
@@ -241,163 +326,199 @@
                     <span class="vf-stars__base">{{ star_svg }}{{ star_svg }}{{ star_svg }}{{ star_svg }}{{ star_svg }}</span>
                     <span class="vf-stars__fill" style="width: {{ r_pct }}%;">{{ star_svg }}{{ star_svg }}{{ star_svg }}{{ star_svg }}{{ star_svg }}</span>
                   </span>
-                  <span class="vf-row__rating-text">{{ r_val | round: 1 }}<span class="vf-vh"> out of {{ r_max | round }} stars,</span> <span class="vf-row__rating-count">({{ rating_count }}<span class="vf-vh"> reviews</span>)</span></span>
+                  <span class="vf-row__rating-text">{{ r_val | round: 1 }}<span class="vf-vh"> out of {{ r_max | round }} stars from</span> <span class="vf-row__rating-count">({{ rating_count }}<span class="vf-vh"> reviews</span>)</span></span>
                 </p>
               {%- endif -%}
-            {%- endif -%}
 
-            {%- comment -%} Benefits from the product's vf.benefits metafield {%- endcomment -%}
-            {%- assign benefits = product.metafields.vf.benefits.value -%}
-            {%- assign benefits_limit = block.settings.benefits_count | default: 3 | plus: 0 -%}
-            {%- if benefits != blank -%}
-              <ul class="vf-benefits" role="list">
-                {%- for bnf in benefits limit: benefits_limit -%}
-                  {%- assign icon = bnf.icon.value | downcase -%}
-                  <li class="vf-benefit">
-                    <span class="vf-benefit__icon" aria-hidden="true">
-                      {%- if icon contains 'coat' or icon contains 'skin' or icon contains 'shine' -%}
-                        <svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg>
-                      {%- elsif icon contains 'heart' -%}
-                        <svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>
-                      {%- elsif icon contains 'joint' or icon contains 'mobil' -%}
-                        <svg viewBox="0 0 24 24"><path d="M13 3L6 13h5l-1 8 7-10h-5z"/></svg>
-                      {%- elsif icon contains 'gut' or icon contains 'digest' -%}
-                        <svg viewBox="0 0 24 24"><path d="M8 4v5a4 4 0 0 0 8 0M16 4v3M12 13v7"/></svg>
-                      {%- elsif icon contains 'calm' or icon contains 'sleep' -%}
-                        <svg viewBox="0 0 24 24"><path d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z"/></svg>
-                      {%- elsif icon contains 'dental' or icon contains 'teeth' or icon contains 'tooth' -%}
-                        <svg viewBox="0 0 24 24"><path d="M7 4c-2 0-3 2-3 4 0 4 2 5 2.5 9 .3 2 2.3 2 2.6 0L10 13h4l.9 4c.3 2 2.3 2 2.6 0 .5-4 2.5-5 2.5-9 0-2-1-4-3-4-2 0-3 1-5 1S9 4 7 4z"/></svg>
-                      {%- elsif icon contains 'immun' or icon contains 'shield' -%}
-                        <svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z"/></svg>
-                      {%- else -%}
-                        <svg viewBox="0 0 24 24"><polyline points="5 12.5 10 17 19 7"/></svg>
+              {%- comment -%} Benefits from the product's vf.benefits metafield {%- endcomment -%}
+              {%- assign benefits = product.metafields.vf.benefits.value -%}
+              {%- assign benefits_limit = block.settings.benefits_count | default: 3 | plus: 0 -%}
+              {%- if benefits != blank -%}
+                <ul class="vf-benefits" role="list" aria-label="Benefits">
+                  {%- for bnf in benefits limit: benefits_limit -%}
+                    {%- assign icon = bnf.icon.value | downcase -%}
+                    <li class="vf-benefit" {% if bnf.support_line.value != blank %}title="{{ bnf.support_line.value | escape }}"{% endif %}>
+                      <span class="vf-benefit__icon" aria-hidden="true">
+                        {%- if icon contains 'coat' or icon contains 'skin' or icon contains 'shine' -%}
+                          <svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg>
+                        {%- elsif icon contains 'heart' -%}
+                          <svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>
+                        {%- elsif icon contains 'joint' or icon contains 'mobil' -%}
+                          <svg viewBox="0 0 24 24"><path d="M13 3L6 13h5l-1 8 7-10h-5z"/></svg>
+                        {%- elsif icon contains 'gut' or icon contains 'digest' -%}
+                          <svg viewBox="0 0 24 24"><path d="M8 4v5a4 4 0 0 0 8 0M16 4v3M12 13v7"/></svg>
+                        {%- elsif icon contains 'calm' or icon contains 'sleep' -%}
+                          <svg viewBox="0 0 24 24"><path d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z"/></svg>
+                        {%- elsif icon contains 'dental' or icon contains 'teeth' or icon contains 'tooth' -%}
+                          <svg viewBox="0 0 24 24"><path d="M7 4c-2 0-3 2-3 4 0 4 2 5 2.5 9 .3 2 2.3 2 2.6 0L10 13h4l.9 4c.3 2 2.3 2 2.6 0 .5-4 2.5-5 2.5-9 0-2-1-4-3-4-2 0-3 1-5 1S9 4 7 4z"/></svg>
+                        {%- elsif icon contains 'immun' or icon contains 'shield' -%}
+                          <svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z"/></svg>
+                        {%- else -%}
+                          <svg viewBox="0 0 24 24"><polyline points="5 12.5 10 17 19 7"/></svg>
+                        {%- endif -%}
+                      </span>
+                      <span>{{ bnf.title.value }}</span>
+                    </li>
+                  {%- endfor -%}
+                </ul>
+              {%- elsif request.design_mode -%}
+                <p class="vf-rows__note">Benefits come from this product's "benefits" metafield (vf.benefits). (Only you see this note.)</p>
+              {%- endif -%}
+
+              {%- comment -%} ---------- Buy box ---------- {%- endcomment -%}
+              <form class="vf-buy" action="{{ routes.cart_add_url }}" method="post" data-buy novalidate>
+                <input type="hidden" name="id" value="{{ variant.id }}" data-variant-input>
+                <input type="hidden" name="quantity" value="1">
+                {%- if has_plans -%}<input type="hidden" name="selling_plan" value="{% if product.requires_selling_plan %}{{ first_group.selling_plans.first.id }}{% endif %}" data-plan-input>{%- endif -%}
+                <script type="application/json" data-row-json>{{ row_json | strip_newlines }}</script>
+
+                {%- unless product.has_only_default_variant -%}
+                  <fieldset class="vf-sizes">
+                    <legend class="vf-vh">{{ ss.size_label | default: product.options.first }}</legend>
+                    <div class="vf-sizes__chips">
+                      {%- for v in product.variants -%}
+                        <label class="vf-chip{% unless v.available %} is-soldout{% endunless %}">
+                          <input type="radio" name="size-{{ uid }}" value="{{ v.id }}"{% if v.id == variant.id %} checked{% endif %} data-size>
+                          <span>{{ v.title }}</span>
+                        </label>
+                      {%- endfor -%}
+                    </div>
+                  </fieldset>
+                {%- endunless -%}
+
+                {%- if has_plans -%}
+                  <fieldset class="vf-po">
+                    <legend class="vf-vh">Purchase option</legend>
+                    <div class="vf-po__seg">
+                      {%- unless product.requires_selling_plan -%}
+                        <label class="vf-po__opt">
+                          <input type="radio" name="po-{{ uid }}" value="once" checked data-po>
+                          <span>{{ ss.one_time_label }}</span>
+                        </label>
+                      {%- endunless -%}
+                      <label class="vf-po__opt">
+                        <input type="radio" name="po-{{ uid }}" value="sub"{% if product.requires_selling_plan %} checked{% endif %} data-po>
+                        <span>{{ ss.subscribe_label }}{% if save_text != '' %} <b class="vf-po__save">−{{ save_text }}</b>{% endif %}</span>
+                      </label>
+                    </div>
+                    <div class="vf-po__freq" data-freq{% unless product.requires_selling_plan %} hidden{% endunless %}>
+                      {%- if ss.subscribe_note != blank -%}<p class="vf-po__note">{{ ss.subscribe_note }}</p>{%- endif -%}
+                      <div class="vf-select">
+                        <select id="plan-{{ uid }}" data-plan aria-label="{{ ss.frequency_label | escape }}">
+                          {%- for group in product.selling_plan_groups -%}
+                            {%- for plan in group.selling_plans -%}
+                              <option value="{{ plan.id }}">{{ plan.name }}</option>
+                            {%- endfor -%}
+                          {%- endfor -%}
+                        </select>
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                      </div>
+                    </div>
+                  </fieldset>
+                {%- endif -%}
+
+                {%- if ss.button_action == 'product' -%}
+                  <a class="vf-btn" href="{{ product.url }}">{{ ss.product_button_label }}</a>
+                {%- else -%}
+                  <button class="vf-btn" type="submit" data-atc data-sold-out="{{ ss.sold_out_label | escape }}"{% unless variant.available %} disabled{% endunless %}>
+                    <span class="vf-btn__label">
+                      <span data-atc-label>{% if variant.available %}{{ ss.button_label }}{% else %}{{ ss.sold_out_label }}{% endif %}</span>
+                      <span class="vf-btn__dot" aria-hidden="true">·</span>
+                      <span class="vf-btn__price" data-price>{{ variant.price | money }}</span>
+                      {%- if ss.show_compare and variant.compare_at_price > variant.price -%}
+                        <s class="vf-btn__was" data-compare>{{ variant.compare_at_price | money }}</s>
                       {%- endif -%}
                     </span>
-                    <span class="vf-benefit__text">
-                      <span class="vf-benefit__title">{{ bnf.title.value }}</span>
-                      {%- if bnf.support_line.value != blank -%}<span class="vf-benefit__line">{{ bnf.support_line.value }}</span>{%- endif -%}
+                    <span class="vf-btn__done" aria-hidden="true">
+                      <svg viewBox="0 0 24 24"><polyline points="5 12.5 10 17 19 7"/></svg>
+                      <span>{{ ss.added_label }}</span>
                     </span>
-                  </li>
-                {%- endfor -%}
-              </ul>
-            {%- elsif request.design_mode -%}
-              <p class="vf-rows__note">Benefits come from this product's "benefits" metafield (vf.benefits). Add 2–3 there and they appear here. (Only you see this note.)</p>
-            {%- endif -%}
+                  </button>
+                {%- endif -%}
 
-            {%- comment -%} ---------- Buy box ---------- {%- endcomment -%}
-            <form class="vf-buy" action="{{ routes.cart_add_url }}" method="post" data-buy novalidate>
-              <input type="hidden" name="id" value="{{ variant.id }}" data-variant-input>
-              <input type="hidden" name="quantity" value="1">
-              {%- if has_plans -%}<input type="hidden" name="selling_plan" value="{% if product.requires_selling_plan %}{{ first_group.selling_plans.first.id }}{% endif %}" data-plan-input>{%- endif -%}
-              <script type="application/json" data-row-json>{{ row_json | strip_newlines }}</script>
-
-              {%- unless product.has_only_default_variant -%}
-                <fieldset class="vf-sizes">
-                  <legend class="vf-buy__legend">{{ ss.size_label | default: product.options.first }}</legend>
-                  <div class="vf-sizes__chips">
-                    {%- for v in product.variants -%}
-                      <label class="vf-chip{% unless v.available %} is-soldout{% endunless %}">
-                        <input type="radio" name="size-{{ uid }}" value="{{ v.id }}"{% if v.id == variant.id %} checked{% endif %} data-size>
-                        <span>{{ v.title }}</span>
-                      </label>
-                    {%- endfor -%}
-                  </div>
-                </fieldset>
-              {%- endunless -%}
-
-              {%- if has_plans -%}
-                <fieldset class="vf-po">
-                  <legend class="vf-vh">Purchase option</legend>
-                  {%- unless product.requires_selling_plan -%}
-                    <label class="vf-po__opt">
-                      <input type="radio" name="po-{{ uid }}" value="once" checked data-po>
-                      <span class="vf-po__radio" aria-hidden="true"></span>
-                      <span class="vf-po__text"><span class="vf-po__name">{{ ss.one_time_label }}</span></span>
-                    </label>
-                  {%- endunless -%}
-                  <label class="vf-po__opt">
-                    <input type="radio" name="po-{{ uid }}" value="sub"{% if product.requires_selling_plan %} checked{% endif %} data-po>
-                    <span class="vf-po__radio" aria-hidden="true"></span>
-                    <span class="vf-po__text">
-                      <span class="vf-po__name">{{ ss.subscribe_label }}{% if save_text != '' %} <span class="vf-po__save">{{ save_text }}</span>{% endif %}</span>
-                      {%- if ss.subscribe_note != blank -%}<span class="vf-po__note">{{ ss.subscribe_note }}</span>{%- endif -%}
-                    </span>
-                  </label>
-                  <div class="vf-po__freq" data-freq{% unless product.requires_selling_plan %} hidden{% endunless %}>
-                    <label class="vf-po__freq-label" for="plan-{{ uid }}">{{ ss.frequency_label }}</label>
-                    <div class="vf-select">
-                      <select id="plan-{{ uid }}" data-plan>
-                        {%- for group in product.selling_plan_groups -%}
-                          {%- for plan in group.selling_plans -%}
-                            <option value="{{ plan.id }}">{{ plan.name }}</option>
-                          {%- endfor -%}
-                        {%- endfor -%}
-                      </select>
-                      <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-                    </div>
-                    {%- if ss.lasts_text != blank -%}
-                      {%- capture days_span -%}<span data-days>{{ days0 }}</span>{%- endcapture -%}
-                      <p class="vf-po__lasts" data-lasts{% if days0 == 0 %} hidden{% endif %}>{{ ss.lasts_text | replace: '[days]', days_span }}</p>
-                    {%- endif -%}
-                  </div>
-                </fieldset>
-              {%- endif -%}
-
-              <div class="vf-buy__price-row">
-                <p class="vf-row__price" aria-live="polite">
-                  <span class="vf-row__now" data-price>{{ variant.price | money }}</span>
-                  {%- if ss.show_compare -%}
-                    <s class="vf-row__was" data-compare{% unless variant.compare_at_price > variant.price %} hidden{% endunless %}>{{ variant.compare_at_price | money }}</s>
-                  {%- endif -%}
-                </p>
                 {%- if ss.show_cost and ss.cost_text != blank -%}
-                  {%- capture cost_html -%}{{ ss.cost_text | replace: '[price]', '<span data-per-day>PERDAY</span>' | replace: '[weight]', weight | replace: '[pet]', pet_word }}{%- endcapture -%}
+                  {%- capture cost_html -%}{{ ss.cost_text | replace: '[price]', '<b data-per-day>PERDAY</b>' | replace: '[weight]', weight | replace: '[pet]', pet_word }}{%- endcapture -%}
                   <p class="vf-row__perday" data-perday-line{% if per_day0 == '' %} hidden{% endif %}>{{ cost_html | replace: 'PERDAY', per_day0 }}</p>
                 {%- endif -%}
-              </div>
-
-              {%- if ss.button_action == 'product' -%}
-                <a class="vf-btn" href="{{ product.url }}">{{ ss.product_button_label }}</a>
-              {%- else -%}
-                <button class="vf-btn" type="submit" data-atc data-sold-out="{{ ss.sold_out_label | escape }}"{% unless variant.available %} disabled{% endunless %}>
-                  <span class="vf-btn__label" data-atc-label>{% if variant.available %}{{ ss.button_label }}{% else %}{{ ss.sold_out_label }}{% endif %}</span>
-                  <span class="vf-btn__done" aria-hidden="true">
-                    <svg viewBox="0 0 24 24"><polyline points="5 12.5 10 17 19 7"/></svg>
-                    <span>{{ ss.added_label }}</span>
-                  </span>
-                </button>
                 <p class="vf-buy__status" role="status" aria-live="polite" data-status></p>
+                {%- if ss.payment_note != blank -%}<p class="vf-buy__note">{{ ss.payment_note }}</p>{%- endif -%}
+              </form>
+
+              {%- comment -%} ---------- Product facts: clear, quotable facts for shoppers, search and AI ---------- {%- endcomment -%}
+              {%- if ss.show_facts -%}
+                <details class="vf-facts"{% if ss.facts_open %} open{% endif %}>
+                  <summary>
+                    <span>{{ ss.facts_title }}</span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                  </summary>
+                  <dl class="vf-facts__list">
+                    {%- if pet_plural != blank -%}
+                      <div><dt>{{ ss.facts_for }}</dt><dd>{{ pet_plural | capitalize }}</dd></div>
+                    {%- endif -%}
+                    <div data-fact-size-row{% if size0 == '' %} hidden{% endif %}><dt>{{ ss.facts_size }}</dt><dd data-fact-size>{{ size0 }}</dd></div>
+                    {%- if pumps_int > 0 -%}
+                      {%- liquid
+                        assign pump_word = ss.pump_word_many
+                        if pumps_int == 1
+                          assign pump_word = ss.pump_word_one
+                        endif
+                        assign pumps_text = pumps_int | append: ' ' | append: pump_word
+                      -%}
+                      <div><dt>{{ ss.facts_daily }}</dt><dd>{{ ss.facts_daily_value | replace: '[pumps]', pumps_text | replace: '[weight]', weight | replace: '[pet]', pet_word }}</dd></div>
+                    {%- endif -%}
+                    <div data-fact-days-row{% if days0 == 0 %} hidden{% endif %}><dt>{{ ss.facts_lasts }}</dt><dd>{{ ss.facts_lasts_value | replace: '[days]', '<span data-fact-days>DAYS</span>' | replace: 'DAYS', days0 }}</dd></div>
+                    <div data-fact-cost-row{% if per_day0 == '' %} hidden{% endif %}><dt>{{ ss.facts_cost }}</dt><dd data-fact-cost>{{ per_day0 }}</dd></div>
+                    <div><dt>{{ ss.facts_price }}</dt><dd data-fact-price>{{ variant.price | money }}</dd></div>
+                  </dl>
+                  <a class="vf-facts__more" href="{{ product.url }}">{{ ss.details_link_label }}<span class="vf-vh">: {{ product.title }}</span> →</a>
+                </details>
               {%- endif -%}
 
-              {%- if ss.payment_note != blank -%}
-                <p class="vf-buy__note">{{ ss.payment_note }}</p>
+              {%- if ss.layout == 'slider' and real_count > 1 -%}
+                <div class="vf-arrows" role="group" aria-label="More products">
+                  <button type="button" class="vf-arrow" data-prev aria-label="Previous product"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="11 6 5 12 11 18"/></svg></button>
+                  <button type="button" class="vf-arrow" data-next aria-label="Next product"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg></button>
+                  <span class="vf-arrows__count" aria-hidden="true"><span data-count-now>{{ forloop.index }}</span> / <span data-count-all>{{ real_count }}</span></span>
+                </div>
               {%- endif -%}
-            </form>
+            </div>
           </div>
-        </li>
+        </article>
       {%- endfor -%}
-    </ul>
+    </div>
 
-    {%- if visible_count == 0 and request.design_mode -%}
+    {%- if real_count == 0 and request.design_mode -%}
       <p class="vf-rows__note">Add a "Product row" block and pick a product. (Only you see this note.)</p>
     {%- endif -%}
-  </div>
+  </section>
 
-  {%- comment -%} Money format, so prices change correctly when the shopper picks a size or plan {%- endcomment -%}
+  {%- if ld_items != '' -%}
+    <script type="application/ld+json">
+      {"@context":"https://schema.org","@type":"ItemList","name":{{ ss.heading | default: shop.name | strip_html | json }},"numberOfItems":{{ ld_pos }},"itemListElement":[{{ ld_items | strip_newlines }}]}
+    </script>
+  {%- endif -%}
+
   <script type="application/json" data-money>{{ shop.money_format | json }}</script>
   <script type="application/json" data-labels>{{ ss.button_label | json }}</script>
 </vf-product-rows>
 
 {%- capture s -%}#vf-rows-{{ section.id }}{%- endcapture -%}
 {% style %}
-  {{ s }}.vf-scheme--white  { --r-bg: var(--vf-white, #FFFFFF); --r-media: var(--vf-white, #FFFFFF); --r-media-line: rgba(17,17,17,.08); --r-card: var(--vf-white, #FFFFFF); --r-fg: var(--vf-carbon, #111111); --r-muted: rgba(17,17,17,.66); --r-line: rgba(17,17,17,.14); --r-soft: var(--vf-chalk, #F7F5EF); --r-btn-bg: var(--vf-carbon, #111111); --r-btn-fg: #FFFFFF; }
-  {{ s }}.vf-scheme--chalk  { --r-bg: var(--vf-chalk, #F7F5EF); --r-media: var(--vf-white, #FFFFFF); --r-media-line: transparent; --r-card: var(--vf-white, #FFFFFF); --r-fg: var(--vf-carbon, #111111); --r-muted: rgba(17,17,17,.66); --r-line: rgba(17,17,17,.14); --r-soft: var(--vf-white, #FFFFFF); --r-btn-bg: var(--vf-carbon, #111111); --r-btn-fg: #FFFFFF; }
-  {{ s }}.vf-scheme--plum   { --r-bg: var(--vf-plum, #2B1B3A); --r-media: var(--vf-white, #FFFFFF); --r-media-line: transparent; --r-card: rgba(255,255,255,.04); --r-fg: #FFFFFF; --r-muted: rgba(255,255,255,.76); --r-line: rgba(255,255,255,.2); --r-soft: rgba(255,255,255,.06); --r-btn-bg: var(--vf-chalk, #F7F5EF); --r-btn-fg: var(--vf-carbon, #111111); }
-  {{ s }}.vf-scheme--carbon { --r-bg: var(--vf-carbon, #111111); --r-media: var(--vf-white, #FFFFFF); --r-media-line: transparent; --r-card: rgba(255,255,255,.04); --r-fg: var(--vf-chalk, #F7F5EF); --r-muted: rgba(247,245,239,.74); --r-line: rgba(247,245,239,.18); --r-soft: rgba(255,255,255,.06); --r-btn-bg: var(--vf-teal, #09D1C7); --r-btn-fg: var(--vf-carbon, #111111); }
+  /* ---------- Section background (heading area and gaps) ---------- */
+  {{ s }}.vf-scheme--white  { --r-bg: var(--vf-white, #FFFFFF); --r-fg: var(--vf-carbon, #111111); --r-muted: rgba(17,17,17,.66); }
+  {{ s }}.vf-scheme--chalk  { --r-bg: var(--vf-chalk, #F7F5EF); --r-fg: var(--vf-carbon, #111111); --r-muted: rgba(17,17,17,.66); }
+  {{ s }}.vf-scheme--plum   { --r-bg: var(--vf-plum, #2B1B3A); --r-fg: #FFFFFF; --r-muted: rgba(255,255,255,.76); }
+  {{ s }}.vf-scheme--carbon { --r-bg: var(--vf-carbon, #111111); --r-fg: var(--vf-chalk, #F7F5EF); --r-muted: rgba(247,245,239,.74); }
+
+  /* ---------- Panel colours (brand surfaces only) ---------- */
+  {{ s }} .vf-panel--accent { --p-bg: var(--vf-accent, #FF8A74); --p-fg: var(--vf-carbon, #111111); --p-muted: rgba(17,17,17,.76); --p-line: rgba(17,17,17,.3); --p-chip: rgba(255,255,255,.34); --p-btn-bg: var(--vf-carbon, #111111); --p-btn-fg: #FFFFFF; --p-sel-bg: var(--vf-carbon, #111111); --p-sel-fg: #FFFFFF; }
+  {{ s }} .vf-panel--chalk  { --p-bg: var(--vf-chalk, #F7F5EF); --p-fg: var(--vf-carbon, #111111); --p-muted: rgba(17,17,17,.68); --p-line: rgba(17,17,17,.18); --p-chip: #FFFFFF; --p-btn-bg: var(--vf-carbon, #111111); --p-btn-fg: #FFFFFF; --p-sel-bg: var(--vf-carbon, #111111); --p-sel-fg: #FFFFFF; }
+  {{ s }} .vf-panel--white  { --p-bg: var(--vf-white, #FFFFFF); --p-fg: var(--vf-carbon, #111111); --p-muted: rgba(17,17,17,.68); --p-line: rgba(17,17,17,.16); --p-chip: var(--vf-chalk, #F7F5EF); --p-btn-bg: var(--vf-carbon, #111111); --p-btn-fg: #FFFFFF; --p-sel-bg: var(--vf-carbon, #111111); --p-sel-fg: #FFFFFF; }
+  {{ s }} .vf-panel--plum   { --p-bg: var(--vf-plum, #2B1B3A); --p-fg: #FFFFFF; --p-muted: rgba(255,255,255,.78); --p-line: rgba(255,255,255,.26); --p-chip: rgba(255,255,255,.08); --p-btn-bg: var(--vf-chalk, #F7F5EF); --p-btn-fg: var(--vf-carbon, #111111); --p-sel-bg: var(--vf-chalk, #F7F5EF); --p-sel-fg: var(--vf-carbon, #111111); }
+  {{ s }} .vf-panel--carbon { --p-bg: var(--vf-carbon, #111111); --p-fg: var(--vf-chalk, #F7F5EF); --p-muted: rgba(247,245,239,.76); --p-line: rgba(247,245,239,.24); --p-chip: rgba(255,255,255,.07); --p-btn-bg: var(--vf-teal, #09D1C7); --p-btn-fg: var(--vf-carbon, #111111); --p-sel-bg: var(--vf-chalk, #F7F5EF); --p-sel-fg: var(--vf-carbon, #111111); }
 
   {{ s }} {
     --r-signal: var(--vf-teal, #09D1C7);
-    --r-accent: var(--vf-accent, #FF8A74);
     --r-ink: var(--vf-carbon, #111111);
     --r-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
     --r-gutter: 16px;
@@ -412,240 +533,256 @@
     overflow-x: clip;
   }
   {{ s }} *, {{ s }} *::before, {{ s }} *::after { box-sizing: border-box; }
-  {{ s }} h2, {{ s }} h3, {{ s }} p, {{ s }} ul, {{ s }} li, {{ s }} fieldset, {{ s }} legend {
+  {{ s }} h2, {{ s }} h3, {{ s }} p, {{ s }} ul, {{ s }} li, {{ s }} dl, {{ s }} dt, {{ s }} dd, {{ s }} fieldset, {{ s }} legend {
     margin: 0; padding: 0; border: 0; letter-spacing: 0; text-transform: none; font-style: normal; list-style: none;
   }
   {{ s }} li::before, {{ s }} li::marker { content: none; }
   {{ s }} [hidden] { display: none !important; }
-
   {{ s }}.vf-space-below--none   { padding-bottom: 0; }
   {{ s }}.vf-space-below--small  { padding-bottom: 24px; }
   {{ s }}.vf-space-below--medium { padding-bottom: 48px; }
   {{ s }}.vf-space-below--large  { padding-bottom: 80px; }
 
-  {{ s }} .vf-rows__wrap { max-width: 1440px; margin: 0 auto; padding: 48px var(--r-gutter) 8px; }
-
   /* ---------- Heading ---------- */
-  {{ s }} .vf-rows__head { margin-bottom: 28px; }
-  {{ s }} .vf-rows__heading {
-    font-family: var(--r-font-display); font-weight: 700;
-    font-size: 30px; line-height: 1.08; letter-spacing: -0.02em;
-    color: var(--r-fg); max-width: 20ch; text-wrap: balance;
-  }
+  {{ s }} .vf-rows__head { max-width: 1440px; margin: 0 auto; padding: 48px var(--r-gutter) 24px; }
+  {{ s }}.vf-align--center .vf-rows__head { text-align: center; }
+  {{ s }} .vf-rows__heading { font-family: var(--r-font-display); font-weight: 700; font-size: 30px; line-height: 1.08; letter-spacing: -0.02em; color: var(--r-fg); text-wrap: balance; }
   {{ s }} .vf-rows__signal { display: block; width: 48px; height: 2px; margin-top: 16px; border-radius: 2px; background: var(--r-signal); }
-  {{ s }} .vf-rows__intro { margin-top: 14px; max-width: 52ch; font-size: 17px; line-height: 1.5; color: var(--r-muted); }
+  {{ s }}.vf-align--center .vf-rows__signal { margin-left: auto; margin-right: auto; }
+  {{ s }} .vf-rows__intro { margin-top: 14px; font-size: 17px; line-height: 1.5; color: var(--r-muted); }
+  {{ s }}.vf-align--center .vf-rows__intro { margin-left: auto; margin-right: auto; max-width: 52ch; }
 
-  /* ---------- Mobile: swipeable cards, 85% width with a peek ---------- */
-  {{ s }} .vf-rows__list {
+  /* ---------- Mobile: swipeable cards ---------- */
+  {{ s }} .vf-rows__track {
     display: flex; gap: 12px;
-    margin: 0 calc(-1 * var(--r-gutter)); padding: 4px var(--r-gutter) 8px;
+    padding: 0 var(--r-gutter) 8px;
     overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding: 0 var(--r-gutter);
     scrollbar-width: none; overscroll-behavior-x: contain;
   }
-  {{ s }} .vf-rows__list::-webkit-scrollbar { display: none; }
+  {{ s }} .vf-rows__track::-webkit-scrollbar { display: none; }
   {{ s }} .vf-row {
     position: relative;
-    flex: 0 0 85%;
+    flex: 0 0 88%;
     scroll-snap-align: start;
     display: flex; flex-direction: column;
-    background: var(--r-card);
-    border: 1px solid var(--r-line);
-    border-radius: 24px;
-    overflow: hidden;
+    border-radius: 24px; overflow: hidden;
+    background: var(--p-bg); color: var(--p-fg);
   }
-  {{ s }} .vf-rows__list.is-single .vf-row { flex-basis: 100%; }
+  {{ s }} .vf-rows__track.is-single .vf-row { flex-basis: 100%; }
 
-  {{ s }} .vf-row__media {
-    position: relative; aspect-ratio: 5 / 4;
-    background: var(--r-media); overflow: hidden;
-  }
+  {{ s }} .vf-row__media { position: relative; aspect-ratio: 1 / 1; background: #FFFFFF; overflow: hidden; }
   {{ s }} .vf-row__media-link { display: block; width: 100%; height: 100%; }
-  {{ s }} .vf-row__img,
-  {{ s }} .vf-row__video,
-  {{ s }} .vf-row__media video,
-  {{ s }} .vf-row__ph { display: block; width: 100%; height: 100%; }
-  {{ s }} .vf-row__media--contain .vf-row__img { object-fit: contain; padding: 4%; }
-  /* Phones: benefit titles only, so each card stays close to one screen */
-  @media (max-width: 749px) {
-    {{ s }} .vf-benefit__line { display: none; }
-    {{ s }} .vf-benefit { align-items: center; }
-    {{ s }} .vf-benefit__text { padding-top: 0; }
-    {{ s }} .vf-benefits { gap: 10px; margin-top: 14px; }
-    {{ s }} .vf-buy { gap: 12px; padding-top: 16px; }
-  }
-  {{ s }} .vf-row__media--cover .vf-row__img,
-  {{ s }} .vf-row__media video { object-fit: cover; }
-  {{ s }} .vf-row__ph { background: var(--r-soft); fill: var(--r-muted); }
+  {{ s }} .vf-row__img, {{ s }} .vf-row__media video, {{ s }} .vf-row__ph { display: block; width: 100%; height: 100%; }
+  {{ s }} .vf-row__media--contain .vf-row__img { object-fit: contain; padding: 5%; }
+  {{ s }} .vf-row__media--cover .vf-row__img, {{ s }} .vf-row__media video { object-fit: cover; }
+  {{ s }} .vf-row__ph { background: var(--vf-chalk, #F7F5EF); fill: rgba(17,17,17,.35); }
 
   {{ s }} .vf-row__label {
-    position: absolute; top: 14px; left: 14px;
-    padding: 6px 12px; border-radius: 999px;
-    background: var(--vf-chalk, #F7F5EF); color: var(--r-ink);
-    border: 1px solid rgba(17,17,17,.12);
-    font-size: 12px; font-weight: 600; line-height: 1.2;
+    position: absolute; top: 16px; left: 16px;
+    padding: 7px 14px; border-radius: 999px;
+    background: var(--vf-carbon, #111111); color: #FFFFFF;
+    font-size: 12px; font-weight: 700; line-height: 1.1; letter-spacing: 0.06em; text-transform: uppercase;
   }
-
   {{ s }} .vf-row__play {
-    position: absolute; right: 14px; bottom: 14px;
-    width: 48px; height: 48px; border-radius: 999px; border: 0;
+    position: absolute; right: 16px; bottom: 16px; width: 48px; height: 48px; border-radius: 999px; border: 0;
     display: inline-flex; align-items: center; justify-content: center;
     background: rgba(17,17,17,.72); color: #FFFFFF; cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
   }
   {{ s }} .vf-row__play svg { width: 20px; height: 20px; fill: currentColor; }
   {{ s }} .vf-row__play .vf-i-pause { display: none; }
   {{ s }} .vf-row__play[aria-pressed="true"] .vf-i-play { display: none; }
   {{ s }} .vf-row__play[aria-pressed="true"] .vf-i-pause { display: block; }
 
-  {{ s }} .vf-row__info { display: flex; flex-direction: column; flex: 1 1 auto; padding: 18px 16px 18px; }
-  {{ s }} .vf-row__title {
-    font-family: var(--r-font-display); font-weight: 700;
-    font-size: 21px; line-height: 1.2; letter-spacing: -0.01em; color: var(--r-fg);
-  }
-  {{ s }} .vf-row__title a { color: inherit; text-decoration: none; }
-  {{ s }} .vf-row__title a:hover { text-decoration: underline; text-decoration-color: var(--r-signal); text-decoration-thickness: 2px; text-underline-offset: 5px; }
+  /* ---------- Panel content ---------- */
+  {{ s }} .vf-row__panel { flex: 1 1 auto; display: flex; background: var(--p-bg); color: var(--p-fg); }
+  {{ s }} .vf-row__content { width: 100%; display: flex; flex-direction: column; gap: 16px; padding: 28px 20px 24px; }
+  {{ s }}.vf-align--center .vf-row__content { align-items: center; text-align: center; }
 
-  {{ s }} .vf-row__rating { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 14px; color: var(--r-muted); font-variant-numeric: tabular-nums; }
+  {{ s }} .vf-row__eyebrow { display: flex; align-items: center; gap: 12px; font-size: 12px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--p-fg); }
+  {{ s }} .vf-row__eyebrow::before, {{ s }} .vf-row__eyebrow::after { content: ""; width: 22px; height: 2px; border-radius: 2px; background: var(--r-signal); }
+  {{ s }}.vf-align--left .vf-row__eyebrow::before { display: none; }
+
+  {{ s }} .vf-row__title {
+    font-family: var(--r-font-display); font-weight: 800;
+    font-size: 40px; line-height: 0.98; letter-spacing: -0.035em;
+    color: var(--p-fg); text-wrap: balance;
+  }
+  {{ s }} .vf-row__title.is-long { font-size: 28px; line-height: 1.08; letter-spacing: -0.02em; }
+  {{ s }} .vf-row__title a { color: inherit; text-decoration: none; }
+  {{ s }} .vf-row__title a:hover { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 6px; }
+  {{ s }} .vf-row__line { font-size: 17px; line-height: 1.45; color: var(--p-muted); max-width: 34ch; }
+
+  {{ s }} .vf-row__rating { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--p-muted); font-variant-numeric: tabular-nums; }
   {{ s }} .vf-stars { position: relative; display: inline-block; line-height: 0; }
   {{ s }} .vf-stars__base, {{ s }} .vf-stars__fill { display: inline-flex; gap: 2px; white-space: nowrap; }
   {{ s }} .vf-stars__fill { position: absolute; inset: 0 auto 0 0; overflow: hidden; }
   {{ s }} .vf-stars svg { width: 16px; height: 16px; flex-shrink: 0; }
-  {{ s }} .vf-stars__base svg { fill: var(--r-line); }
-  {{ s }} .vf-stars__fill svg { fill: var(--r-fg); }
-  {{ s }} .vf-row__rating-text { color: var(--r-fg); font-weight: 600; }
-  {{ s }} .vf-row__rating-count { color: var(--r-muted); font-weight: 400; }
+  {{ s }} .vf-stars__base svg { fill: var(--p-line); }
+  {{ s }} .vf-stars__fill svg { fill: var(--p-fg); }
+  {{ s }} .vf-row__rating-text { color: var(--p-fg); font-weight: 700; }
+  {{ s }} .vf-row__rating-count { color: var(--p-muted); font-weight: 400; }
 
-  {{ s }} .vf-benefits { display: grid; gap: 12px; margin-top: 18px; }
-  {{ s }} .vf-benefit { display: flex; align-items: flex-start; gap: 12px; }
-  {{ s }} .vf-benefit__icon {
-    flex: 0 0 32px; width: 32px; height: 32px; border-radius: 999px;
-    display: inline-flex; align-items: center; justify-content: center;
-    background: var(--r-accent); color: var(--r-ink);
+  {{ s }} .vf-benefits { display: flex; flex-wrap: wrap; gap: 8px; }
+  {{ s }}.vf-align--center .vf-benefits { justify-content: center; }
+  {{ s }} .vf-benefit {
+    display: inline-flex; align-items: center; gap: 8px;
+    min-height: 36px; padding: 0 14px 0 6px; border-radius: 999px;
+    background: var(--p-chip); border: 1px solid var(--p-line);
+    font-size: 14px; font-weight: 600; line-height: 1.2; color: var(--p-fg);
   }
-  {{ s }} .vf-benefit__icon svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
-  {{ s }} .vf-benefit__text { display: flex; flex-direction: column; gap: 2px; padding-top: 5px; }
-  {{ s }} .vf-benefit__title { font-size: 16px; font-weight: 600; line-height: 1.3; color: var(--r-fg); }
-  {{ s }} .vf-benefit__line { font-size: 14px; line-height: 1.45; color: var(--r-muted); }
+  {{ s }} .vf-benefit__icon { width: 26px; height: 26px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; background: var(--p-fg); color: var(--p-bg); flex-shrink: 0; }
+  {{ s }} .vf-benefit__icon svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
   /* ---------- Buy box ---------- */
-  {{ s }} .vf-buy { display: flex; flex-direction: column; gap: 14px; margin-top: auto; padding-top: 20px; }
-  {{ s }} .vf-buy__legend { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 600; color: var(--r-muted); }
+  {{ s }} .vf-buy { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 400px; margin-top: 4px; }
   {{ s }} .vf-sizes__chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  {{ s }}.vf-align--center .vf-sizes__chips { justify-content: center; }
   {{ s }} .vf-chip { position: relative; }
   {{ s }} .vf-chip input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
   {{ s }} .vf-chip span {
     display: inline-flex; align-items: center; justify-content: center;
-    min-height: 44px; min-width: 64px; padding: 0 16px;
-    border: 1px solid var(--r-line); border-radius: 999px;
-    font-size: 15px; font-weight: 500; color: var(--r-fg); font-variant-numeric: tabular-nums;
-    transition: border-color 180ms ease, background-color 180ms ease;
+    min-height: 44px; min-width: 72px; padding: 0 16px; border-radius: 999px;
+    border: 1px solid var(--p-line); background: var(--p-chip);
+    font-size: 15px; font-weight: 600; color: var(--p-fg); font-variant-numeric: tabular-nums;
   }
-  {{ s }} .vf-chip input:checked + span { border: 2px solid var(--r-fg); font-weight: 700; padding: 0 15px; }
-  {{ s }} .vf-chip input:focus-visible + span { outline: 2px solid var(--r-fg); outline-offset: 2px; }
-  {{ s }} .vf-chip.is-soldout span { color: var(--r-muted); text-decoration: line-through; }
+  {{ s }} .vf-chip input:checked + span { background: var(--p-sel-bg); color: var(--p-sel-fg); border-color: var(--p-sel-bg); }
+  {{ s }} .vf-chip input:focus-visible + span { outline: 2px solid var(--p-fg); outline-offset: 2px; }
+  {{ s }} .vf-chip.is-soldout span { opacity: .5; text-decoration: line-through; }
 
   {{ s }} .vf-po { display: grid; gap: 8px; }
-  {{ s }} .vf-po__opt {
-    position: relative; display: flex; align-items: flex-start; gap: 12px;
-    min-height: 48px; padding: 12px 14px;
-    border: 1px solid var(--r-line); border-radius: 14px; cursor: pointer;
-    transition: border-color 180ms ease;
+  {{ s }} .vf-po__seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; padding: 4px; border-radius: 999px; background: var(--p-chip); border: 1px solid var(--p-line); }
+  {{ s }} .vf-po__opt { position: relative; }
+  {{ s }} .vf-po__opt input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; z-index: 1; }
+  {{ s }} .vf-po__opt span {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    min-height: 44px; padding: 0 12px; border-radius: 999px;
+    font-size: 14px; font-weight: 600; line-height: 1.15; color: var(--p-fg); text-align: center;
+    transition: background-color 180ms ease, color 180ms ease;
   }
-  {{ s }} .vf-po__opt input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
-  {{ s }} .vf-po__radio { flex: 0 0 20px; width: 20px; height: 20px; margin-top: 1px; border-radius: 999px; border: 1.5px solid var(--r-muted); position: relative; }
-  {{ s }} .vf-po__opt input:checked ~ .vf-po__radio { border-color: var(--r-fg); }
-  {{ s }} .vf-po__opt input:checked ~ .vf-po__radio::after { content: ""; position: absolute; inset: 4px; border-radius: 999px; background: var(--r-fg); }
-  {{ s }} .vf-po__opt:has(input:checked) { border: 2px solid var(--r-fg); padding: 11px 13px; }
-  {{ s }} .vf-po__opt input:focus-visible ~ .vf-po__radio { outline: 2px solid var(--r-fg); outline-offset: 3px; }
-  {{ s }} .vf-po__text { display: flex; flex-direction: column; gap: 2px; }
-  {{ s }} .vf-po__name { font-size: 15px; font-weight: 600; line-height: 1.3; }
-  {{ s }} .vf-po__save { display: inline-block; margin-left: 4px; padding: 1px 8px; border-radius: 999px; background: var(--r-signal); color: var(--r-ink); font-size: 12px; font-weight: 700; vertical-align: 1px; }
-  {{ s }} .vf-po__note { font-size: 13px; color: var(--r-muted); line-height: 1.4; }
-  {{ s }} .vf-po__freq { display: grid; gap: 6px; padding: 2px 2px 0; }
-  {{ s }} .vf-po__freq-label { font-size: 13px; font-weight: 600; color: var(--r-muted); }
+  {{ s }} .vf-po__opt input:checked + span { background: var(--p-sel-bg); color: var(--p-sel-fg); }
+  {{ s }} .vf-po__opt input:focus-visible + span { outline: 2px solid var(--p-fg); outline-offset: 2px; }
+  {{ s }} .vf-po__save { padding: 2px 7px; border-radius: 999px; background: var(--r-signal); color: var(--r-ink); font-size: 12px; font-weight: 800; }
+  {{ s }} .vf-po__freq { display: grid; gap: 8px; }
+  {{ s }} .vf-po__note { font-size: 13px; color: var(--p-muted); }
   {{ s }} .vf-select { position: relative; }
   {{ s }} .vf-select select {
-    width: 100%; min-height: 48px; padding: 0 40px 0 14px;
-    border: 1px solid var(--r-line); border-radius: 14px;
-    background: transparent; color: var(--r-fg);
+    width: 100%; min-height: 48px; padding: 0 40px 0 16px;
+    border: 1px solid var(--p-line); border-radius: 14px; background: var(--p-chip); color: var(--p-fg);
     font: inherit; font-size: 16px; -webkit-appearance: none; appearance: none; cursor: pointer;
   }
-  {{ s }} .vf-select select option { color: #111111; }
-  {{ s }} .vf-select svg { position: absolute; right: 14px; top: 50%; width: 18px; height: 18px; transform: translateY(-50%); fill: none; stroke: var(--r-fg); stroke-width: 1.75; pointer-events: none; }
-  {{ s }} .vf-po__lasts { font-size: 13px; color: var(--r-muted); }
+  {{ s }} .vf-select select option { color: #111111; background: #FFFFFF; }
+  {{ s }} .vf-select svg { position: absolute; right: 14px; top: 50%; width: 18px; height: 18px; transform: translateY(-50%); fill: none; stroke: var(--p-fg); stroke-width: 1.75; pointer-events: none; }
 
-  {{ s }} .vf-buy__price-row { display: flex; flex-direction: column; gap: 4px; }
-  {{ s }} .vf-row__price { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px; font-variant-numeric: tabular-nums; }
-  {{ s }} .vf-row__now { font-size: 24px; font-weight: 700; color: var(--r-fg); line-height: 1.1; }
-  {{ s }} .vf-row__was { font-size: 16px; color: var(--r-muted); }
-  {{ s }} .vf-row__perday { font-size: 14px; color: var(--r-muted); font-variant-numeric: tabular-nums; }
-  {{ s }} .vf-row__perday [data-per-day] { color: var(--r-fg); font-weight: 600; }
-
-  /* Primary button: Carbon fill, white text, 48px+ */
+  /* Primary button: price inside, so the decision is one tap */
   {{ s }} .vf-btn {
     position: relative; display: inline-flex; align-items: center; justify-content: center;
-    width: 100%; min-height: 52px; padding: 0 24px;
-    border: 0; border-radius: 14px;
-    background: var(--r-btn-bg); color: var(--r-btn-fg);
-    font-family: var(--r-font); font-size: 16px; font-weight: 600; letter-spacing: 0;
-    text-decoration: none; cursor: pointer; overflow: hidden;
-    -webkit-tap-highlight-color: transparent;
-    transition: transform 180ms var(--r-ease), opacity 180ms ease;
+    width: 100%; min-height: 56px; padding: 0 24px; border: 0; border-radius: 14px;
+    background: var(--p-btn-bg); color: var(--p-btn-fg);
+    font-family: var(--r-font); font-size: 16px; font-weight: 700; letter-spacing: 0;
+    text-decoration: none; cursor: pointer; overflow: hidden; -webkit-tap-highlight-color: transparent;
+    transition: transform 180ms var(--r-ease);
   }
-  @media (hover: hover) { {{ s }} .vf-btn:hover { transform: translateY(-1px); } }
+  @media (hover: hover) { {{ s }} .vf-btn:hover { transform: translateY(-2px); } }
   {{ s }} .vf-btn:active { transform: translateY(1px); }
-  {{ s }} .vf-btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
-  {{ s }} .vf-btn[aria-busy="true"] { cursor: progress; }
+  {{ s }} .vf-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+  {{ s }} .vf-btn__label { display: inline-flex; align-items: baseline; gap: 8px; font-variant-numeric: tabular-nums; }
+  {{ s }} .vf-btn__dot { opacity: .6; }
+  {{ s }} .vf-btn__was { font-weight: 500; opacity: .6; font-size: 14px; }
   {{ s }} .vf-btn[aria-busy="true"] .vf-btn__label { opacity: .55; }
   {{ s }} .vf-btn__label, {{ s }} .vf-btn__done { transition: opacity 200ms ease, transform 200ms var(--r-ease); }
   {{ s }} .vf-btn__done { position: absolute; inset: 0; display: inline-flex; align-items: center; justify-content: center; gap: 8px; opacity: 0; transform: translateY(8px); }
-  {{ s }} .vf-btn__done svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.25; stroke-linecap: round; stroke-linejoin: round; }
+  {{ s }} .vf-btn__done svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
   {{ s }} .vf-btn.is-added .vf-btn__label { opacity: 0; transform: translateY(-8px); }
   {{ s }} .vf-btn.is-added .vf-btn__done { opacity: 1; transform: none; }
-  {{ s }} .vf-buy__status { font-size: 14px; line-height: 1.4; color: var(--r-fg); min-height: 0; }
+
+  {{ s }} .vf-row__perday { font-size: 14px; color: var(--p-muted); font-variant-numeric: tabular-nums; }
+  {{ s }} .vf-row__perday b { color: var(--p-fg); font-weight: 700; }
+  {{ s }} .vf-buy__status { font-size: 14px; color: var(--p-fg); }
   {{ s }} .vf-buy__status:empty { display: none; }
-  {{ s }} .vf-buy__status a { color: inherit; font-weight: 600; text-decoration: underline; text-decoration-color: var(--r-signal); text-decoration-thickness: 2px; text-underline-offset: 4px; }
-  {{ s }} .vf-buy__status.is-error { color: #B42318; }
-  {{ s }}.vf-scheme--plum .vf-buy__status.is-error, {{ s }}.vf-scheme--carbon .vf-buy__status.is-error { color: #FFB4A8; }
-  {{ s }} .vf-buy__note { font-size: 13px; color: var(--r-muted); text-align: center; }
+  {{ s }} .vf-buy__status a { color: inherit; font-weight: 700; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; }
+  {{ s }} .vf-buy__status.is-error { font-weight: 600; }
+  {{ s }} .vf-buy__note { font-size: 13px; color: var(--p-muted); }
 
-  {{ s }} a:focus-visible, {{ s }} button:focus-visible, {{ s }} select:focus-visible { outline: 2px solid var(--r-fg); outline-offset: 3px; }
+  /* Product facts */
+  {{ s }} .vf-facts { width: 100%; max-width: 400px; border-top: 1px solid var(--p-line); text-align: left; }
+  {{ s }} .vf-facts summary {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    min-height: 48px; cursor: pointer; list-style: none;
+    font-size: 14px; font-weight: 700; color: var(--p-fg);
+  }
+  {{ s }} .vf-facts summary::-webkit-details-marker { display: none; }
+  {{ s }} .vf-facts summary svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.75; transition: transform 200ms var(--r-ease); }
+  {{ s }} .vf-facts[open] summary svg { transform: rotate(180deg); }
+  {{ s }} .vf-facts__list { display: grid; padding-bottom: 8px; }
+  {{ s }} .vf-facts__list > div { display: flex; justify-content: space-between; gap: 16px; padding: 9px 0; border-top: 1px dashed var(--p-line); font-size: 14px; line-height: 1.35; }
+  {{ s }} .vf-facts__list dt { color: var(--p-muted); }
+  {{ s }} .vf-facts__list dd { color: var(--p-fg); font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+  {{ s }} .vf-facts__more { display: inline-flex; min-height: 44px; align-items: center; font-size: 14px; font-weight: 700; color: var(--p-fg); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+
+  /* Slider arrows (joined pill) */
+  {{ s }} .vf-arrows { display: none; align-items: center; margin-top: 8px; }
+  {{ s }} .vf-arrow {
+    width: 60px; height: 44px; display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--p-fg); background: transparent; color: var(--p-fg); cursor: pointer;
+    transition: background-color 180ms ease, color 180ms ease;
+  }
+  {{ s }} .vf-arrow[data-prev] { border-radius: 999px 0 0 999px; }
+  {{ s }} .vf-arrow[data-next] { border-radius: 0 999px 999px 0; margin-left: -1px; }
+  {{ s }} .vf-arrows__count { margin-left: 14px; font-size: 13px; font-weight: 600; color: var(--p-muted); font-variant-numeric: tabular-nums; }
+  {{ s }} .vf-arrow svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+  @media (hover: hover) { {{ s }} .vf-arrow:hover { background: var(--p-fg); color: var(--p-bg); } }
+
+  {{ s }} a:focus-visible, {{ s }} button:focus-visible, {{ s }} select:focus-visible, {{ s }} summary:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
   {{ s }} .vf-vh { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-  {{ s }} .vf-rows__note, {{ s }} .vf-row__editor-tag { margin: 0 0 12px; padding: 8px 12px; background: #FFF4B8; color: #111111; font-size: 13px; line-height: 1.4; border-radius: 10px; }
+  {{ s }} .vf-rows__note { padding: 8px 12px; background: #FFF4B8; color: #111111; font-size: 13px; line-height: 1.4; border-radius: 10px; text-align: left; }
 
-  /* ---------- Tablet and desktop: alternating rows ---------- */
+  /* Phones: compact card, visible edge on white pages */
+  @media (max-width: 749px) {
+    {{ s }} .vf-row { box-shadow: inset 0 0 0 1px rgba(17,17,17,.1); }
+    {{ s }} .vf-row__media { aspect-ratio: 4 / 3; }
+    {{ s }} .vf-row__media--contain .vf-row__img { padding: 4% 8%; }
+    {{ s }} .vf-row__content { gap: 12px; padding: 22px 18px 18px; }
+    {{ s }} .vf-row__title { font-size: 34px; }
+    {{ s }} .vf-row__title.is-long { font-size: 24px; }
+    {{ s }} .vf-row__line { font-size: 16px; }
+    {{ s }} .vf-benefits { gap: 6px; }
+    {{ s }} .vf-benefit { min-height: 32px; padding: 0 12px 0 4px; font-size: 13px; gap: 6px; }
+    {{ s }} .vf-benefit__icon { width: 24px; height: 24px; }
+    {{ s }} .vf-buy { gap: 10px; }
+    {{ s }} .vf-chip span { min-height: 44px; }
+    {{ s }} .vf-row__label { top: 12px; left: 12px; padding: 6px 12px; font-size: 11px; }
+  }
+
+  /* ---------- Tablet & desktop: 50 / 50 split bands ---------- */
   @media (min-width: 750px) {
-    {{ s }} { --r-gutter: clamp(24px, 4vw, 48px); }
-    {{ s }} .vf-rows__wrap { padding-top: 72px; }
-    {{ s }} .vf-rows__head { margin-bottom: 48px; }
+    {{ s }} { --r-gutter: clamp(24px, 4vw, 64px); }
+    {{ s }} .vf-rows__head { padding-top: 80px; padding-bottom: 48px; }
     {{ s }} .vf-rows__heading { font-size: clamp(32px, 2vw + 14px, 46px); }
-    {{ s }} .vf-rows__list { display: grid; gap: 64px; margin: 0; padding: 0; overflow: visible; }
-    {{ s }} .vf-row {
-      display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: clamp(24px, 3vw, 48px);
-      align-items: center; background: transparent; border: 0; border-radius: 0; overflow: visible;
-    }
-    {{ s }} .vf-row { align-items: start; }
-    {{ s }} .vf-row__media {
-      grid-column: 1 / span 6; grid-row: 1; border-radius: 24px; border: 1px solid var(--r-media-line); aspect-ratio: 1 / 1;
-      position: sticky; top: 96px; align-self: start;
-    }
-    {{ s }} .vf-row__info { grid-column: 7 / span 6; grid-row: 1; padding: 0; }
-    {{ s }}.vf-rows--alternate .vf-row.is-flip .vf-row__media { grid-column: 7 / span 6; }
-    {{ s }}.vf-rows--alternate .vf-row.is-flip .vf-row__info { grid-column: 1 / span 6; }
-    {{ s }} .vf-row__title { font-size: clamp(24px, 1.4vw + 12px, 34px); }
-    {{ s }} .vf-buy { margin-top: 0; padding-top: 24px; }
-    {{ s }} .vf-row__label { top: 18px; left: 18px; }
-  }
-  @media (min-width: 1200px) {
-    {{ s }} .vf-rows__wrap { padding-top: 96px; padding-left: clamp(48px, 5vw, 80px); padding-right: clamp(48px, 5vw, 80px); }
-    {{ s }} .vf-rows__list { gap: 96px; }
-    {{ s }} .vf-row__media { grid-column: 1 / span 7; max-height: 82vh; aspect-ratio: auto; height: min(82vh, 720px); }
-    {{ s }} .vf-row__info { grid-column: 8 / span 5; max-width: 480px; }
-    {{ s }}.vf-rows--alternate .vf-row.is-flip .vf-row__media { grid-column: 6 / span 7; }
-    {{ s }}.vf-rows--alternate .vf-row.is-flip .vf-row__info { grid-column: 1 / span 5; justify-self: end; width: 100%; }
-    {{ s }} .vf-btn { min-height: 56px; }
-  }
 
+    {{ s }} .vf-rows__track { display: grid; gap: 0; padding: 0; overflow: visible; }
+    {{ s }}.vf-rows--page .vf-rows__track { gap: 24px; max-width: 1440px; margin: 0 auto; padding: 0 var(--r-gutter); }
+    {{ s }} .vf-row { display: grid; grid-template-columns: 1fr 1fr; border-radius: 0; min-height: clamp(560px, 82vh, 820px); }
+    {{ s }}.vf-rows--page .vf-row { border-radius: 24px; }
+    {{ s }} .vf-row__media { aspect-ratio: auto; height: 100%; grid-column: 2; grid-row: 1; }
+    {{ s }} .vf-row__panel { grid-column: 1; grid-row: 1; align-items: center; justify-content: center; }
+    {{ s }}.vf-rows--alternate .vf-row.is-flip .vf-row__media { grid-column: 1; }
+    {{ s }}.vf-rows--alternate .vf-row.is-flip .vf-row__panel { grid-column: 2; }
+    {{ s }} .vf-row__content { max-width: 560px; padding: 64px clamp(28px, 4vw, 72px); gap: 20px; }
+    {{ s }}.vf-align--center .vf-row__content { margin: 0 auto; }
+    {{ s }} .vf-row__media--contain .vf-row__img { padding: 8%; }
+    {{ s }} .vf-row__title { font-size: clamp(40px, 3.4vw + 8px, 72px); }
+    {{ s }} .vf-row__title.is-long { font-size: clamp(30px, 1.8vw + 10px, 46px); }
+    {{ s }} .vf-row__line { font-size: 19px; }
+    {{ s }} .vf-row__eyebrow { font-size: 13px; }
+    {{ s }} .vf-row__eyebrow::before, {{ s }} .vf-row__eyebrow::after { width: 28px; }
+    {{ s }} .vf-row__label { top: 24px; left: 24px; }
+
+    /* Slider layout: one product at a time with arrows */
+    {{ s }}.vf-rows--slider .vf-rows__track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+    {{ s }}.vf-rows--slider .vf-row { flex: 0 0 100%; scroll-snap-align: start; }
+    {{ s }}.vf-rows--slider.vf-rows--page .vf-rows__track { scroll-padding: 0 var(--r-gutter); }
+    {{ s }}.vf-rows--slider .vf-arrows { display: inline-flex; }
+  }
   @media (prefers-reduced-motion: reduce) {
     {{ s }} *, {{ s }} *::before, {{ s }} *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
   }
@@ -655,41 +792,31 @@
   (function () {
     if (customElements.get('vf-product-rows')) return;
 
-    /* Shopify money formatting (follows the shop's / market's format) */
     function formatMoney(cents, format) {
-      if (typeof cents === 'string') cents = cents.replace('.', '');
       var re = /\{\{\s*(\w+)\s*\}\}/;
       var fmt = format || '₹{{amount}}';
-      function withDelims(n, precision, thousands, decimal) {
-        thousands = thousands || ','; decimal = decimal || '.';
+      function d(n, p, t, dec) {
+        t = t || ','; dec = dec || '.';
         if (isNaN(n) || n === null) return '0';
-        var num = (n / 100.0).toFixed(precision);
-        var parts = num.split('.');
-        var dollars = parts[0].replace(/(\d)(?=(\d\d\d)+(?!\d))/g, '$1' + thousands);
-        var c = parts[1] ? decimal + parts[1] : '';
-        return dollars + c;
+        var parts = (n / 100).toFixed(p).split('.');
+        return parts[0].replace(/(\d)(?=(\d\d\d)+(?!\d))/g, '$1' + t) + (parts[1] ? dec + parts[1] : '');
       }
-      var m = fmt.match(re);
-      var value = '';
+      var m = fmt.match(re), v;
       switch (m ? m[1] : 'amount') {
-        case 'amount': value = withDelims(cents, 2); break;
-        case 'amount_no_decimals': value = withDelims(cents, 0); break;
-        case 'amount_with_comma_separator': value = withDelims(cents, 2, '.', ','); break;
-        case 'amount_no_decimals_with_comma_separator': value = withDelims(cents, 0, '.', ','); break;
-        case 'amount_with_apostrophe_separator': value = withDelims(cents, 2, "'", '.'); break;
-        case 'amount_no_decimals_with_space_separator': value = withDelims(cents, 0, ' '); break;
-        case 'amount_with_space_separator': value = withDelims(cents, 2, ' ', ','); break;
-        case 'amount_with_period_and_space_separator': value = withDelims(cents, 2, ' ', '.'); break;
-        default: value = withDelims(cents, 2);
+        case 'amount_no_decimals': v = d(cents, 0); break;
+        case 'amount_with_comma_separator': v = d(cents, 2, '.', ','); break;
+        case 'amount_no_decimals_with_comma_separator': v = d(cents, 0, '.', ','); break;
+        case 'amount_with_apostrophe_separator': v = d(cents, 2, "'", '.'); break;
+        case 'amount_no_decimals_with_space_separator': v = d(cents, 0, ' '); break;
+        case 'amount_with_space_separator': v = d(cents, 2, ' ', ','); break;
+        case 'amount_with_period_and_space_separator': v = d(cents, 2, ' ', '.'); break;
+        default: v = d(cents, 2);
       }
-      return fmt.replace(re, value).replace(/<[^>]*>/g, '');
+      return fmt.replace(re, v).replace(/<[^>]*>/g, '');
     }
-    /* Whole units for "about ₹X a day" */
     function formatWhole(cents, format) {
-      var rounded = Math.round(cents / 100) * 100;
-      return formatMoney(rounded, format).replace(/[.,]00(?!\d)/, '');
+      return formatMoney(Math.round(cents / 100) * 100, format).replace(/[.,]00(?!\d)/, '');
     }
-
     function currentSpecies() {
       var s = null;
       try { s = new URLSearchParams(window.location.search).get('pet'); } catch (e) {}
@@ -700,7 +827,7 @@
     class VfProductRows extends HTMLElement {
       connectedCallback() {
         var self = this;
-        this.list = this.querySelector('[data-list]');
+        this.track = this.querySelector('[data-list]');
         this.rows = Array.prototype.slice.call(this.querySelectorAll('[data-row]'));
         this.design = this.dataset.design === 'true';
         this.reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -712,14 +839,14 @@
         this.onBlockSelect = function (e) {
           var id = e.detail && e.detail.blockId;
           var row = id && self.querySelector('[data-row][data-block-id="' + id + '"]');
-          if (row && self.list && self.list.scrollWidth > self.list.clientWidth) {
-            self.list.scrollTo({ left: row.offsetLeft - self.list.offsetLeft - 16, behavior: 'smooth' });
-          }
+          if (row) self.scrollToRow(row);
         };
         document.addEventListener('vf:species-change', this.onSpecies);
         document.addEventListener('shopify:block:select', this.onBlockSelect);
 
         this.rows.forEach(function (row, i) { self.setupRow(row, i); });
+        this.querySelectorAll('[data-prev]').forEach(function (b) { b.addEventListener('click', function () { self.step(-1); }); });
+        this.querySelectorAll('[data-next]').forEach(function (b) { b.addEventListener('click', function () { self.step(1); }); });
         this.filter(currentSpecies());
       }
 
@@ -728,7 +855,26 @@
         document.removeEventListener('shopify:block:select', this.onBlockSelect);
       }
 
-      /* ---------- Dog / Cat: show the right rows ---------- */
+      visibleRows() { return this.rows.filter(function (r) { return !r.hidden; }); }
+
+      scrollToRow(row) {
+        if (!this.track) return;
+        if (this.track.scrollWidth > this.track.clientWidth + 2) {
+          var pad = parseFloat(getComputedStyle(this.track).paddingLeft) || 0;
+          var left = this.track.scrollLeft + row.getBoundingClientRect().left - this.track.getBoundingClientRect().left - pad;
+          this.track.scrollTo({ left: left, behavior: this.reduce.matches ? 'auto' : 'smooth' });
+        }
+      }
+
+      step(dir) {
+        var rows = this.visibleRows();
+        if (!rows.length || !this.track) return;
+        var trackLeft = this.track.getBoundingClientRect().left + (parseFloat(getComputedStyle(this.track).paddingLeft) || 0);
+        var idx = 0, best = Infinity;
+        rows.forEach(function (r, i) { var dl = Math.abs(r.getBoundingClientRect().left - trackLeft); if (dl < best) { best = dl; idx = i; } });
+        this.scrollToRow(rows[(idx + dir + rows.length) % rows.length]);
+      }
+
       filter(species) {
         if (species !== 'dog' && species !== 'cat') species = null;
         this.species = species;
@@ -739,34 +885,35 @@
           row.hidden = !ok;
           if (ok) shown.push(row);
         }, this);
-        /* Never leave the section empty */
         if (!shown.length) { this.rows.forEach(function (r) { r.hidden = false; }); shown = this.rows.slice(); }
-        shown.forEach(function (r, i) { r.classList.toggle('is-flip', i % 2 === 1); });
-        if (this.list) this.list.classList.toggle('is-single', shown.length === 1);
+        shown.forEach(function (r, i) {
+          r.classList.toggle('is-flip', i % 2 === 1);
+          var now = r.querySelector('[data-count-now]'), all = r.querySelector('[data-count-all]');
+          if (now) now.textContent = i + 1;
+          if (all) all.textContent = shown.length;
+          var arrows = r.querySelector('.vf-arrows');
+          if (arrows) arrows.hidden = shown.length < 2;
+        });
+        if (this.track) this.track.classList.toggle('is-single', shown.length === 1);
       }
 
-      /* ---------- One row ---------- */
       setupRow(row, index) {
         var self = this;
         var form = row.querySelector('[data-buy]');
         var data = null;
         try { data = JSON.parse(row.querySelector('[data-row-json]').textContent); } catch (e) {}
-        var state = { variant: null, plan: null };
+        var state = { variant: null };
         row._state = state;
 
-        var variantInput = row.querySelector('[data-variant-input]');
-        var planInput = row.querySelector('[data-plan-input]');
-        var planSelect = row.querySelector('[data-plan]');
-        var freq = row.querySelector('[data-freq]');
-        var priceEl = row.querySelector('[data-price]');
-        var compareEl = row.querySelector('[data-compare]');
-        var perDayLine = row.querySelector('[data-perday-line]');
-        var perDayEl = row.querySelector('[data-per-day]');
-        var lasts = row.querySelector('[data-lasts]');
-        var daysEl = row.querySelector('[data-days]');
-        var atc = row.querySelector('[data-atc]');
-        var atcLabel = row.querySelector('[data-atc-label]');
+        var q = function (sel) { return row.querySelector(sel); };
+        var variantInput = q('[data-variant-input]'), planInput = q('[data-plan-input]'), planSelect = q('[data-plan]');
+        var freq = q('[data-freq]'), priceEl = q('[data-price]'), compareEl = q('[data-compare]');
+        var perDayLine = q('[data-perday-line]'), perDayEl = q('[data-per-day]');
+        var atc = q('[data-atc]'), atcLabel = q('[data-atc-label]');
         var soldOutText = atc ? atc.dataset.soldOut : 'Sold out';
+        var fSizeRow = q('[data-fact-size-row]'), fSize = q('[data-fact-size]');
+        var fDaysRow = q('[data-fact-days-row]'), fDays = q('[data-fact-days]');
+        var fCostRow = q('[data-fact-cost-row]'), fCost = q('[data-fact-cost]'), fPrice = q('[data-fact-price]');
 
         function findVariant(id) {
           if (!data) return null;
@@ -780,34 +927,28 @@
           var subOn = row.querySelector('[data-po][value="sub"]:checked');
           var planId = subOn && planSelect ? planSelect.value : null;
           var price = planId && v.plans && v.plans[planId] != null ? v.plans[planId] : v.price;
+          var priceText = formatMoney(price, self.moneyFormat);
+          var perDay = v.days > 0 ? formatWhole(price / v.days, self.moneyFormat) : '';
 
           if (variantInput) variantInput.value = v.id;
           if (planInput) planInput.value = planId || '';
           if (freq) freq.hidden = !subOn;
-          if (priceEl) priceEl.textContent = formatMoney(price, self.moneyFormat);
-          if (compareEl) {
-            var showCmp = !planId && v.compare > v.price;
-            compareEl.hidden = !showCmp;
-            if (showCmp) compareEl.textContent = formatMoney(v.compare, self.moneyFormat);
-          }
-          if (perDayLine) {
-            perDayLine.hidden = !(v.days > 0);
-            if (v.days > 0 && perDayEl) perDayEl.textContent = formatWhole(price / v.days, self.moneyFormat);
-          }
-          if (lasts) {
-            lasts.hidden = !(v.days > 0);
-            if (daysEl) daysEl.textContent = v.days;
-          }
+          if (priceEl) priceEl.textContent = priceText;
+          if (compareEl) compareEl.hidden = !!planId || !(v.compare > v.price);
+          if (perDayLine) { perDayLine.hidden = !perDay; if (perDay && perDayEl) perDayEl.textContent = perDay; }
+          if (fPrice) fPrice.textContent = priceText;
+          if (fSizeRow) { fSizeRow.hidden = !v.size; if (fSize) fSize.textContent = v.size; }
+          if (fDaysRow) { fDaysRow.hidden = !(v.days > 0); if (fDays) fDays.textContent = v.days; }
+          if (fCostRow) { fCostRow.hidden = !perDay; if (fCost) fCost.textContent = perDay; }
           if (atc) {
             atc.disabled = !v.available;
-            if (atcLabel) atcLabel.textContent = v.available ? self.atcLabel : (soldOutText || 'Sold out');
+            if (atcLabel) atcLabel.textContent = v.available ? self.atcLabel : soldOutText;
           }
         }
 
         if (data && data.variants.length) {
           state.variant = findVariant(variantInput ? variantInput.value : data.variants[0].id) || data.variants[0];
         }
-
         row.querySelectorAll('[data-size]').forEach(function (r) {
           r.addEventListener('change', function () { state.variant = findVariant(r.value) || state.variant; refresh(); });
         });
@@ -815,9 +956,7 @@
         if (planSelect) planSelect.addEventListener('change', refresh);
         refresh();
 
-        /* Video: hover plays on desktop; tap the play button on phones */
-        var video = row.querySelector('video');
-        var playBtn = row.querySelector('[data-play]');
+        var video = row.querySelector('video'), playBtn = row.querySelector('[data-play]');
         if (video) {
           var setPressed = function (on) { if (playBtn) { playBtn.setAttribute('aria-pressed', on ? 'true' : 'false'); playBtn.setAttribute('aria-label', on ? 'Pause video' : 'Play video'); } };
           var play = function () { var p = video.play(); if (p && p.catch) p.catch(function () {}); setPressed(true); };
@@ -825,16 +964,11 @@
           row.addEventListener('mouseenter', function () { if (self.hoverMq.matches && !self.reduce.matches) play(); });
           row.addEventListener('mouseleave', function () { if (self.hoverMq.matches) pause(); });
           if (playBtn) playBtn.addEventListener('click', function () { if (video.paused) play(); else pause(); });
-          /* Stop when scrolled away */
           new IntersectionObserver(function (en) { if (!en[0].isIntersecting) pause(); }).observe(row);
         }
 
-        /* Add to cart */
         if (form && atc) {
-          form.addEventListener('submit', function (e) {
-            e.preventDefault();
-            self.addToCart(row, index, form, atc);
-          });
+          form.addEventListener('submit', function (e) { e.preventDefault(); self.addToCart(row, index, form, atc); });
         }
       }
 
@@ -842,8 +976,7 @@
         var self = this;
         if (btn.disabled || btn.getAttribute('aria-busy') === 'true') return;
         var status = row.querySelector('[data-status]');
-        var st = row._state || {};
-        var v = st.variant;
+        var v = (row._state || {}).variant;
         var planInput = row.querySelector('[data-plan-input]');
         var item = { id: Number(v ? v.id : form.querySelector('[name="id"]').value), quantity: 1 };
         if (planInput && planInput.value) item.selling_plan = Number(planInput.value);
@@ -851,8 +984,7 @@
         btn.setAttribute('aria-busy', 'true');
         if (status) { status.textContent = ''; status.classList.remove('is-error'); }
 
-        var url = (this.dataset.cartAdd || '/cart/add') + '.js';
-        fetch(url, {
+        fetch((this.dataset.cartAdd || '/cart/add') + '.js', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
           body: JSON.stringify({ items: [item], sections: 'cart-drawer,cart-icon-bubble', sections_url: window.location.pathname })
@@ -861,24 +993,20 @@
           .then(function (r) {
             btn.removeAttribute('aria-busy');
             if (!r.ok) throw new Error((r.json && (r.json.description || r.json.message)) || 'Could not add to cart.');
-
             btn.classList.add('is-added');
             setTimeout(function () { btn.classList.remove('is-added'); }, 2200);
 
-            /* Analytics: add_to_cart with species and row position */
             var detail = { variant_id: item.id, selling_plan: item.selling_plan || null, species: self.species || row.dataset.species, row_position: index + 1 };
             try { (window.dataLayer = window.dataLayer || []).push(Object.assign({ event: 'add_to_cart', section: 'vf_product_rows' }, detail)); } catch (e) {}
             try { if (window.Shopify && Shopify.analytics && Shopify.analytics.publish) Shopify.analytics.publish('vf_add_to_cart', detail); } catch (e) {}
-
             document.dispatchEvent(new CustomEvent('vf:cart:changed'));
             document.dispatchEvent(new CustomEvent('cart:refresh'));
 
             if (self.dataset.action === 'cart' && self.openDrawer(r.json, btn)) return;
             if (status) {
-              var cartUrl = self.dataset.cartUrl || '/cart';
               status.textContent = (self.dataset.addedText || 'Added to your cart.') + ' ';
               var a = document.createElement('a');
-              a.href = cartUrl;
+              a.href = self.dataset.cartUrl || '/cart';
               a.textContent = self.dataset.viewCart || 'View cart';
               status.appendChild(a);
             }
@@ -889,7 +1017,6 @@
           });
       }
 
-      /* Open the cart drawer: the Vettofit cart drawer, or Dawn's. Returns true if one opened. */
       openDrawer(json, trigger) {
         var evt = new CustomEvent('vf:cart:open', { cancelable: true, bubbles: true, detail: { trigger: trigger, response: json } });
         document.dispatchEvent(evt);
@@ -913,18 +1040,60 @@
 {% schema %}
 {
   "name": "Vettofit product rows",
-  "tag": "section",
+  "tag": "div",
   "class": "vf-rows-section",
   "enabled_on": {
     "templates": ["page", "index", "product", "collection"]
   },
   "max_blocks": 4,
   "settings": [
+    { "type": "header", "content": "Look" },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "Layout",
+      "info": "Rows stack the products one under another. Slider shows one at a time with arrows. Phones always swipe.",
+      "options": [
+        { "value": "rows", "label": "Rows" },
+        { "value": "slider", "label": "Slider with arrows" }
+      ],
+      "default": "rows"
+    },
+    {
+      "type": "select",
+      "id": "width",
+      "label": "Width",
+      "options": [
+        { "value": "full", "label": "Edge to edge" },
+        { "value": "page", "label": "Page width (rounded cards)" }
+      ],
+      "default": "full"
+    },
+    {
+      "type": "select",
+      "id": "row_style",
+      "label": "Row style",
+      "options": [
+        { "value": "alternate", "label": "Alternate left / right" },
+        { "value": "left", "label": "Colour panel always left" }
+      ],
+      "default": "alternate"
+    },
+    {
+      "type": "select",
+      "id": "text_align",
+      "label": "Text alignment",
+      "options": [
+        { "value": "center", "label": "Centre" },
+        { "value": "left", "label": "Left" }
+      ],
+      "default": "center"
+    },
     {
       "type": "select",
       "id": "color_scheme",
-      "label": "Colour scheme",
-      "info": "Brand colours only. White is the default for product rows.",
+      "label": "Section background",
+      "info": "Behind the heading. Each row's panel colour is set in the row itself.",
       "options": [
         { "value": "white", "label": "White" },
         { "value": "chalk", "label": "Chalk" },
@@ -937,7 +1106,7 @@
       "type": "text",
       "id": "heading",
       "label": "Heading",
-      "info": "Optional. Best under 6 words.",
+      "info": "Optional. Best under 6 words. If empty, it's hidden but still read by search engines and screen readers.",
       "default": "Pick their ritual."
     },
     {
@@ -948,14 +1117,11 @@
       "default": "Wild-caught salmon oil, made for dogs and for cats."
     },
     {
-      "type": "select",
-      "id": "row_style",
-      "label": "Row style",
-      "options": [
-        { "value": "alternate", "label": "Alternate left / right" },
-        { "value": "left", "label": "Photo always left" }
-      ],
-      "default": "alternate"
+      "type": "text",
+      "id": "eyebrow_auto",
+      "label": "Automatic small label",
+      "info": "Used when a row's own label is empty. Keep [pets]; it becomes dogs or cats.",
+      "default": "For [pets]"
     },
     {
       "type": "checkbox",
@@ -964,10 +1130,7 @@
       "info": "Comes from your reviews app automatically.",
       "default": true
     },
-    {
-      "type": "header",
-      "content": "Cost per day"
-    },
+    { "type": "header", "content": "Cost per day" },
     {
       "type": "checkbox",
       "id": "show_cost",
@@ -978,18 +1141,17 @@
     {
       "type": "range",
       "id": "cost_weight_dog",
-      "label": "Cost-per-day example weight (dogs)",
+      "label": "Example weight (dogs)",
       "min": 5,
       "max": 40,
       "step": 5,
       "unit": "kg",
-      "default": 10,
-      "info": "Shows e.g. \"about ₹X a day for a 10 kg dog\"."
+      "default": 10
     },
     {
       "type": "range",
       "id": "cost_weight_cat",
-      "label": "Cost-per-day example weight (cats)",
+      "label": "Example weight (cats)",
       "min": 2,
       "max": 8,
       "step": 1,
@@ -1003,33 +1165,12 @@
       "info": "Keep [price], [weight] and [pet]. They fill in automatically.",
       "default": "About [price] a day for a [weight] kg [pet]"
     },
-    {
-      "type": "text",
-      "id": "pet_word_dog",
-      "label": "Word for dog",
-      "default": "dog"
-    },
-    {
-      "type": "text",
-      "id": "pet_word_cat",
-      "label": "Word for cat",
-      "default": "cat"
-    },
-    {
-      "type": "text",
-      "id": "pet_word_any",
-      "label": "Word for products made for both",
-      "default": "pet"
-    },
-    {
-      "type": "header",
-      "content": "Buying"
-    },
+    { "type": "header", "content": "Buying" },
     {
       "type": "checkbox",
       "id": "show_subscribe",
       "label": "Show subscribe-and-save option",
-      "info": "Appears only on products with a subscription plan. One-time purchase is always pre-selected.",
+      "info": "Appears only on products with a subscription plan. One-time is always pre-selected.",
       "default": true
     },
     {
@@ -1046,114 +1187,75 @@
       "type": "checkbox",
       "id": "show_compare",
       "label": "Show crossed-out compare-at price",
-      "info": "Off by default: the guidelines keep deals out of this section (announcement line, cart drawer and final section only).",
+      "info": "Off by default: the guidelines keep deals out of this section.",
       "default": false
     },
     {
       "type": "text",
       "id": "payment_note",
       "label": "Payment note under the button",
-      "info": "Optional, e.g. \"COD and UPI available\". Leave empty to hide."
+      "info": "Optional, e.g. \"COD and UPI available\"."
+    },
+    { "type": "header", "content": "Product facts (search engines & AI)" },
+    {
+      "type": "checkbox",
+      "id": "show_facts",
+      "label": "Show product facts",
+      "info": "A short fact list: pack size, daily amount, days per bottle, cost per day and price. Search engines and AI assistants can quote it.",
+      "default": true
     },
     {
-      "type": "header",
-      "content": "Labels and button text"
+      "type": "checkbox",
+      "id": "facts_open",
+      "label": "Open product facts by default",
+      "default": false
     },
-    {
-      "type": "text",
-      "id": "button_label",
-      "label": "Add to cart button",
-      "default": "Add to cart"
-    },
-    {
-      "type": "text",
-      "id": "product_button_label",
-      "label": "Product page button",
-      "default": "See details"
-    },
-    {
-      "type": "text",
-      "id": "added_label",
-      "label": "After adding",
-      "default": "Added"
-    },
+    { "type": "text", "id": "facts_title", "label": "Facts heading", "default": "Product facts" },
+    { "type": "text", "id": "facts_for", "label": "\"Made for\" label", "default": "Made for" },
+    { "type": "text", "id": "facts_size", "label": "\"Pack size\" label", "default": "Pack size" },
+    { "type": "text", "id": "facts_daily", "label": "\"Daily amount\" label", "default": "Daily amount" },
     {
       "type": "text",
-      "id": "added_note",
-      "label": "Message after adding (when no cart drawer opens)",
-      "default": "Added to your cart."
+      "id": "facts_daily_value",
+      "label": "Daily amount text",
+      "info": "Keep [pumps], [weight] and [pet].",
+      "default": "[pumps] for a [weight] kg [pet]"
     },
+    { "type": "text", "id": "pump_word_one", "label": "Word for one pump", "default": "pump" },
+    { "type": "text", "id": "pump_word_many", "label": "Word for several pumps", "default": "pumps" },
+    { "type": "text", "id": "facts_lasts", "label": "\"Bottle lasts\" label", "default": "One bottle lasts" },
     {
       "type": "text",
-      "id": "view_cart_label",
-      "label": "View cart link",
-      "default": "View cart"
+      "id": "facts_lasts_value",
+      "label": "Bottle lasts text",
+      "info": "Keep [days].",
+      "default": "About [days] days"
     },
-    {
-      "type": "text",
-      "id": "sold_out_label",
-      "label": "Sold out",
-      "default": "Sold out"
-    },
-    {
-      "type": "text",
-      "id": "size_label",
-      "label": "Size heading",
-      "default": "Size"
-    },
-    {
-      "type": "text",
-      "id": "one_time_label",
-      "label": "One-time option",
-      "default": "One-time purchase"
-    },
-    {
-      "type": "text",
-      "id": "subscribe_label",
-      "label": "Subscribe option",
-      "default": "Subscribe and save"
-    },
-    {
-      "type": "text",
-      "id": "subscribe_note",
-      "label": "Subscribe explainer",
-      "default": "Change or skip anytime."
-    },
-    {
-      "type": "text",
-      "id": "frequency_label",
-      "label": "Delivery frequency heading",
-      "default": "Deliver every"
-    },
-    {
-      "type": "text",
-      "id": "lasts_text",
-      "label": "Bottle-lasts hint",
-      "info": "Keep [days]. Helps shoppers pick a delivery frequency.",
-      "default": "One bottle lasts about [days] days at this size."
-    },
-    {
-      "type": "text",
-      "id": "label_bestseller",
-      "label": "\"Bestseller\" label text",
-      "default": "Bestseller"
-    },
-    {
-      "type": "text",
-      "id": "label_new",
-      "label": "\"New\" label text",
-      "default": "New"
-    },
-    {
-      "type": "text",
-      "id": "label_back",
-      "label": "\"Back in stock\" label text",
-      "default": "Back in stock"
-    },
-    {
-      "type": "header",
-      "content": "Spacing"
-    },
+    { "type": "text", "id": "facts_cost", "label": "\"Cost per day\" label", "default": "Cost per day" },
+    { "type": "text", "id": "facts_price", "label": "\"Price\" label", "default": "Price" },
+    { "type": "text", "id": "details_link_label", "label": "Link to product page", "default": "See full details" },
+    { "type": "header", "content": "Words" },
+    { "type": "text", "id": "pet_word_dog", "label": "Dog (one)", "default": "dog" },
+    { "type": "text", "id": "pet_plural_dog", "label": "Dogs (many)", "default": "dogs" },
+    { "type": "text", "id": "pet_word_cat", "label": "Cat (one)", "default": "cat" },
+    { "type": "text", "id": "pet_plural_cat", "label": "Cats (many)", "default": "cats" },
+    { "type": "text", "id": "pet_word_any", "label": "Pet (one, for products made for both)", "default": "pet" },
+    { "type": "text", "id": "pet_plural_any", "label": "Pets (many)", "default": "dogs and cats" },
+    { "type": "text", "id": "button_label", "label": "Add to cart button", "default": "Add to cart" },
+    { "type": "text", "id": "product_button_label", "label": "Product page button", "default": "See details" },
+    { "type": "text", "id": "added_label", "label": "After adding", "default": "Added" },
+    { "type": "text", "id": "added_note", "label": "Message after adding (when no cart drawer opens)", "default": "Added to your cart." },
+    { "type": "text", "id": "view_cart_label", "label": "View cart link", "default": "View cart" },
+    { "type": "text", "id": "sold_out_label", "label": "Sold out", "default": "Sold out" },
+    { "type": "text", "id": "size_label", "label": "Size heading (for screen readers)", "default": "Size" },
+    { "type": "text", "id": "one_time_label", "label": "One-time option", "default": "One-time" },
+    { "type": "text", "id": "subscribe_label", "label": "Subscribe option", "default": "Subscribe" },
+    { "type": "text", "id": "subscribe_note", "label": "Subscribe explainer", "default": "Change or skip anytime." },
+    { "type": "text", "id": "frequency_label", "label": "Delivery frequency (for screen readers)", "default": "Deliver every" },
+    { "type": "text", "id": "label_bestseller", "label": "\"Bestseller\" label text", "default": "Bestseller" },
+    { "type": "text", "id": "label_new", "label": "\"New\" label text", "default": "New" },
+    { "type": "text", "id": "label_back", "label": "\"Back in stock\" label text", "default": "Back in stock" },
+    { "type": "header", "content": "Spacing" },
     {
       "type": "select",
       "id": "space_below",
@@ -1164,7 +1266,7 @@
         { "value": "medium", "label": "Medium" },
         { "value": "large", "label": "Large" }
       ],
-      "default": "medium"
+      "default": "none"
     }
   ],
   "blocks": [
@@ -1178,6 +1280,38 @@
           "id": "product",
           "label": "Product",
           "info": "Price, sizes, rating, stock and benefits come from the product."
+        },
+        {
+          "type": "text",
+          "id": "display_name",
+          "label": "Name on this page",
+          "info": "Optional short name, e.g. \"Salmon oil for dogs\". Best under 4 words. Search engines still see the full product name."
+        },
+        {
+          "type": "text",
+          "id": "eyebrow",
+          "label": "Small label above the name",
+          "info": "Optional, e.g. \"Skin & coat ritual\". Leave empty to show \"For dogs\" or \"For cats\" automatically."
+        },
+        {
+          "type": "inline_richtext",
+          "id": "short_line",
+          "label": "Short line",
+          "info": "One sentence under the name. No health claims here; benefits come from the product data."
+        },
+        {
+          "type": "select",
+          "id": "panel_color",
+          "label": "Panel colour",
+          "info": "Brand colours only. Use the need colour on one row per page; Chalk or White for the others.",
+          "options": [
+            { "value": "accent", "label": "Need colour (coral for Skin & Coat)" },
+            { "value": "chalk", "label": "Chalk" },
+            { "value": "white", "label": "White" },
+            { "value": "plum", "label": "Night Plum" },
+            { "value": "carbon", "label": "Carbon" }
+          ],
+          "default": "chalk"
         },
         {
           "type": "select",
@@ -1196,13 +1330,13 @@
           "type": "image_picker",
           "id": "image",
           "label": "Photo override",
-          "info": "Optional. Square works best. Otherwise uses the product's ritual video, then its first photo."
+          "info": "Optional. A ritual or lifestyle photo fills the whole side. Without one, the pack photo shows on White."
         },
         {
           "type": "video",
           "id": "video",
           "label": "Video override",
-          "info": "Optional. Muted 4–6 second loop, under 1.5MB."
+          "info": "Optional. Muted 4–6 second loop, under 1.5MB. Plays on hover (desktop) or tap (phone)."
         },
         {
           "type": "select",
@@ -1235,8 +1369,8 @@
     {
       "name": "Vettofit product rows",
       "blocks": [
-        { "type": "product_row", "settings": { "show_for": "auto", "label": "bestseller" } },
-        { "type": "product_row", "settings": { "show_for": "auto" } }
+        { "type": "product_row", "settings": { "display_name": "Salmon oil for dogs", "short_line": "One pump with dinner. That's the ritual.", "panel_color": "accent", "label": "bestseller" } },
+        { "type": "product_row", "settings": { "display_name": "Salmon oil for cats", "short_line": "Same ritual, sized for cats.", "panel_color": "chalk" } }
       ]
     }
   ]

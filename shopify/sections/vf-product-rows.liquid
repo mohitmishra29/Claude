@@ -174,6 +174,12 @@
             endif
           endif
 
+          assign mrp0 = variant.compare_at_price | default: 0
+          assign off0 = 0
+          if mrp0 > variant.price
+            assign off0 = mrp0 | minus: variant.price | times: 100.0 | divided_by: mrp0 | round
+          endif
+
           assign rating = product.metafields.reviews.rating.value
           assign rating_count = product.metafields.reviews.rating_count.value | default: 0
           assign show_stars = false
@@ -235,7 +241,7 @@
             {%- if product.variants.size > 1 -%}
               "offers":{"@type":"AggregateOffer","priceCurrency":{{ cart.currency.iso_code | json }},"lowPrice":{{ product.price_min | money_without_currency | remove: ',' | json }},"highPrice":{{ product.price_max | money_without_currency | remove: ',' | json }},"offerCount":{{ product.variants.size }},"availability":"https://schema.org/{% if product.available %}InStock{% else %}OutOfStock{% endif %}"}
             {%- else -%}
-              "offers":{"@type":"Offer","url":{{ ld_url | json }},"priceCurrency":{{ cart.currency.iso_code | json }},"price":{{ variant.price | money_without_currency | remove: ',' | json }},"availability":"https://schema.org/{% if variant.available %}InStock{% else %}OutOfStock{% endif %}","itemCondition":"https://schema.org/NewCondition"}
+              "offers":{"@type":"Offer","url":{{ ld_url | json }},"priceCurrency":{{ cart.currency.iso_code | json }},"price":{{ variant.price | money_without_currency | remove: ',' | json }},"availability":"https://schema.org/{% if variant.available %}InStock{% else %}OutOfStock{% endif %}","itemCondition":"https://schema.org/NewCondition"{% if mrp0 > variant.price %},"priceSpecification":{"@type":"UnitPriceSpecification","priceType":"https://schema.org/StrikethroughPrice","price":{{ mrp0 | money_without_currency | remove: ',' | json }},"priceCurrency":{{ cart.currency.iso_code | json }}}{% endif %}}
             {%- endif -%}
           }}
         {%- endcapture -%}
@@ -417,17 +423,25 @@
                   </fieldset>
                 {%- endif -%}
 
+                <div class="vf-price" aria-live="polite">
+                  <p class="vf-price__row">
+                    {%- if ss.show_mrp -%}
+                      <span class="vf-price__mrp" data-compare{% unless mrp0 > variant.price %} hidden{% endunless %}><span class="vf-price__mrp-label" data-mrp-label>{{ ss.mrp_label }}</span> <s data-compare-amount>{{ mrp0 | money }}</s></span>
+                    {%- endif -%}
+                    <span class="vf-price__now" data-price>{{ variant.price | money }}</span>
+                    {%- if ss.show_mrp and ss.show_discount_badge -%}
+                      <span class="vf-price__off" data-off{% unless off0 > 0 %} hidden{% endunless %}>−<span data-off-pct>{{ off0 }}</span>%</span>
+                    {%- endif -%}
+                  </p>
+                  {%- if ss.tax_note != blank -%}<p class="vf-price__tax">{{ ss.tax_note }}</p>{%- endif -%}
+                </div>
+
                 {%- if ss.button_action == 'product' -%}
                   <a class="vf-btn" href="{{ product.url }}">{{ ss.product_button_label }}</a>
                 {%- else -%}
                   <button class="vf-btn" type="submit" data-atc data-sold-out="{{ ss.sold_out_label | escape }}"{% unless variant.available %} disabled{% endunless %}>
                     <span class="vf-btn__label">
                       <span data-atc-label>{% if variant.available %}{{ ss.button_label }}{% else %}{{ ss.sold_out_label }}{% endif %}</span>
-                      <span class="vf-btn__dot" aria-hidden="true">·</span>
-                      <span class="vf-btn__price" data-price>{{ variant.price | money }}</span>
-                      {%- if ss.show_compare and variant.compare_at_price > variant.price -%}
-                        <s class="vf-btn__was" data-compare>{{ variant.compare_at_price | money }}</s>
-                      {%- endif -%}
                     </span>
                     <span class="vf-btn__done" aria-hidden="true">
                       <svg viewBox="0 0 24 24"><polyline points="5 12.5 10 17 19 7"/></svg>
@@ -469,6 +483,9 @@
                     <div data-fact-days-row{% if days0 == 0 %} hidden{% endif %}><dt>{{ ss.facts_lasts }}</dt><dd>{{ ss.facts_lasts_value | replace: '[days]', '<span data-fact-days>DAYS</span>' | replace: 'DAYS', days0 }}</dd></div>
                     <div data-fact-cost-row{% if per_day0 == '' %} hidden{% endif %}><dt>{{ ss.facts_cost }}</dt><dd data-fact-cost>{{ per_day0 }}</dd></div>
                     <div><dt>{{ ss.facts_price }}</dt><dd data-fact-price>{{ variant.price | money }}</dd></div>
+                    {%- if ss.show_mrp -%}
+                      <div data-fact-mrp-row{% unless mrp0 > variant.price %} hidden{% endunless %}><dt>{{ ss.mrp_label }}</dt><dd data-fact-mrp>{{ mrp0 | money }}</dd></div>
+                    {%- endif -%}
                   </dl>
                   <a class="vf-facts__more" href="{{ product.url }}">{{ ss.details_link_label }}<span class="vf-vh">: {{ product.title }}</span> →</a>
                 </details>
@@ -686,8 +703,17 @@
   {{ s }} .vf-btn:active { transform: translateY(1px); }
   {{ s }} .vf-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
   {{ s }} .vf-btn__label { display: inline-flex; align-items: baseline; gap: 8px; font-variant-numeric: tabular-nums; }
-  {{ s }} .vf-btn__dot { opacity: .6; }
-  {{ s }} .vf-btn__was { font-weight: 500; opacity: .6; font-size: 14px; }
+
+  /* Price: crossed-out MRP, selling price, discount badge */
+  {{ s }} .vf-price { display: grid; gap: 2px; }
+  {{ s }} .vf-price__row { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; font-variant-numeric: tabular-nums; }
+  {{ s }}.vf-align--center .vf-price__row { justify-content: center; }
+  {{ s }} .vf-price__mrp { font-size: 15px; font-weight: 500; color: var(--p-muted); white-space: nowrap; }
+  {{ s }} .vf-price__mrp s { text-decoration-thickness: 1.5px; }
+  {{ s }} .vf-price__mrp-label { font-size: 13px; }
+  {{ s }} .vf-price__now { font-family: var(--r-font-display); font-size: 30px; font-weight: 800; line-height: 1.05; letter-spacing: -0.02em; color: var(--p-fg); }
+  {{ s }} .vf-price__off { align-self: center; padding: 3px 9px; border-radius: 999px; background: var(--r-signal); color: var(--r-ink); font-size: 13px; font-weight: 800; line-height: 1.2; }
+  {{ s }} .vf-price__tax { font-size: 12px; color: var(--p-muted); }
   {{ s }} .vf-btn[aria-busy="true"] .vf-btn__label { opacity: .55; }
   {{ s }} .vf-btn__label, {{ s }} .vf-btn__done { transition: opacity 200ms ease, transform 200ms var(--r-ease); }
   {{ s }} .vf-btn__done { position: absolute; inset: 0; display: inline-flex; align-items: center; justify-content: center; gap: 8px; opacity: 0; transform: translateY(8px); }
@@ -751,6 +777,10 @@
     {{ s }} .vf-buy { gap: 10px; }
     {{ s }} .vf-chip span { min-height: 44px; }
     {{ s }} .vf-row__label { top: 12px; left: 12px; padding: 6px 12px; font-size: 11px; }
+    {{ s }} .vf-price__row { gap: 4px 8px; }
+    {{ s }} .vf-price__now { font-size: 26px; }
+    {{ s }} .vf-price__mrp { font-size: 14px; }
+    {{ s }} .vf-price__off { font-size: 12px; padding: 2px 8px; }
   }
 
   /* ---------- Tablet & desktop: 50 / 50 split bands ---------- */
@@ -914,6 +944,9 @@
         var fSizeRow = q('[data-fact-size-row]'), fSize = q('[data-fact-size]');
         var fDaysRow = q('[data-fact-days-row]'), fDays = q('[data-fact-days]');
         var fCostRow = q('[data-fact-cost-row]'), fCost = q('[data-fact-cost]'), fPrice = q('[data-fact-price]');
+        var mrpLabel = q('[data-mrp-label]');
+        var compareAmt = q('[data-compare-amount]'), offEl = q('[data-off]'), offPct = q('[data-off-pct]');
+        var fMrpRow = q('[data-fact-mrp-row]'), fMrp = q('[data-fact-mrp]');
 
         function findVariant(id) {
           if (!data) return null;
@@ -934,7 +967,15 @@
           if (planInput) planInput.value = planId || '';
           if (freq) freq.hidden = !subOn;
           if (priceEl) priceEl.textContent = priceText;
-          if (compareEl) compareEl.hidden = !!planId || !(v.compare > v.price);
+          /* MRP (compare-at) crossed out; with a subscription, the regular price is crossed out if there's no MRP */
+          var struck = Math.max(v.compare || 0, planId ? v.price : 0);
+          var hasStrike = struck > price;
+          var pct = hasStrike ? Math.round((struck - price) * 100 / struck) : 0;
+          if (compareEl) { compareEl.hidden = !hasStrike; if (compareAmt) compareAmt.textContent = formatMoney(struck, self.moneyFormat); }
+          /* Only call it "MRP" when it really is the MRP (compare-at price), never the regular price */
+          if (mrpLabel) mrpLabel.hidden = !(v.compare > 0 && struck === v.compare);
+          if (offEl) { offEl.hidden = !(pct > 0); if (offPct) offPct.textContent = pct; }
+          if (fMrpRow) { fMrpRow.hidden = !(v.compare > price); if (fMrp) fMrp.textContent = formatMoney(v.compare, self.moneyFormat); }
           if (perDayLine) { perDayLine.hidden = !perDay; if (perDay && perDayEl) perDayEl.textContent = perDay; }
           if (fPrice) fPrice.textContent = priceText;
           if (fSizeRow) { fSizeRow.hidden = !v.size; if (fSize) fSize.textContent = v.size; }
@@ -1185,10 +1226,29 @@
     },
     {
       "type": "checkbox",
-      "id": "show_compare",
-      "label": "Show crossed-out compare-at price",
-      "info": "Off by default: the guidelines keep deals out of this section.",
-      "default": false
+      "id": "show_mrp",
+      "label": "Show MRP and discount",
+      "info": "Shows the product's compare-at price as the crossed-out MRP, next to the selling price. Set the compare-at price on each product in Admin.",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_discount_badge",
+      "label": "Show % off badge",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "mrp_label",
+      "label": "MRP label",
+      "default": "MRP"
+    },
+    {
+      "type": "text",
+      "id": "tax_note",
+      "label": "Tax note under the price",
+      "info": "Leave empty to hide.",
+      "default": "Inclusive of all taxes"
     },
     {
       "type": "text",

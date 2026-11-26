@@ -163,8 +163,12 @@
             if s_product != blank
               assign p_short = s_product.title | split: '|' | first | strip
               if s_product.vendor != blank
-                assign vendor_prefix = s_product.vendor | append: ' '
-                assign p_short = p_short | remove_first: vendor_prefix
+                assign v_len = s_product.vendor.size | plus: 1
+                assign v_head = p_short | slice: 0, v_len | downcase
+                assign v_want = s_product.vendor | downcase | append: ' '
+                if v_head == v_want
+                  assign p_short = p_short | slice: v_len, 300 | strip
+                endif
               endif
               assign p_short = p_short | truncate: 48
             endif
@@ -318,10 +322,11 @@
   }
   {{ s }} .vf-pets__wall::-webkit-scrollbar { display: none; }
   {{ s }} .vf-pets__wall { align-items: stretch; }
-  {{ s }} .vf-story-wrap { position: relative; flex: 0 0 85%; scroll-snap-align: start; display: flex; }
+  {{ s }} .vf-story-wrap { position: relative; flex: 0 0 85%; min-width: 0; scroll-snap-align: start; display: flex; }
 
   /* ---------- Card ---------- */
-  {{ s }} .vf-story { display: flex; flex-direction: column; width: 100%; background: var(--t-card); border-radius: 24px; overflow: hidden; }
+  {{ s }} .vf-story { display: flex; flex-direction: column; width: 100%; min-width: 0; background: var(--t-card); border-radius: 24px; overflow: hidden; }
+  {{ s }} .vf-story__body { min-width: 0; }
   {{ s }} .vf-story__media { position: relative; background: var(--t-line); }
   /* Equal cards: every photo / clip is 4:5 */
   {{ s }} .vf-story__media { aspect-ratio: 4 / 5; overflow: hidden; }
@@ -386,6 +391,14 @@
   {{ s }} a:focus-visible, {{ s }} button:focus-visible { outline: 2px solid var(--t-fg); outline-offset: 3px; }
   {{ s }} .vf-vh { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
   {{ s }} .vf-pets__note { padding: 8px 12px; background: #FFF4B8; color: #111111; font-size: 13px; line-height: 1.4; border-radius: 10px; }
+
+  /* Phones: each card snaps to the centre with an equal peek on both sides */
+  @media (max-width: 749px) {
+    {{ s }} .vf-pets__wall { padding: 0 0 8px; scroll-padding: 0; gap: 12px; }
+    {{ s }} .vf-pets__wall::before,
+    {{ s }} .vf-pets__wall::after { content: ""; flex: 0 0 calc(7.5% - 12px); }
+    {{ s }} .vf-story-wrap { scroll-snap-align: center; }
+  }
 
   /* ---------- Tablet & desktop ---------- */
   @media (min-width: 750px) {

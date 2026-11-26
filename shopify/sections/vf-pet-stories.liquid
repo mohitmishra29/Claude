@@ -16,7 +16,8 @@
   Library fields used: pet_name, species, city, weeks_of_use, photo, video, quote, product,
   consent_confirmed.
 
-  Desktop: mosaic (masonry) or a single scrolling row. Mobile: swipeable cards at 85% width.
+  One single line on every device (Ghia-style): 4 cards on large desktops, 3 on small desktops,
+  2 on tablets, 85% cards on phones. Arrows + a teal Signal Line progress bar. Never wraps.
   Dog / Cat filter, and it follows the page's Dog / Cat switch (event vf:species-change).
   Experience language only: there is no star-rating override and no medical-claim field.
 {%- endcomment -%}
@@ -40,7 +41,7 @@
 
 <vf-pet-stories
   id="vf-pets-{{ section.id }}"
-  class="vf-pets vf-scheme--{{ ss.color_scheme }} vf-pets--{{ ss.layout }} vf-space-below--{{ ss.space_below }}"
+  class="vf-pets vf-scheme--{{ ss.color_scheme }} vf-space-below--{{ ss.space_below }}"
   data-follow="{{ ss.follow_switch }}"
 >
   <section class="vf-pets__inner" aria-labelledby="{{ heading_id }}">
@@ -81,12 +82,6 @@
     </header>
 
     <div class="vf-pets__viewport">
-      {%- if ss.layout == 'row' -%}
-        <div class="vf-pets__arrows">
-          <button type="button" class="vf-pets__arrow" data-prev aria-label="Previous stories"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="11 6 5 12 11 18"/></svg></button>
-          <button type="button" class="vf-pets__arrow" data-next aria-label="Next stories"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg></button>
-        </div>
-      {%- endif -%}
 
       <div class="vf-pets__wall" role="list" data-wall>
         {%- for item in items -%}
@@ -146,7 +141,33 @@
               endif
             endif
 
-            assign quote = s_quote | strip_html | strip | truncate: 140
+            assign quote_raw = s_quote | strip_html | strip
+            assign quote = quote_raw
+            if quote_raw.size > 140
+              assign quote = ''
+              assign q_words = quote_raw | split: ' '
+              for qw in q_words
+                assign q_try = quote | append: ' ' | append: qw | strip
+                if q_try.size > 138
+                  break
+                endif
+                assign quote = q_try
+              endfor
+              assign quote = quote | append: '…'
+            endif
+
+            comment
+              Short product name: the part before "|", without the brand name in front.
+            endcomment
+            assign p_short = ''
+            if s_product != blank
+              assign p_short = s_product.title | split: '|' | first | strip
+              if s_product.vendor != blank
+                assign vendor_prefix = s_product.vendor | append: ' '
+                assign p_short = p_short | remove_first: vendor_prefix
+              endif
+              assign p_short = p_short | truncate: 48
+            endif
             assign shown = shown | plus: 1
             assign alt = ''
             if s_img != blank
@@ -180,18 +201,26 @@
                   <blockquote class="vf-story__quote"><p>“{{ quote }}”</p></blockquote>
                 {%- endif -%}
                 <p class="vf-story__who">
-                  <span class="vf-story__name">{{ s_name }}</span>
+                  {%- if s_name != blank -%}<span class="vf-story__name">{{ s_name }}</span>{%- endif -%}
                   {%- if sp_word != '' or s_city != blank -%}
                     <span class="vf-story__meta">{% if sp_word != '' %}{{ sp_word | capitalize }}{% endif %}{% if sp_word != '' and s_city != blank %} · {% endif %}{{ s_city }}</span>
                   {%- endif -%}
                 </p>
                 {%- if s_product != blank and ss.show_product -%}
-                  <a class="vf-story__product" href="{{ s_product.url }}">{{ ss.uses_text | replace: '[product]', s_product.title }}</a>
+                  <a class="vf-story__product" href="{{ s_product.url }}">{{ ss.uses_text | replace: '[product]', p_short }}</a>
                 {%- endif -%}
               </figcaption>
             </figure>
           </div>
         {%- endfor -%}
+      </div>
+
+      <div class="vf-pets__nav" data-nav>
+        <div class="vf-pets__progress" aria-hidden="true"><span data-progress></span></div>
+        <div class="vf-pets__arrows">
+          <button type="button" class="vf-pets__arrow" data-prev aria-label="Previous stories"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="11 6 5 12 11 18"/></svg></button>
+          <button type="button" class="vf-pets__arrow" data-next aria-label="Next stories"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg></button>
+        </div>
       </div>
 
       <p class="vf-pets__empty" data-empty hidden>{{ ss.empty_text }}</p>
@@ -288,14 +317,16 @@
     scrollbar-width: none; overscroll-behavior-x: contain;
   }
   {{ s }} .vf-pets__wall::-webkit-scrollbar { display: none; }
-  {{ s }} .vf-story-wrap { position: relative; flex: 0 0 85%; scroll-snap-align: start; }
+  {{ s }} .vf-pets__wall { align-items: stretch; }
+  {{ s }} .vf-story-wrap { position: relative; flex: 0 0 85%; scroll-snap-align: start; display: flex; }
 
   /* ---------- Card ---------- */
-  {{ s }} .vf-story { display: flex; flex-direction: column; background: var(--t-card); border-radius: 24px; overflow: hidden; }
+  {{ s }} .vf-story { display: flex; flex-direction: column; width: 100%; background: var(--t-card); border-radius: 24px; overflow: hidden; }
   {{ s }} .vf-story__media { position: relative; background: var(--t-line); }
-  {{ s }} .vf-story__img, {{ s }} .vf-story__video, {{ s }} .vf-story__media video, {{ s }} .vf-story__ph { display: block; width: 100%; height: auto; }
-  {{ s }} .vf-story__media video { aspect-ratio: 4 / 5; object-fit: cover; }
-  {{ s }} .vf-story__ph { aspect-ratio: 4 / 5; fill: var(--t-muted); background: var(--t-line); }
+  /* Equal cards: every photo / clip is 4:5 */
+  {{ s }} .vf-story__media { aspect-ratio: 4 / 5; overflow: hidden; }
+  {{ s }} .vf-story__img, {{ s }} .vf-story__video, {{ s }} .vf-story__media video, {{ s }} .vf-story__ph { display: block; width: 100%; height: 100%; object-fit: cover; }
+  {{ s }} .vf-story__ph { fill: var(--t-muted); background: var(--t-line); }
   {{ s }} .vf-story__weeks {
     position: absolute; left: 12px; bottom: 12px;
     padding: 6px 12px; border-radius: 999px;
@@ -312,14 +343,15 @@
   {{ s }} .vf-story__play[aria-pressed="true"] .vf-i-play { display: none; }
   {{ s }} .vf-story__play[aria-pressed="true"] .vf-i-pause { display: block; }
 
-  {{ s }} .vf-story__body { display: flex; flex-direction: column; gap: 12px; padding: 18px 18px 20px; }
+  {{ s }} .vf-story__body { flex: 1 1 auto; display: flex; flex-direction: column; gap: 12px; padding: 18px 18px 20px; }
+  {{ s }} .vf-story__who { margin-top: auto; }
   {{ s }} .vf-story__quote { position: relative; padding-top: 14px; }
   {{ s }} .vf-story__quote::before { content: ""; position: absolute; top: 0; left: 0; width: 28px; height: 2px; border-radius: 2px; background: var(--t-signal); }
-  {{ s }} .vf-story__quote p { font-family: var(--t-font-accent); font-style: italic; font-size: 20px; line-height: 1.35; color: var(--t-fg); }
+  {{ s }} .vf-story__quote p { font-family: var(--t-font-accent); font-style: italic; font-size: 19px; line-height: 1.38; color: var(--t-fg); }
   {{ s }} .vf-story__who { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; }
   {{ s }} .vf-story__name { font-family: var(--t-font-display); font-size: 17px; font-weight: 700; color: var(--t-fg); }
   {{ s }} .vf-story__meta { font-size: 14px; color: var(--t-muted); }
-  {{ s }} .vf-story__product { align-self: flex-start; font-size: 13px; font-weight: 600; color: var(--t-muted); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  {{ s }} .vf-story__product { display: block; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 13px; font-weight: 600; color: var(--t-muted); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
   {{ s }} .vf-story__product:hover { color: var(--t-fg); }
 
   {{ s }} .vf-pets__empty { padding: 24px 0; color: var(--t-muted); font-size: 15px; }
@@ -334,15 +366,22 @@
   }
   @media (hover: hover) { {{ s }} .vf-pets__btn:hover { background: var(--t-fg); color: var(--t-bg); } }
 
-  {{ s }} .vf-pets__arrows { display: none; }
+  /* Navigation: teal Signal Line progress + arrows */
+  {{ s }} .vf-pets__nav { display: flex; align-items: center; gap: 20px; margin-top: 20px; }
+  {{ s }} .vf-pets__nav[hidden] { display: none !important; }
+  {{ s }} .vf-pets__progress { position: relative; flex: 1 1 auto; height: 2px; border-radius: 2px; background: var(--t-line); overflow: hidden; }
+  {{ s }} .vf-pets__progress span { position: absolute; top: 0; left: 0; height: 100%; width: 30%; border-radius: 2px; background: var(--t-signal); transition: transform 120ms linear; }
+  {{ s }} .vf-pets__arrows { display: none; flex-shrink: 0; }
   {{ s }} .vf-pets__arrow {
     width: 52px; height: 44px; display: inline-flex; align-items: center; justify-content: center;
     border: 1px solid var(--t-fg); background: transparent; color: var(--t-fg); cursor: pointer;
+    transition: background-color 180ms ease, color 180ms ease, opacity 180ms ease;
   }
   {{ s }} .vf-pets__arrow[data-prev] { border-radius: 999px 0 0 999px; }
   {{ s }} .vf-pets__arrow[data-next] { border-radius: 0 999px 999px 0; margin-left: -1px; }
   {{ s }} .vf-pets__arrow svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
-  @media (hover: hover) { {{ s }} .vf-pets__arrow:hover { background: var(--t-fg); color: var(--t-bg); } }
+  @media (hover: hover) { {{ s }} .vf-pets__arrow:not(:disabled):hover { background: var(--t-fg); color: var(--t-bg); } }
+  {{ s }} .vf-pets__arrow:disabled { opacity: .3; cursor: default; }
 
   {{ s }} a:focus-visible, {{ s }} button:focus-visible { outline: 2px solid var(--t-fg); outline-offset: 3px; }
   {{ s }} .vf-vh { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
@@ -355,22 +394,16 @@
     {{ s }} .vf-pets__head { flex-direction: row; align-items: flex-end; justify-content: space-between; gap: 32px; margin-bottom: 40px; }
     {{ s }} .vf-pets__heading { font-size: clamp(36px, 2.2vw + 16px, 48px); }
 
-    /* Mosaic: balanced masonry columns (built by the script); plain grid if the script can't run */
-    {{ s }}.vf-pets--mosaic .vf-pets__wall { display: grid; grid-template-columns: repeat(var(--t-cols, 2), minmax(0, 1fr)); gap: 20px; align-items: start; margin: 0; padding: 0; overflow: visible; }
-    {{ s }}.vf-pets--mosaic .vf-pets__wall.is-masonry { display: flex; align-items: flex-start; }
-    {{ s }} .vf-pets__col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
-    {{ s }}.vf-pets--mosaic .vf-story-wrap { width: 100%; }
-
-    /* Single row */
-    {{ s }}.vf-pets--row .vf-pets__wall { margin: 0; padding: 0 0 8px; gap: 20px; scroll-padding: 0; }
-    {{ s }}.vf-pets--row .vf-story-wrap { flex: 0 0 clamp(260px, 28vw, 340px); }
-    {{ s }}.vf-pets--row .vf-pets__arrows { display: inline-flex; position: absolute; right: 0; top: -84px; }
+    /* One line: 2 cards on tablets */
+    {{ s }} .vf-pets__wall { gap: 20px; margin: 0; padding: 0 0 4px; scroll-padding: 0; }
+    {{ s }} .vf-story-wrap { flex: 0 0 calc((100% - 20px) / 2); }
+    {{ s }} .vf-pets__arrows { display: inline-flex; }
   }
   @media (min-width: 990px) {
-    {{ s }}.vf-pets--mosaic .vf-pets__wall { --t-cols: 3; }
+    {{ s }} .vf-story-wrap { flex-basis: calc((100% - 40px) / 3); }
   }
   @media (min-width: 1200px) {
-    {{ s }}.vf-pets--mosaic .vf-pets__wall { --t-cols: 4; }
+    {{ s }} .vf-story-wrap { flex-basis: calc((100% - 60px) / 4); }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -390,19 +423,17 @@
         this.empty = this.querySelector('[data-empty]');
         this.radios = Array.prototype.slice.call(this.querySelectorAll('[data-filter]'));
         this.reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
-        this.mosaic = this.classList.contains('vf-pets--mosaic');
-        this.relayout = function () { clearTimeout(self._lt); self._lt = setTimeout(function () { self.masonry(); }, 60); };
-        window.addEventListener('resize', this.relayout);
-        this.querySelectorAll('[data-story] img').forEach(function (img) { img.addEventListener('load', self.relayout); });
-        /* Re-balance whenever a card's height changes (photo loads, fonts, video poster) */
-        if ('ResizeObserver' in window && this.mosaic) {
-          this._heights = '';
-          this.ro = new ResizeObserver(function () {
-            var sig = self.cards.map(function (c) { return c.offsetHeight; }).join(',');
-            if (sig !== self._heights) { self._heights = sig; self.relayout(); }
-          });
-          this.cards.forEach(function (c) { self.ro.observe(c); });
-        }
+        this.nav = this.querySelector('[data-nav]');
+        this.bar = this.querySelector('[data-progress]');
+        this.prevBtn = this.querySelector('[data-prev]');
+        this.nextBtn = this.querySelector('[data-next]');
+        this.onScroll = function () {
+          if (self._raf) return;
+          self._raf = requestAnimationFrame(function () { self._raf = null; self.updateNav(); });
+        };
+        if (this.wall) this.wall.addEventListener('scroll', this.onScroll, { passive: true });
+        this.onResize = function () { self.updateNav(); };
+        window.addEventListener('resize', this.onResize);
 
         this.radios.forEach(function (r) { r.addEventListener('change', function () { self.apply(r.value); }); });
 
@@ -433,16 +464,16 @@
           new IntersectionObserver(function (en) { if (!en[0].isIntersecting) { video.pause(); set(false); } }).observe(video);
         });
 
-        /* Single-row arrows */
+        /* Arrows move one card at a time */
         var step = function (dir) {
           if (!self.wall) return;
           var card = self.cards.filter(function (c) { return !c.hidden; })[0];
-          var w = card ? card.getBoundingClientRect().width + 20 : 320;
+          var gap = parseFloat(getComputedStyle(self.wall).columnGap) || 20;
+          var w = card ? card.getBoundingClientRect().width + gap : 320;
           self.wall.scrollBy({ left: dir * w, behavior: self.reduce.matches ? 'auto' : 'smooth' });
         };
-        var prev = this.querySelector('[data-prev]'), next = this.querySelector('[data-next]');
-        if (prev) prev.addEventListener('click', function () { step(-1); });
-        if (next) next.addEventListener('click', function () { step(1); });
+        if (this.prevBtn) this.prevBtn.addEventListener('click', function () { step(-1); });
+        if (this.nextBtn) this.nextBtn.addEventListener('click', function () { step(1); });
 
         /* Theme editor: scroll to the story being edited */
         this.onBlockSelect = function (e) {
@@ -455,52 +486,28 @@
           }
         };
         document.addEventListener('shopify:block:select', this.onBlockSelect);
-        this.masonry();
+        this.updateNav();
       }
 
-      /* Deal visible cards into balanced columns: each card goes to the shortest column */
-      masonry() {
-        if (!this.wall || !this.mosaic) return;
-        var self = this;
-        var w = window.innerWidth;
-        var visible = this.cards.filter(function (c) { return !c.hidden; });
-        var cols = w >= 1200 ? 4 : w >= 990 ? 3 : w >= 750 ? 2 : 0;
-        cols = Math.min(cols, visible.length);
-
-        /* Hold every card aside, drop old columns */
-        var hold = document.createDocumentFragment();
-        this.cards.forEach(function (c) { hold.appendChild(c); });
-        this.wall.querySelectorAll('.vf-pets__col').forEach(function (col) { col.remove(); });
-        this.wall.classList.remove('is-masonry');
-
-        if (cols < 2) {
-          /* Phones and tiny lists: cards go straight back in their original order */
-          this.wall.appendChild(hold);
-          return;
+      /* Progress line + arrow states; hide the nav when everything already fits */
+      updateNav() {
+        if (!this.wall) return;
+        var max = this.wall.scrollWidth - this.wall.clientWidth;
+        var fits = max <= 2;
+        if (this.nav) this.nav.hidden = fits;
+        if (fits) return;
+        var x = this.wall.scrollLeft;
+        if (this.bar) {
+          var frac = this.wall.clientWidth / this.wall.scrollWidth;
+          this.bar.style.width = (frac * 100).toFixed(2) + '%';
+          this.bar.style.transform = 'translateX(' + ((x / max) * (1 / frac - 1) * 100).toFixed(2) + '%)';
         }
-
-        var colEls = [];
-        for (var i = 0; i < cols; i++) {
-          var col = document.createElement('div');
-          col.className = 'vf-pets__col';
-          col.setAttribute('role', 'presentation');
-          this.wall.appendChild(col);
-          colEls.push(col);
-        }
-        this.wall.classList.add('is-masonry');
-        /* Each visible card goes to the currently shortest column */
-        visible.forEach(function (card) {
-          var target = colEls[0];
-          colEls.forEach(function (c) { if (c.offsetHeight < target.offsetHeight) target = c; });
-          target.appendChild(card);
-        });
-        /* Hidden (filtered-out) cards stay in the wall, out of sight */
-        this.wall.appendChild(hold);
+        if (this.prevBtn) this.prevBtn.disabled = x <= 2;
+        if (this.nextBtn) this.nextBtn.disabled = x >= max - 2;
       }
 
       disconnectedCallback() {
-        window.removeEventListener('resize', this.relayout);
-        if (this.ro) this.ro.disconnect();
+        window.removeEventListener('resize', this.onResize);
         document.removeEventListener('vf:species-change', this.onSpecies);
         document.removeEventListener('shopify:block:select', this.onBlockSelect);
       }
@@ -520,7 +527,7 @@
         });
         if (this.empty) this.empty.hidden = visible > 0 || !this.cards.length;
         if (this.wall) this.wall.scrollLeft = 0;
-        if (this.mosaic && this.masonry) this.masonry();
+        this.updateNav();
       }
     }
 
@@ -534,7 +541,12 @@
   "tag": "div",
   "class": "vf-pets-section",
   "enabled_on": {
-    "templates": ["page", "index", "product", "collection"]
+    "templates": [
+      "page",
+      "index",
+      "product",
+      "collection"
+    ]
   },
   "max_blocks": 13,
   "settings": [
@@ -544,10 +556,22 @@
       "label": "Colour scheme",
       "info": "Brand colours only. Chalk is the default for this section.",
       "options": [
-        { "value": "chalk", "label": "Chalk" },
-        { "value": "white", "label": "White" },
-        { "value": "plum", "label": "Night Plum" },
-        { "value": "carbon", "label": "Carbon" }
+        {
+          "value": "chalk",
+          "label": "Chalk"
+        },
+        {
+          "value": "white",
+          "label": "White"
+        },
+        {
+          "value": "plum",
+          "label": "Night Plum"
+        },
+        {
+          "value": "carbon",
+          "label": "Carbon"
+        }
       ],
       "default": "chalk"
     },
@@ -574,9 +598,18 @@
       "label": "Which stories",
       "info": "\"Add them here\" is easiest: use the Pet story blocks on the left. The library options read Content → Metaobjects → Pet story.",
       "options": [
-        { "value": "blocks", "label": "Add them here (Pet story blocks)" },
-        { "value": "auto", "label": "Automatically from my pet-story library" },
-        { "value": "picked", "label": "Pick them from my pet-story library" }
+        {
+          "value": "blocks",
+          "label": "Add them here (Pet story blocks)"
+        },
+        {
+          "value": "auto",
+          "label": "Automatically from my pet-story library"
+        },
+        {
+          "value": "picked",
+          "label": "Pick them from my pet-story library"
+        }
       ],
       "default": "blocks"
     },
@@ -600,18 +633,7 @@
     },
     {
       "type": "header",
-      "content": "Layout and filter"
-    },
-    {
-      "type": "select",
-      "id": "layout",
-      "label": "Desktop layout",
-      "info": "Phones always show swipeable cards.",
-      "options": [
-        { "value": "mosaic", "label": "Mosaic" },
-        { "value": "row", "label": "Single row" }
-      ],
-      "default": "mosaic"
+      "content": "Filter"
     },
     {
       "type": "checkbox",
@@ -652,12 +674,42 @@
       "type": "header",
       "content": "Words"
     },
-    { "type": "text", "id": "filter_label", "label": "Filter name (for screen readers)", "default": "Show stories for" },
-    { "type": "text", "id": "all_label", "label": "\"All\" filter", "default": "All" },
-    { "type": "text", "id": "dogs_label", "label": "\"Dogs\" filter", "default": "Dogs" },
-    { "type": "text", "id": "cats_label", "label": "\"Cats\" filter", "default": "Cats" },
-    { "type": "text", "id": "dog_word", "label": "Word for dog", "default": "dog" },
-    { "type": "text", "id": "cat_word", "label": "Word for cat", "default": "cat" },
+    {
+      "type": "text",
+      "id": "filter_label",
+      "label": "Filter name (for screen readers)",
+      "default": "Show stories for"
+    },
+    {
+      "type": "text",
+      "id": "all_label",
+      "label": "\"All\" filter",
+      "default": "All"
+    },
+    {
+      "type": "text",
+      "id": "dogs_label",
+      "label": "\"Dogs\" filter",
+      "default": "Dogs"
+    },
+    {
+      "type": "text",
+      "id": "cats_label",
+      "label": "\"Cats\" filter",
+      "default": "Cats"
+    },
+    {
+      "type": "text",
+      "id": "dog_word",
+      "label": "Word for dog",
+      "default": "dog"
+    },
+    {
+      "type": "text",
+      "id": "cat_word",
+      "label": "Word for cat",
+      "default": "cat"
+    },
     {
       "type": "text",
       "id": "weeks_text",
@@ -693,10 +745,22 @@
       "id": "space_below",
       "label": "Space below",
       "options": [
-        { "value": "none", "label": "None" },
-        { "value": "small", "label": "Small" },
-        { "value": "medium", "label": "Medium" },
-        { "value": "large", "label": "Large" }
+        {
+          "value": "none",
+          "label": "None"
+        },
+        {
+          "value": "small",
+          "label": "Small"
+        },
+        {
+          "value": "medium",
+          "label": "Medium"
+        },
+        {
+          "value": "large",
+          "label": "Large"
+        }
       ],
       "default": "large"
     }
@@ -737,8 +801,14 @@
           "id": "species",
           "label": "Species",
           "options": [
-            { "value": "dog", "label": "Dog" },
-            { "value": "cat", "label": "Cat" }
+            {
+              "value": "dog",
+              "label": "Dog"
+            },
+            {
+              "value": "cat",
+              "label": "Cat"
+            }
           ],
           "default": "dog"
         },
@@ -774,9 +844,36 @@
     {
       "name": "Vettofit pets wall",
       "blocks": [
-        { "type": "story", "settings": { "pet_name": "Sample: Bruno", "species": "dog", "city": "Pune", "weeks": 6, "quote": "He now waits by his bowl for the pump. Replace this sample with a real story." } },
-        { "type": "story", "settings": { "pet_name": "Sample: Mishti", "species": "cat", "city": "Kolkata", "weeks": 4, "quote": "She licks the bowl clean. Replace this sample with a real story." } },
-        { "type": "story", "settings": { "pet_name": "Sample: Coco", "species": "dog", "city": "Bengaluru", "weeks": 8, "quote": "Two seconds at dinner. Replace this sample with a real story." } }
+        {
+          "type": "story",
+          "settings": {
+            "pet_name": "Sample: Bruno",
+            "species": "dog",
+            "city": "Pune",
+            "weeks": 6,
+            "quote": "He now waits by his bowl for the pump. Replace this sample with a real story."
+          }
+        },
+        {
+          "type": "story",
+          "settings": {
+            "pet_name": "Sample: Mishti",
+            "species": "cat",
+            "city": "Kolkata",
+            "weeks": 4,
+            "quote": "She licks the bowl clean. Replace this sample with a real story."
+          }
+        },
+        {
+          "type": "story",
+          "settings": {
+            "pet_name": "Sample: Coco",
+            "species": "dog",
+            "city": "Bengaluru",
+            "weeks": 8,
+            "quote": "Two seconds at dinner. Replace this sample with a real story."
+          }
+        }
       ]
     }
   ]

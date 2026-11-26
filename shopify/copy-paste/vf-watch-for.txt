@@ -1,0 +1,603 @@
+{%- comment -%}
+  Vettofit "What to watch for" — sections/vf-watch-for.liquid
+  Built from "Vettofit Landing Page — Shopify Section Technical Guide", section 5 (What to watch for)
+  and the Landing Page Guidelines, moment 7.
+
+  Desktop: coat close-up photo in columns 1–5, checklist + vet line + reminder in columns 7–12.
+  Mobile:  photo first, then the checklist as a short card.
+
+  Data (approved wording only):
+  - Checklist: product metafield vf.watch_for (rich text). If empty, the "Sign to watch" blocks
+    in this section are used instead (observations only, no results or timelines).
+  - Vet line: product metafield vf.safety_notes. If empty, a fixed safe sentence is used.
+    The vet line has NO off switch.
+  - Reminder timing: product metafield vf.result_window (number of weeks). Never typed here.
+    If it's missing, no timing is mentioned.
+  - Dog / Cat: if a cat product is set (or the dog product's vf.sibling_product), the checklist
+    and vet line follow the page's Dog / Cat switch.
+
+  Reminder: Shopify customer form (email) tagged "vf-coat-check" (+ species, + weeks), and/or a
+  WhatsApp link, and/or your marketing app's block (@app).
+{%- endcomment -%}
+
+{%- liquid
+  assign ss = section.settings
+  assign dog_product = ss.product
+  assign cat_product = ss.cat_product
+  if cat_product == blank and dog_product != blank
+    assign cat_product = dog_product.metafields.vf.sibling_product.value
+  endif
+  assign has_cat = false
+  if cat_product != blank and dog_product != blank and cat_product.id != dog_product.id
+    assign has_cat = true
+  endif
+
+  assign fallback_items = section.blocks | where: 'type', 'check_item'
+  assign vet_fallback = ss.vet_fallback | default: 'If anything gets worse, or you are unsure, talk to your vet.'
+  assign wa_number = ss.whatsapp_number | remove: '+' | remove: ' ' | remove: '-' | remove: '(' | remove: ')'
+  assign form_id = 'vf-watch-form-' | append: section.id
+  assign heading_id = 'vf-watch-h-' | append: section.id
+
+  assign weeks = dog_product.metafields.vf.result_window.value | default: 0 | plus: 0
+-%}
+
+{%- comment -%} One checklist + vet line per species (dog always; cat when set) {%- endcomment -%}
+{%- capture lists -%}
+  {%- for n in (1..2) -%}
+    {%- liquid
+      if n == 1
+        assign p = dog_product
+        assign sp = 'dog'
+      else
+        if has_cat == false
+          break
+        endif
+        assign p = cat_product
+        assign sp = 'cat'
+      endif
+      assign watch = p.metafields.vf.watch_for
+      assign safety = p.metafields.vf.safety_notes
+    -%}
+    <div class="vf-watch__species" data-species="{{ sp }}"{% if n == 2 %} hidden{% endif %}>
+      {%- if watch != blank -%}
+        <div class="vf-watch__list vf-watch__list--rich">{{ watch | metafield_tag }}</div>
+      {%- else -%}
+        {%- if fallback_items.size > 0 -%}
+          <ol class="vf-watch__list" role="list">
+            {%- for b in fallback_items -%}
+              {%- if b.settings.for == 'all' or b.settings.for == sp -%}
+                <li {{ b.shopify_attributes }}>
+                  <span class="vf-watch__item-title">{{ b.settings.title }}</span>
+                  {%- if b.settings.text != blank -%}<span class="vf-watch__item-text">{{ b.settings.text }}</span>{%- endif -%}
+                </li>
+              {%- endif -%}
+            {%- endfor -%}
+          </ol>
+        {%- endif -%}
+        {%- if request.design_mode -%}
+          <p class="vf-watch__note">Showing the "Sign to watch" blocks because this product's "watch_for" metafield is empty. Once your brand manager adds approved wording there, it replaces these automatically. (Only you see this note.)</p>
+        {%- endif -%}
+      {%- endif -%}
+
+      <div class="vf-watch__vet" role="note">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16.5" x2="12" y2="16.51"/></svg>
+        <div class="vf-watch__vet-text">
+          {%- if safety != blank -%}{{ safety | metafield_tag }}{%- else -%}<p>{{ vet_fallback }}</p>{%- endif -%}
+        </div>
+      </div>
+    </div>
+  {%- endfor -%}
+{%- endcapture -%}
+
+<vf-watch-for
+  id="vf-watch-{{ section.id }}"
+  class="vf-watch vf-scheme--{{ ss.color_scheme }}{% if ss.photo_side == 'right' %} vf-watch--flip{% endif %} vf-space-below--{{ ss.space_below }}"
+  data-has-cat="{{ has_cat }}"
+>
+  <section class="vf-watch__inner" aria-labelledby="{{ heading_id }}">
+
+    <div class="vf-watch__media">
+      {%- if ss.image != blank -%}
+        {%- assign alt = ss.image.alt | default: ss.heading | escape -%}
+        {%- if ss.image_mobile != blank -%}
+          <picture>
+            <source media="(max-width: 749px)" srcset="{{ ss.image_mobile | image_url: width: 430 }} 430w, {{ ss.image_mobile | image_url: width: 860 }} 860w" sizes="100vw">
+            {{ ss.image | image_url: width: 1400 | image_tag: widths: '600, 900, 1100, 1400', sizes: '(min-width: 750px) 42vw, 100vw', loading: 'lazy', class: 'vf-watch__img', alt: alt }}
+          </picture>
+        {%- else -%}
+          {{ ss.image | image_url: width: 1400 | image_tag: widths: '430, 600, 860, 1100, 1400', sizes: '(min-width: 750px) 42vw, 100vw', loading: 'lazy', class: 'vf-watch__img', alt: alt }}
+        {%- endif -%}
+      {%- else -%}
+        {{ 'image' | placeholder_svg_tag: 'vf-watch__img vf-watch__ph' }}
+      {%- endif -%}
+    </div>
+
+    <div class="vf-watch__content">
+      <h2 class="vf-watch__heading" id="{{ heading_id }}">{{ ss.heading }}</h2>
+      <span class="vf-watch__signal" aria-hidden="true"></span>
+      {%- if ss.intro != blank -%}<p class="vf-watch__intro">{{ ss.intro }}</p>{%- endif -%}
+
+      {%- if dog_product != blank -%}
+        {{ lists }}
+      {%- else -%}
+        {%- comment -%} No product picked yet: still show the fallback list and the vet line {%- endcomment -%}
+        <div class="vf-watch__species" data-species="dog">
+          {%- if fallback_items.size > 0 -%}
+            <ol class="vf-watch__list" role="list">
+              {%- for b in fallback_items -%}
+                <li {{ b.shopify_attributes }}>
+                  <span class="vf-watch__item-title">{{ b.settings.title }}</span>
+                  {%- if b.settings.text != blank -%}<span class="vf-watch__item-text">{{ b.settings.text }}</span>{%- endif -%}
+                </li>
+              {%- endfor -%}
+            </ol>
+          {%- endif -%}
+          <div class="vf-watch__vet" role="note">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16.5" x2="12" y2="16.51"/></svg>
+            <div class="vf-watch__vet-text"><p>{{ vet_fallback }}</p></div>
+          </div>
+          {%- if request.design_mode -%}
+            <p class="vf-watch__note">Pick a product under "Product" so the checklist and vet line can come from its approved data. (Only you see this note.)</p>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+
+      {%- comment -%} ---------- Reminder ---------- {%- endcomment -%}
+      {%- if ss.show_reminder -%}
+        <div class="vf-watch__remind" id="{{ form_id }}-wrap">
+          <p class="vf-watch__remind-title">{{ ss.reminder_title }}</p>
+          {%- if ss.reminder_intro != blank -%}<p class="vf-watch__remind-intro">{{ ss.reminder_intro }}</p>{%- endif -%}
+          {%- if weeks > 0 and ss.timing_text != blank -%}
+            <p class="vf-watch__remind-intro">{{ ss.timing_text | replace: '[weeks]', weeks }}</p>
+          {%- endif -%}
+
+          {%- form 'customer', id: form_id, class: 'vf-watch__form' -%}
+            {%- if form.posted_successfully? -%}
+              <p class="vf-watch__done" role="status" tabindex="-1">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="5 12.5 10 17 19 7"/></svg>
+                {{ ss.success_text }}
+              </p>
+            {%- else -%}
+              <input type="hidden" name="contact[tags]" value="vf-coat-check,newsletter{% if weeks > 0 %},vf-remind-{{ weeks }}w{% endif %}" data-tags>
+              <div class="vf-watch__field">
+                <label class="vf-vh" for="{{ form_id }}-email">{{ ss.email_placeholder }}</label>
+                <input
+                  id="{{ form_id }}-email"
+                  type="email"
+                  name="contact[email]"
+                  autocomplete="email"
+                  inputmode="email"
+                  placeholder="{{ ss.email_placeholder | escape }}"
+                  required
+                  {% if form.errors %}aria-invalid="true" aria-describedby="{{ form_id }}-error"{% endif %}
+                >
+                <button type="submit" class="vf-watch__btn">{{ ss.button_label }}</button>
+              </div>
+              {%- if form.errors -%}
+                <div class="vf-watch__error" id="{{ form_id }}-error" role="alert">{{ form.errors | default_errors }}</div>
+              {%- endif -%}
+              {%- if ss.consent_text != blank -%}<p class="vf-watch__consent">{{ ss.consent_text }}</p>{%- endif -%}
+            {%- endif -%}
+          {%- endform -%}
+
+          {%- if wa_number != blank and ss.whatsapp_label != blank -%}
+            <a class="vf-watch__wa" href="https://wa.me/{{ wa_number }}?text={{ ss.whatsapp_message | url_encode }}" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5a8 8 0 0 1-11.8 7L4 20l1.5-4.1A8 8 0 1 1 20 11.5z"/></svg>
+              <span>{{ ss.whatsapp_label }}</span>
+            </a>
+          {%- endif -%}
+
+          {%- for block in section.blocks -%}
+            {%- if block.type == '@app' -%}
+              <div class="vf-watch__app" {{ block.shopify_attributes }}>{% render block %}</div>
+            {%- endif -%}
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+    </div>
+  </section>
+</vf-watch-for>
+
+{%- capture s -%}#vf-watch-{{ section.id }}{%- endcapture -%}
+{% style %}
+  {{ s }}.vf-scheme--white  { --w-bg: var(--vf-white, #FFFFFF); --w-soft: var(--vf-chalk, #F7F5EF); --w-fg: var(--vf-carbon, #111111); --w-muted: rgba(17,17,17,.66); --w-line: rgba(17,17,17,.14); --w-field: #FFFFFF; --w-btn-bg: var(--vf-carbon, #111111); --w-btn-fg: #FFFFFF; }
+  {{ s }}.vf-scheme--chalk  { --w-bg: var(--vf-chalk, #F7F5EF); --w-soft: var(--vf-white, #FFFFFF); --w-fg: var(--vf-carbon, #111111); --w-muted: rgba(17,17,17,.66); --w-line: rgba(17,17,17,.14); --w-field: #FFFFFF; --w-btn-bg: var(--vf-carbon, #111111); --w-btn-fg: #FFFFFF; }
+  {{ s }}.vf-scheme--plum   { --w-bg: var(--vf-plum, #2B1B3A); --w-soft: rgba(255,255,255,.07); --w-fg: #FFFFFF; --w-muted: rgba(255,255,255,.76); --w-line: rgba(255,255,255,.2); --w-field: rgba(255,255,255,.08); --w-btn-bg: var(--vf-chalk, #F7F5EF); --w-btn-fg: var(--vf-carbon, #111111); }
+  {{ s }}.vf-scheme--carbon { --w-bg: var(--vf-carbon, #111111); --w-soft: rgba(255,255,255,.07); --w-fg: var(--vf-chalk, #F7F5EF); --w-muted: rgba(247,245,239,.74); --w-line: rgba(247,245,239,.18); --w-field: rgba(255,255,255,.08); --w-btn-bg: var(--vf-teal, #09D1C7); --w-btn-fg: var(--vf-carbon, #111111); }
+
+  {{ s }} {
+    --w-signal: var(--vf-teal, #09D1C7);
+    --w-gutter: 16px;
+    --w-font: var(--vf-font-body, "Inter", var(--font-body-family, system-ui, -apple-system, "Segoe UI", sans-serif));
+    --w-font-display: var(--vf-font-display, "Inter Display", "Inter", var(--font-heading-family, system-ui, sans-serif));
+    display: block;
+    background: var(--w-bg);
+    color: var(--w-fg);
+    font-family: var(--w-font);
+    letter-spacing: 0;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: clip;
+  }
+  {{ s }} *, {{ s }} *::before, {{ s }} *::after { box-sizing: border-box; }
+  {{ s }} h2, {{ s }} p, {{ s }} ol, {{ s }} ul, {{ s }} li { margin: 0; padding: 0; letter-spacing: 0; text-transform: none; list-style: none; }
+  {{ s }} li::marker { content: none; }
+  {{ s }} [hidden] { display: none !important; }
+  {{ s }}.vf-space-below--none   { padding-bottom: 0; }
+  {{ s }}.vf-space-below--small  { padding-bottom: 24px; }
+  {{ s }}.vf-space-below--medium { padding-bottom: 48px; }
+  {{ s }}.vf-space-below--large  { padding-bottom: 80px; }
+
+  {{ s }} .vf-watch__inner { max-width: 1440px; margin: 0 auto; padding: 56px var(--w-gutter) 8px; display: flex; flex-direction: column; gap: 28px; }
+
+  /* Photo */
+  {{ s }} .vf-watch__media { border-radius: 24px; overflow: hidden; background: var(--w-soft); aspect-ratio: 4 / 5; }
+  {{ s }} .vf-watch__media picture { display: block; width: 100%; height: 100%; }
+  {{ s }} .vf-watch__img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  {{ s }} .vf-watch__ph { fill: var(--w-muted); }
+
+  /* Copy */
+  {{ s }} .vf-watch__heading { font-family: var(--w-font-display); font-weight: 700; font-size: 32px; line-height: 1.05; letter-spacing: -0.02em; color: var(--w-fg); text-wrap: balance; }
+  {{ s }} .vf-watch__signal { display: block; width: 48px; height: 2px; margin-top: 16px; border-radius: 2px; background: var(--w-signal); }
+  {{ s }} .vf-watch__intro { margin-top: 14px; max-width: 44ch; font-size: 17px; line-height: 1.5; color: var(--w-muted); }
+
+  /* Checklist: calm, numbered, each point underlined by the Signal Line */
+  {{ s }} .vf-watch__species { margin-top: 24px; }
+  {{ s }} .vf-watch__list { counter-reset: vfw; display: grid; }
+  {{ s }} .vf-watch__list li,
+  {{ s }} .vf-watch__list--rich li,
+  {{ s }} .vf-watch__list--rich p {
+    counter-increment: vfw;
+    position: relative;
+    display: flex; flex-direction: column; gap: 4px;
+    padding: 16px 0 16px 48px;
+    border-bottom: 1px solid var(--w-line);
+    font-size: 17px; line-height: 1.45; color: var(--w-fg);
+  }
+  {{ s }} .vf-watch__list--rich ul, {{ s }} .vf-watch__list--rich ol { display: grid; counter-reset: vfw; }
+  {{ s }} .vf-watch__list li::before,
+  {{ s }} .vf-watch__list--rich li::before,
+  {{ s }} .vf-watch__list--rich p::before {
+    content: counter(vfw, decimal-leading-zero);
+    position: absolute; left: 0; top: 17px;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: var(--w-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  {{ s }} .vf-watch__list li::after,
+  {{ s }} .vf-watch__list--rich li::after,
+  {{ s }} .vf-watch__list--rich p::after {
+    content: ""; position: absolute; left: 0; top: 38px; width: 20px; height: 2px; border-radius: 2px; background: var(--w-signal);
+  }
+  {{ s }} .vf-watch__item-title { font-weight: 600; }
+  {{ s }} .vf-watch__item-text { font-size: 15px; color: var(--w-muted); }
+
+  /* Vet line (always shown) */
+  {{ s }} .vf-watch__vet { display: flex; gap: 12px; align-items: flex-start; margin-top: 20px; padding: 16px 18px; border-radius: 14px; background: var(--w-soft); }
+  {{ s }} .vf-watch__vet svg { flex: 0 0 22px; width: 22px; height: 22px; fill: none; stroke: var(--w-fg); stroke-width: 1.75; stroke-linecap: round; margin-top: 1px; }
+  {{ s }} .vf-watch__vet-text, {{ s }} .vf-watch__vet-text p { font-size: 15px; line-height: 1.5; font-weight: 500; color: var(--w-fg); }
+
+  /* Reminder */
+  {{ s }} .vf-watch__remind { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--w-line); display: grid; gap: 10px; }
+  {{ s }} .vf-watch__remind-title { font-family: var(--w-font-display); font-size: 20px; font-weight: 700; color: var(--w-fg); }
+  {{ s }} .vf-watch__remind-intro { font-size: 15px; line-height: 1.5; color: var(--w-muted); }
+  {{ s }} .vf-watch__form { margin: 4px 0 0; }
+  {{ s }} .vf-watch__field { display: flex; flex-direction: column; gap: 10px; }
+  {{ s }} .vf-watch__field input {
+    width: 100%; min-height: 52px; padding: 0 16px;
+    border: 1px solid var(--w-line); border-radius: 14px; background: var(--w-field); color: var(--w-fg);
+    font: inherit; font-size: 16px; -webkit-appearance: none; appearance: none;
+  }
+  {{ s }} .vf-watch__field input::placeholder { color: var(--w-muted); }
+  {{ s }} .vf-watch__field input[aria-invalid="true"] { border-color: #B42318; }
+  {{ s }} .vf-watch__btn {
+    min-height: 52px; padding: 0 24px; border: 0; border-radius: 14px;
+    background: var(--w-btn-bg); color: var(--w-btn-fg);
+    font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; white-space: nowrap;
+    transition: transform 180ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  @media (hover: hover) { {{ s }} .vf-watch__btn:hover { transform: translateY(-1px); } }
+  {{ s }} .vf-watch__consent { margin-top: 8px; font-size: 12px; line-height: 1.45; color: var(--w-muted); }
+  {{ s }} .vf-watch__error { margin-top: 8px; font-size: 14px; color: #B42318; }
+  {{ s }}.vf-scheme--plum .vf-watch__error, {{ s }}.vf-scheme--carbon .vf-watch__error { color: #FFB4A8; }
+  {{ s }} .vf-watch__done { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-radius: 14px; background: var(--w-soft); font-size: 15px; font-weight: 600; color: var(--w-fg); }
+  {{ s }} .vf-watch__done svg { width: 22px; height: 22px; flex-shrink: 0; fill: none; stroke: var(--w-fg); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; padding: 3px; border-radius: 999px; background: var(--w-signal); }
+  {{ s }} .vf-watch__wa { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; align-self: start; font-size: 15px; font-weight: 600; color: var(--w-fg); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+  {{ s }} .vf-watch__wa svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linejoin: round; }
+  {{ s }} .vf-watch__app { margin-top: 8px; }
+
+  {{ s }} a:focus-visible, {{ s }} button:focus-visible, {{ s }} input:focus-visible { outline: 2px solid var(--w-fg); outline-offset: 2px; }
+  {{ s }} .vf-vh { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  {{ s }} .vf-watch__note { margin-top: 12px; padding: 8px 12px; background: #FFF4B8; color: #111111; font-size: 13px; line-height: 1.4; border-radius: 10px; }
+
+  /* ---------- Desktop: photo columns 1–5, content columns 7–12 ---------- */
+  @media (min-width: 750px) {
+    {{ s }} { --w-gutter: clamp(24px, 4vw, 64px); }
+    {{ s }} .vf-watch__inner { padding-top: 88px; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: clamp(24px, 2.2vw, 32px); align-items: center; }
+    {{ s }} .vf-watch__media { grid-column: 1 / span 5; grid-row: 1; }
+    {{ s }} .vf-watch__content { grid-column: 7 / span 6; grid-row: 1; }
+    {{ s }}.vf-watch--flip .vf-watch__media { grid-column: 8 / span 5; }
+    {{ s }}.vf-watch--flip .vf-watch__content { grid-column: 1 / span 6; }
+    {{ s }} .vf-watch__heading { font-size: clamp(36px, 2.2vw + 16px, 48px); }
+    {{ s }} .vf-watch__field { flex-direction: row; }
+    {{ s }} .vf-watch__field input { flex: 1 1 auto; }
+  }
+{% endstyle %}
+
+<script>
+  (function () {
+    if (customElements.get('vf-watch-for')) return;
+
+    class VfWatchFor extends HTMLElement {
+      connectedCallback() {
+        var self = this;
+        this.lists = Array.prototype.slice.call(this.querySelectorAll('.vf-watch__species[data-species]'));
+        this.tags = this.querySelector('[data-tags]');
+
+        /* Follow the page's Dog / Cat switch */
+        this.onSpecies = function (e) { var d = (e && e.detail) || {}; self.apply(d.species || d.pet || d.value); };
+        document.addEventListener('vf:species-change', this.onSpecies);
+        var s = null;
+        try { s = new URLSearchParams(window.location.search).get('pet'); } catch (e) {}
+        if (s !== 'dog' && s !== 'cat') { try { s = localStorage.getItem('vf_pet'); } catch (e) {} }
+        this.apply(s === 'cat' ? 'cat' : 'dog');
+
+        /* After a successful sign-up, move focus to the confirmation */
+        var done = this.querySelector('.vf-watch__done');
+        if (done) { done.scrollIntoView({ block: 'center' }); done.focus({ preventScroll: true }); }
+      }
+
+      disconnectedCallback() {
+        document.removeEventListener('vf:species-change', this.onSpecies);
+      }
+
+      apply(species) {
+        if (species !== 'dog' && species !== 'cat') return;
+        var hasCat = this.dataset.hasCat === 'true';
+        var want = hasCat ? species : 'dog';
+        this.lists.forEach(function (l) { l.hidden = l.dataset.species !== want; });
+        /* Tag the reminder with the species so the right email goes out */
+        if (this.tags) {
+          var t = this.tags.value.split(',').filter(function (x) { return x && x !== 'dog' && x !== 'cat'; });
+          t.push(species);
+          this.tags.value = t.join(',');
+        }
+      }
+    }
+
+    customElements.define('vf-watch-for', VfWatchFor);
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Vettofit what to watch for",
+  "tag": "div",
+  "class": "vf-watch-section",
+  "enabled_on": {
+    "templates": ["page", "index", "product", "collection"]
+  },
+  "max_blocks": 7,
+  "settings": [
+    {
+      "type": "select",
+      "id": "color_scheme",
+      "label": "Colour scheme",
+      "info": "Brand colours only. White is the default for this section.",
+      "options": [
+        { "value": "white", "label": "White" },
+        { "value": "chalk", "label": "Chalk" },
+        { "value": "plum", "label": "Night Plum" },
+        { "value": "carbon", "label": "Carbon" }
+      ],
+      "default": "white"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Notice the small things."
+    },
+    {
+      "type": "text",
+      "id": "intro",
+      "label": "Short intro",
+      "info": "Optional. Observations only: no results or timelines.",
+      "default": "Coat feel, scratching, how they take it."
+    },
+    {
+      "type": "header",
+      "content": "Photo"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Photo",
+      "info": "A close-up of coat or skin works best, e.g. a hand running through fur. 4:5."
+    },
+    {
+      "type": "image_picker",
+      "id": "image_mobile",
+      "label": "Mobile photo (optional)",
+      "info": "Use if the desktop crop doesn't work on a phone. 4:5."
+    },
+    {
+      "type": "select",
+      "id": "photo_side",
+      "label": "Photo side on desktop",
+      "options": [
+        { "value": "left", "label": "Left" },
+        { "value": "right", "label": "Right" }
+      ],
+      "default": "left"
+    },
+    {
+      "type": "header",
+      "content": "Checklist and vet line"
+    },
+    {
+      "type": "product",
+      "id": "product",
+      "label": "Product",
+      "info": "The checklist and the vet line come from this product's approved data (watch_for and safety_notes)."
+    },
+    {
+      "type": "product",
+      "id": "cat_product",
+      "label": "Cat product (optional)",
+      "info": "Lets the checklist follow the Dog / Cat switch. Leave empty to use the product's linked cat version, if any."
+    },
+    {
+      "type": "text",
+      "id": "vet_fallback",
+      "label": "Vet line (used only if the product has no safety notes)",
+      "info": "This line always shows. It can't be switched off.",
+      "default": "If anything gets worse, or you are unsure, talk to your vet."
+    },
+    {
+      "type": "header",
+      "content": "Reminder"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_reminder",
+      "label": "Show reminder sign-up",
+      "info": "Lets shoppers ask for a 'time to check' reminder. Sign-ups are saved as customers tagged vf-coat-check.",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "reminder_title",
+      "label": "Reminder heading",
+      "default": "Want a nudge to check?",
+      "visible_if": "{{ section.settings.show_reminder }}"
+    },
+    {
+      "type": "text",
+      "id": "reminder_intro",
+      "label": "Reminder line",
+      "default": "We'll send one gentle reminder to look again. Nothing else.",
+      "visible_if": "{{ section.settings.show_reminder }}"
+    },
+    {
+      "type": "text",
+      "id": "timing_text",
+      "label": "Timing line",
+      "info": "Shown only if the product has an approved result window. Keep [weeks].",
+      "default": "Your reminder comes in about [weeks] weeks.",
+      "visible_if": "{{ section.settings.show_reminder }}"
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Reminder button text",
+      "default": "Remind me to check",
+      "visible_if": "{{ section.settings.show_reminder }}"
+    },
+    {
+      "type": "text",
+      "id": "email_placeholder",
+      "label": "Email box hint",
+      "default": "Your email",
+      "visible_if": "{{ section.settings.show_reminder }}"
+    },
+    {
+      "type": "text",
+      "id": "consent_text",
+      "label": "Small print under the form",
+      "default": "By signing up you agree to get emails from Vettofit. Unsubscribe anytime.",
+      "visible_if": "{{ section.settings.show_reminder }}"
+    },
+    {
+      "type": "text",
+      "id": "success_text",
+      "label": "Thank-you message",
+      "default": "Done. We'll remind you when it's time to check.",
+      "visible_if": "{{ section.settings.show_reminder }}"
+    },
+    {
+      "type": "text",
+      "id": "whatsapp_number",
+      "label": "WhatsApp number (optional)",
+      "info": "With country code, e.g. 91 98765 43210. Adds a \"Remind me on WhatsApp\" link.",
+      "visible_if": "{{ section.settings.show_reminder }}"
+    },
+    {
+      "type": "text",
+      "id": "whatsapp_label",
+      "label": "WhatsApp link text",
+      "default": "Or remind me on WhatsApp",
+      "visible_if": "{{ section.settings.show_reminder }}"
+    },
+    {
+      "type": "text",
+      "id": "whatsapp_message",
+      "label": "WhatsApp first message",
+      "default": "Hi Vettofit, please remind me to check my pet's coat.",
+      "visible_if": "{{ section.settings.show_reminder }}"
+    },
+    {
+      "type": "header",
+      "content": "Spacing"
+    },
+    {
+      "type": "select",
+      "id": "space_below",
+      "label": "Space below",
+      "options": [
+        { "value": "none", "label": "None" },
+        { "value": "small", "label": "Small" },
+        { "value": "medium", "label": "Medium" },
+        { "value": "large", "label": "Large" }
+      ],
+      "default": "large"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "check_item",
+      "name": "Sign to watch",
+      "limit": 6,
+      "settings": [
+        {
+          "type": "paragraph",
+          "content": "Used only until the product's approved \"watch_for\" list is filled in. Describe what to notice, never a result or a timeline."
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "What to notice",
+          "default": "Coat feel when you brush"
+        },
+        {
+          "type": "text",
+          "id": "text",
+          "label": "Short detail (optional)"
+        },
+        {
+          "type": "select",
+          "id": "for",
+          "label": "Show for",
+          "options": [
+            { "value": "all", "label": "Dogs and cats" },
+            { "value": "dog", "label": "Dogs only" },
+            { "value": "cat", "label": "Cats only" }
+          ],
+          "default": "all"
+        }
+      ]
+    },
+    {
+      "type": "@app"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Vettofit what to watch for",
+      "blocks": [
+        { "type": "check_item", "settings": { "title": "Coat feel when you brush", "text": "Softer, smoother, or no change. Just notice." } },
+        { "type": "check_item", "settings": { "title": "How often they scratch or lick", "text": "A rough sense is enough. More, less or the same." } },
+        { "type": "check_item", "settings": { "title": "How they take it at dinner", "text": "Do they eat the bowl as usual after the pump?" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

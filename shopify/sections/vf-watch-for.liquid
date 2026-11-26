@@ -13,7 +13,7 @@
     The vet line has NO off switch.
   - Reminder timing: product metafield vf.result_window (number of weeks). Never typed here.
     If it's missing, no timing is mentioned.
-  - Dog / Cat: if a cat product is set (or the dog product's vf.sibling_product), the checklist
+  - Dog / Cat: if a "Cat version" block is added (or the dog product has vf.sibling_product), the checklist
     and vet line follow the page's Dog / Cat switch.
 
   Reminder: Shopify customer form (email) tagged "vf-coat-check" (+ species, + weeks), and/or a
@@ -23,7 +23,8 @@
 {%- liquid
   assign ss = section.settings
   assign dog_product = ss.product
-  assign cat_product = ss.cat_product
+  assign cat_block = section.blocks | where: 'type', 'cat_product' | first
+  assign cat_product = cat_block.settings.product
   if cat_product == blank and dog_product != blank
     assign cat_product = dog_product.metafields.vf.sibling_product.value
   endif
@@ -373,9 +374,14 @@
   "tag": "div",
   "class": "vf-watch-section",
   "enabled_on": {
-    "templates": ["page", "index", "product", "collection"]
+    "templates": [
+      "page",
+      "index",
+      "product",
+      "collection"
+    ]
   },
-  "max_blocks": 7,
+  "max_blocks": 8,
   "settings": [
     {
       "type": "select",
@@ -383,10 +389,22 @@
       "label": "Colour scheme",
       "info": "Brand colours only. White is the default for this section.",
       "options": [
-        { "value": "white", "label": "White" },
-        { "value": "chalk", "label": "Chalk" },
-        { "value": "plum", "label": "Night Plum" },
-        { "value": "carbon", "label": "Carbon" }
+        {
+          "value": "white",
+          "label": "White"
+        },
+        {
+          "value": "chalk",
+          "label": "Chalk"
+        },
+        {
+          "value": "plum",
+          "label": "Night Plum"
+        },
+        {
+          "value": "carbon",
+          "label": "Carbon"
+        }
       ],
       "default": "white"
     },
@@ -424,8 +442,14 @@
       "id": "photo_side",
       "label": "Photo side on desktop",
       "options": [
-        { "value": "left", "label": "Left" },
-        { "value": "right", "label": "Right" }
+        {
+          "value": "left",
+          "label": "Left"
+        },
+        {
+          "value": "right",
+          "label": "Right"
+        }
       ],
       "default": "left"
     },
@@ -437,13 +461,7 @@
       "type": "product",
       "id": "product",
       "label": "Product",
-      "info": "The checklist and the vet line come from this product's approved data (watch_for and safety_notes)."
-    },
-    {
-      "type": "product",
-      "id": "cat_product",
-      "label": "Cat product (optional)",
-      "info": "Lets the checklist follow the Dog / Cat switch. Leave empty to use the product's linked cat version, if any."
+      "info": "Pick the dog product. The checklist and vet line come from its approved data. For cats, add a \"Cat version\" block."
     },
     {
       "type": "text",
@@ -543,10 +561,22 @@
       "id": "space_below",
       "label": "Space below",
       "options": [
-        { "value": "none", "label": "None" },
-        { "value": "small", "label": "Small" },
-        { "value": "medium", "label": "Medium" },
-        { "value": "large", "label": "Large" }
+        {
+          "value": "none",
+          "label": "None"
+        },
+        {
+          "value": "small",
+          "label": "Small"
+        },
+        {
+          "value": "medium",
+          "label": "Medium"
+        },
+        {
+          "value": "large",
+          "label": "Large"
+        }
       ],
       "default": "large"
     }
@@ -577,11 +607,33 @@
           "id": "for",
           "label": "Show for",
           "options": [
-            { "value": "all", "label": "Dogs and cats" },
-            { "value": "dog", "label": "Dogs only" },
-            { "value": "cat", "label": "Cats only" }
+            {
+              "value": "all",
+              "label": "Dogs and cats"
+            },
+            {
+              "value": "dog",
+              "label": "Dogs only"
+            },
+            {
+              "value": "cat",
+              "label": "Cats only"
+            }
           ],
           "default": "all"
+        }
+      ]
+    },
+    {
+      "type": "cat_product",
+      "name": "Cat version",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "product",
+          "id": "product",
+          "label": "Cat product",
+          "info": "Lets the checklist and vet line follow the page's Dog / Cat switch. Not needed if the dog product already links its cat version."
         }
       ]
     },
@@ -593,9 +645,27 @@
     {
       "name": "Vettofit watch for",
       "blocks": [
-        { "type": "check_item", "settings": { "title": "Coat feel when you brush", "text": "Softer, smoother, or no change. Just notice." } },
-        { "type": "check_item", "settings": { "title": "How often they scratch or lick", "text": "A rough sense is enough. More, less or the same." } },
-        { "type": "check_item", "settings": { "title": "How they take it at dinner", "text": "Do they eat the bowl as usual after the pump?" } }
+        {
+          "type": "check_item",
+          "settings": {
+            "title": "Coat feel when you brush",
+            "text": "Softer, smoother, or no change. Just notice."
+          }
+        },
+        {
+          "type": "check_item",
+          "settings": {
+            "title": "How often they scratch or lick",
+            "text": "A rough sense is enough. More, less or the same."
+          }
+        },
+        {
+          "type": "check_item",
+          "settings": {
+            "title": "How they take it at dinner",
+            "text": "Do they eat the bowl as usual after the pump?"
+          }
+        }
       ]
     }
   ]

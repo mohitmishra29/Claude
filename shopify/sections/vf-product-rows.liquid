@@ -11,8 +11,8 @@
   Search & AI friendly:
   - Product + ItemList structured data (JSON-LD) with the REAL product name, price,
     availability, brand, SKU / barcode and rating (only when the rating is visible).
-  - A "Product facts" list (<dl>) with pack size, daily amount, days per bottle and cost per
-    day, so answer engines and AI assistants can quote clear facts.
+  - Pack size, daily amount and days per bottle are included in the structured data
+    (additionalProperty), so answer engines and AI assistants can quote clear facts.
   - Semantic headings (h2 → h3), descriptive links and image alt text.
   - "Name on this page" changes only the visible name. Search data keeps the real name.
 
@@ -237,6 +237,28 @@
             {%- if variant.sku != blank -%}"sku":{{ variant.sku | json }},{%- endif -%}
             {%- if variant.barcode != blank -%}"gtin":{{ variant.barcode | json }},{%- endif -%}
             {%- if product.type != blank -%}"category":{{ product.type | json }},{%- endif -%}
+            {%- liquid
+              assign ld_props = ''
+              if size0 != ''
+                assign size_json = size0 | json
+                assign ld_props = ld_props | append: '{"@type":"PropertyValue","name":"Pack size","value":' | append: size_json | append: '}'
+              endif
+              if pumps_int > 0
+                assign ld_daily = pumps_int | append: ' pump(s) per day for a ' | append: weight | append: ' kg ' | append: pet_word
+                if ld_props != ''
+                  assign ld_props = ld_props | append: ','
+                endif
+                assign daily_json = ld_daily | json
+                assign ld_props = ld_props | append: '{"@type":"PropertyValue","name":"Daily amount","value":' | append: daily_json | append: '}'
+              endif
+              if days0 > 0
+                if ld_props != ''
+                  assign ld_props = ld_props | append: ','
+                endif
+                assign ld_props = ld_props | append: '{"@type":"PropertyValue","name":"Days per bottle","value":' | append: days0 | append: '}'
+              endif
+            -%}
+            {%- if ld_props != '' -%}"additionalProperty":[{{ ld_props }}],{%- endif -%}
             {%- if show_stars -%}"aggregateRating":{"@type":"AggregateRating","ratingValue":{{ rating.rating | json }},"bestRating":{{ rating.scale_max | default: 5 | json }},"ratingCount":{{ rating_count | json }}},{%- endif -%}
             {%- if product.variants.size > 1 -%}
               "offers":{"@type":"AggregateOffer","priceCurrency":{{ cart.currency.iso_code | json }},"lowPrice":{{ product.price_min | money_without_currency | remove: ',' | json }},"highPrice":{{ product.price_max | money_without_currency | remove: ',' | json }},"offerCount":{{ product.variants.size }},"availability":"https://schema.org/{% if product.available %}InStock{% else %}OutOfStock{% endif %}"}
@@ -457,39 +479,6 @@
                 <p class="vf-buy__status" role="status" aria-live="polite" data-status></p>
                 {%- if ss.payment_note != blank -%}<p class="vf-buy__note">{{ ss.payment_note }}</p>{%- endif -%}
               </form>
-
-              {%- comment -%} ---------- Product facts: clear, quotable facts for shoppers, search and AI ---------- {%- endcomment -%}
-              {%- if ss.show_facts -%}
-                <details class="vf-facts"{% if ss.facts_open %} open{% endif %}>
-                  <summary>
-                    <span>{{ ss.facts_title }}</span>
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-                  </summary>
-                  <dl class="vf-facts__list">
-                    {%- if pet_plural != blank -%}
-                      <div><dt>{{ ss.facts_for }}</dt><dd>{{ pet_plural | capitalize }}</dd></div>
-                    {%- endif -%}
-                    <div data-fact-size-row{% if size0 == '' %} hidden{% endif %}><dt>{{ ss.facts_size }}</dt><dd data-fact-size>{{ size0 }}</dd></div>
-                    {%- if pumps_int > 0 -%}
-                      {%- liquid
-                        assign pump_word = ss.pump_word_many
-                        if pumps_int == 1
-                          assign pump_word = ss.pump_word_one
-                        endif
-                        assign pumps_text = pumps_int | append: ' ' | append: pump_word
-                      -%}
-                      <div><dt>{{ ss.facts_daily }}</dt><dd>{{ ss.facts_daily_value | replace: '[pumps]', pumps_text | replace: '[weight]', weight | replace: '[pet]', pet_word }}</dd></div>
-                    {%- endif -%}
-                    <div data-fact-days-row{% if days0 == 0 %} hidden{% endif %}><dt>{{ ss.facts_lasts }}</dt><dd>{{ ss.facts_lasts_value | replace: '[days]', '<span data-fact-days>DAYS</span>' | replace: 'DAYS', days0 }}</dd></div>
-                    <div data-fact-cost-row{% if per_day0 == '' %} hidden{% endif %}><dt>{{ ss.facts_cost }}</dt><dd data-fact-cost>{{ per_day0 }}</dd></div>
-                    <div><dt>{{ ss.facts_price }}</dt><dd data-fact-price>{{ variant.price | money }}</dd></div>
-                    {%- if ss.show_mrp -%}
-                      <div data-fact-mrp-row{% unless mrp0 > variant.price %} hidden{% endunless %}><dt>{{ ss.mrp_label }}</dt><dd data-fact-mrp>{{ mrp0 | money }}</dd></div>
-                    {%- endif -%}
-                  </dl>
-                  <a class="vf-facts__more" href="{{ product.url }}">{{ ss.details_link_label }}<span class="vf-vh">: {{ product.title }}</span> →</a>
-                </details>
-              {%- endif -%}
 
               {%- if ss.layout == 'slider' and real_count > 1 -%}
                 <div class="vf-arrows" role="group" aria-label="More products">
@@ -729,21 +718,6 @@
   {{ s }} .vf-buy__status.is-error { font-weight: 600; }
   {{ s }} .vf-buy__note { font-size: 13px; color: var(--p-muted); }
 
-  /* Product facts */
-  {{ s }} .vf-facts { width: 100%; max-width: 400px; border-top: 1px solid var(--p-line); text-align: left; }
-  {{ s }} .vf-facts summary {
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    min-height: 48px; cursor: pointer; list-style: none;
-    font-size: 14px; font-weight: 700; color: var(--p-fg);
-  }
-  {{ s }} .vf-facts summary::-webkit-details-marker { display: none; }
-  {{ s }} .vf-facts summary svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.75; transition: transform 200ms var(--r-ease); }
-  {{ s }} .vf-facts[open] summary svg { transform: rotate(180deg); }
-  {{ s }} .vf-facts__list { display: grid; padding-bottom: 8px; }
-  {{ s }} .vf-facts__list > div { display: flex; justify-content: space-between; gap: 16px; padding: 9px 0; border-top: 1px dashed var(--p-line); font-size: 14px; line-height: 1.35; }
-  {{ s }} .vf-facts__list dt { color: var(--p-muted); }
-  {{ s }} .vf-facts__list dd { color: var(--p-fg); font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
-  {{ s }} .vf-facts__more { display: inline-flex; min-height: 44px; align-items: center; font-size: 14px; font-weight: 700; color: var(--p-fg); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
 
   /* Slider arrows (joined pill) */
   {{ s }} .vf-arrows { display: none; align-items: center; margin-top: 8px; }
@@ -941,12 +915,9 @@
         var perDayLine = q('[data-perday-line]'), perDayEl = q('[data-per-day]');
         var atc = q('[data-atc]'), atcLabel = q('[data-atc-label]');
         var soldOutText = atc ? atc.dataset.soldOut : 'Sold out';
-        var fSizeRow = q('[data-fact-size-row]'), fSize = q('[data-fact-size]');
-        var fDaysRow = q('[data-fact-days-row]'), fDays = q('[data-fact-days]');
-        var fCostRow = q('[data-fact-cost-row]'), fCost = q('[data-fact-cost]'), fPrice = q('[data-fact-price]');
         var mrpLabel = q('[data-mrp-label]');
         var compareAmt = q('[data-compare-amount]'), offEl = q('[data-off]'), offPct = q('[data-off-pct]');
-        var fMrpRow = q('[data-fact-mrp-row]'), fMrp = q('[data-fact-mrp]');
+
 
         function findVariant(id) {
           if (!data) return null;
@@ -975,12 +946,8 @@
           /* Only call it "MRP" when it really is the MRP (compare-at price), never the regular price */
           if (mrpLabel) mrpLabel.hidden = !(v.compare > 0 && struck === v.compare);
           if (offEl) { offEl.hidden = !(pct > 0); if (offPct) offPct.textContent = pct; }
-          if (fMrpRow) { fMrpRow.hidden = !(v.compare > price); if (fMrp) fMrp.textContent = formatMoney(v.compare, self.moneyFormat); }
+
           if (perDayLine) { perDayLine.hidden = !perDay; if (perDay && perDayEl) perDayEl.textContent = perDay; }
-          if (fPrice) fPrice.textContent = priceText;
-          if (fSizeRow) { fSizeRow.hidden = !v.size; if (fSize) fSize.textContent = v.size; }
-          if (fDaysRow) { fDaysRow.hidden = !(v.days > 0); if (fDays) fDays.textContent = v.days; }
-          if (fCostRow) { fCostRow.hidden = !perDay; if (fCost) fCost.textContent = perDay; }
           if (atc) {
             atc.disabled = !v.available;
             if (atcLabel) atcLabel.textContent = v.available ? self.atcLabel : soldOutText;
@@ -1084,19 +1051,33 @@
   "tag": "div",
   "class": "vf-rows-section",
   "enabled_on": {
-    "templates": ["page", "index", "product", "collection"]
+    "templates": [
+      "page",
+      "index",
+      "product",
+      "collection"
+    ]
   },
   "max_blocks": 4,
   "settings": [
-    { "type": "header", "content": "Look" },
+    {
+      "type": "header",
+      "content": "Look"
+    },
     {
       "type": "select",
       "id": "layout",
       "label": "Layout",
       "info": "Rows stack the products one under another. Slider shows one at a time with arrows. Phones always swipe.",
       "options": [
-        { "value": "rows", "label": "Rows" },
-        { "value": "slider", "label": "Slider with arrows" }
+        {
+          "value": "rows",
+          "label": "Rows"
+        },
+        {
+          "value": "slider",
+          "label": "Slider with arrows"
+        }
       ],
       "default": "rows"
     },
@@ -1105,8 +1086,14 @@
       "id": "width",
       "label": "Width",
       "options": [
-        { "value": "full", "label": "Edge to edge" },
-        { "value": "page", "label": "Page width (rounded cards)" }
+        {
+          "value": "full",
+          "label": "Edge to edge"
+        },
+        {
+          "value": "page",
+          "label": "Page width (rounded cards)"
+        }
       ],
       "default": "full"
     },
@@ -1115,8 +1102,14 @@
       "id": "row_style",
       "label": "Row style",
       "options": [
-        { "value": "alternate", "label": "Alternate left / right" },
-        { "value": "left", "label": "Colour panel always left" }
+        {
+          "value": "alternate",
+          "label": "Alternate left / right"
+        },
+        {
+          "value": "left",
+          "label": "Colour panel always left"
+        }
       ],
       "default": "alternate"
     },
@@ -1125,8 +1118,14 @@
       "id": "text_align",
       "label": "Text alignment",
       "options": [
-        { "value": "center", "label": "Centre" },
-        { "value": "left", "label": "Left" }
+        {
+          "value": "center",
+          "label": "Centre"
+        },
+        {
+          "value": "left",
+          "label": "Left"
+        }
       ],
       "default": "center"
     },
@@ -1136,10 +1135,22 @@
       "label": "Section background",
       "info": "Behind the heading. Each row's panel colour is set in the row itself.",
       "options": [
-        { "value": "white", "label": "White" },
-        { "value": "chalk", "label": "Chalk" },
-        { "value": "plum", "label": "Night Plum" },
-        { "value": "carbon", "label": "Carbon" }
+        {
+          "value": "white",
+          "label": "White"
+        },
+        {
+          "value": "chalk",
+          "label": "Chalk"
+        },
+        {
+          "value": "plum",
+          "label": "Night Plum"
+        },
+        {
+          "value": "carbon",
+          "label": "Carbon"
+        }
       ],
       "default": "white"
     },
@@ -1171,7 +1182,10 @@
       "info": "Comes from your reviews app automatically.",
       "default": true
     },
-    { "type": "header", "content": "Cost per day" },
+    {
+      "type": "header",
+      "content": "Cost per day"
+    },
     {
       "type": "checkbox",
       "id": "show_cost",
@@ -1206,7 +1220,10 @@
       "info": "Keep [price], [weight] and [pet]. They fill in automatically.",
       "default": "About [price] a day for a [weight] kg [pet]"
     },
-    { "type": "header", "content": "Buying" },
+    {
+      "type": "header",
+      "content": "Buying"
+    },
     {
       "type": "checkbox",
       "id": "show_subscribe",
@@ -1219,8 +1236,14 @@
       "id": "button_action",
       "label": "Button action",
       "options": [
-        { "value": "cart", "label": "Add to cart and open cart" },
-        { "value": "product", "label": "Go to product page" }
+        {
+          "value": "cart",
+          "label": "Add to cart and open cart"
+        },
+        {
+          "value": "product",
+          "label": "Go to product page"
+        }
       ],
       "default": "cart"
     },
@@ -1256,75 +1279,155 @@
       "label": "Payment note under the button",
       "info": "Optional, e.g. \"COD and UPI available\"."
     },
-    { "type": "header", "content": "Product facts (search engines & AI)" },
     {
-      "type": "checkbox",
-      "id": "show_facts",
-      "label": "Show product facts",
-      "info": "A short fact list: pack size, daily amount, days per bottle, cost per day and price. Search engines and AI assistants can quote it.",
-      "default": true
+      "type": "header",
+      "content": "Words"
     },
-    {
-      "type": "checkbox",
-      "id": "facts_open",
-      "label": "Open product facts by default",
-      "default": false
-    },
-    { "type": "text", "id": "facts_title", "label": "Facts heading", "default": "Product facts" },
-    { "type": "text", "id": "facts_for", "label": "\"Made for\" label", "default": "Made for" },
-    { "type": "text", "id": "facts_size", "label": "\"Pack size\" label", "default": "Pack size" },
-    { "type": "text", "id": "facts_daily", "label": "\"Daily amount\" label", "default": "Daily amount" },
     {
       "type": "text",
-      "id": "facts_daily_value",
-      "label": "Daily amount text",
-      "info": "Keep [pumps], [weight] and [pet].",
-      "default": "[pumps] for a [weight] kg [pet]"
+      "id": "pet_word_dog",
+      "label": "Dog (one)",
+      "default": "dog"
     },
-    { "type": "text", "id": "pump_word_one", "label": "Word for one pump", "default": "pump" },
-    { "type": "text", "id": "pump_word_many", "label": "Word for several pumps", "default": "pumps" },
-    { "type": "text", "id": "facts_lasts", "label": "\"Bottle lasts\" label", "default": "One bottle lasts" },
     {
       "type": "text",
-      "id": "facts_lasts_value",
-      "label": "Bottle lasts text",
-      "info": "Keep [days].",
-      "default": "About [days] days"
+      "id": "pet_plural_dog",
+      "label": "Dogs (many)",
+      "default": "dogs"
     },
-    { "type": "text", "id": "facts_cost", "label": "\"Cost per day\" label", "default": "Cost per day" },
-    { "type": "text", "id": "facts_price", "label": "\"Price\" label", "default": "Price" },
-    { "type": "text", "id": "details_link_label", "label": "Link to product page", "default": "See full details" },
-    { "type": "header", "content": "Words" },
-    { "type": "text", "id": "pet_word_dog", "label": "Dog (one)", "default": "dog" },
-    { "type": "text", "id": "pet_plural_dog", "label": "Dogs (many)", "default": "dogs" },
-    { "type": "text", "id": "pet_word_cat", "label": "Cat (one)", "default": "cat" },
-    { "type": "text", "id": "pet_plural_cat", "label": "Cats (many)", "default": "cats" },
-    { "type": "text", "id": "pet_word_any", "label": "Pet (one, for products made for both)", "default": "pet" },
-    { "type": "text", "id": "pet_plural_any", "label": "Pets (many)", "default": "dogs and cats" },
-    { "type": "text", "id": "button_label", "label": "Add to cart button", "default": "Add to cart" },
-    { "type": "text", "id": "product_button_label", "label": "Product page button", "default": "See details" },
-    { "type": "text", "id": "added_label", "label": "After adding", "default": "Added" },
-    { "type": "text", "id": "added_note", "label": "Message after adding (when no cart drawer opens)", "default": "Added to your cart." },
-    { "type": "text", "id": "view_cart_label", "label": "View cart link", "default": "View cart" },
-    { "type": "text", "id": "sold_out_label", "label": "Sold out", "default": "Sold out" },
-    { "type": "text", "id": "size_label", "label": "Size heading (for screen readers)", "default": "Size" },
-    { "type": "text", "id": "one_time_label", "label": "One-time option", "default": "One-time" },
-    { "type": "text", "id": "subscribe_label", "label": "Subscribe option", "default": "Subscribe" },
-    { "type": "text", "id": "subscribe_note", "label": "Subscribe explainer", "default": "Change or skip anytime." },
-    { "type": "text", "id": "frequency_label", "label": "Delivery frequency (for screen readers)", "default": "Deliver every" },
-    { "type": "text", "id": "label_bestseller", "label": "\"Bestseller\" label text", "default": "Bestseller" },
-    { "type": "text", "id": "label_new", "label": "\"New\" label text", "default": "New" },
-    { "type": "text", "id": "label_back", "label": "\"Back in stock\" label text", "default": "Back in stock" },
-    { "type": "header", "content": "Spacing" },
+    {
+      "type": "text",
+      "id": "pet_word_cat",
+      "label": "Cat (one)",
+      "default": "cat"
+    },
+    {
+      "type": "text",
+      "id": "pet_plural_cat",
+      "label": "Cats (many)",
+      "default": "cats"
+    },
+    {
+      "type": "text",
+      "id": "pet_word_any",
+      "label": "Pet (one, for products made for both)",
+      "default": "pet"
+    },
+    {
+      "type": "text",
+      "id": "pet_plural_any",
+      "label": "Pets (many)",
+      "default": "dogs and cats"
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Add to cart button",
+      "default": "Add to cart"
+    },
+    {
+      "type": "text",
+      "id": "product_button_label",
+      "label": "Product page button",
+      "default": "See details"
+    },
+    {
+      "type": "text",
+      "id": "added_label",
+      "label": "After adding",
+      "default": "Added"
+    },
+    {
+      "type": "text",
+      "id": "added_note",
+      "label": "Message after adding (when no cart drawer opens)",
+      "default": "Added to your cart."
+    },
+    {
+      "type": "text",
+      "id": "view_cart_label",
+      "label": "View cart link",
+      "default": "View cart"
+    },
+    {
+      "type": "text",
+      "id": "sold_out_label",
+      "label": "Sold out",
+      "default": "Sold out"
+    },
+    {
+      "type": "text",
+      "id": "size_label",
+      "label": "Size heading (for screen readers)",
+      "default": "Size"
+    },
+    {
+      "type": "text",
+      "id": "one_time_label",
+      "label": "One-time option",
+      "default": "One-time"
+    },
+    {
+      "type": "text",
+      "id": "subscribe_label",
+      "label": "Subscribe option",
+      "default": "Subscribe"
+    },
+    {
+      "type": "text",
+      "id": "subscribe_note",
+      "label": "Subscribe explainer",
+      "default": "Change or skip anytime."
+    },
+    {
+      "type": "text",
+      "id": "frequency_label",
+      "label": "Delivery frequency (for screen readers)",
+      "default": "Deliver every"
+    },
+    {
+      "type": "text",
+      "id": "label_bestseller",
+      "label": "\"Bestseller\" label text",
+      "default": "Bestseller"
+    },
+    {
+      "type": "text",
+      "id": "label_new",
+      "label": "\"New\" label text",
+      "default": "New"
+    },
+    {
+      "type": "text",
+      "id": "label_back",
+      "label": "\"Back in stock\" label text",
+      "default": "Back in stock"
+    },
+    {
+      "type": "header",
+      "content": "Spacing"
+    },
     {
       "type": "select",
       "id": "space_below",
       "label": "Space below",
       "options": [
-        { "value": "none", "label": "None" },
-        { "value": "small", "label": "Small" },
-        { "value": "medium", "label": "Medium" },
-        { "value": "large", "label": "Large" }
+        {
+          "value": "none",
+          "label": "None"
+        },
+        {
+          "value": "small",
+          "label": "Small"
+        },
+        {
+          "value": "medium",
+          "label": "Medium"
+        },
+        {
+          "value": "large",
+          "label": "Large"
+        }
       ],
       "default": "none"
     }
@@ -1365,11 +1468,26 @@
           "label": "Panel colour",
           "info": "Brand colours only. Use the need colour on one row per page; Chalk or White for the others.",
           "options": [
-            { "value": "accent", "label": "Need colour (coral for Skin & Coat)" },
-            { "value": "chalk", "label": "Chalk" },
-            { "value": "white", "label": "White" },
-            { "value": "plum", "label": "Night Plum" },
-            { "value": "carbon", "label": "Carbon" }
+            {
+              "value": "accent",
+              "label": "Need colour (coral for Skin & Coat)"
+            },
+            {
+              "value": "chalk",
+              "label": "Chalk"
+            },
+            {
+              "value": "white",
+              "label": "White"
+            },
+            {
+              "value": "plum",
+              "label": "Night Plum"
+            },
+            {
+              "value": "carbon",
+              "label": "Carbon"
+            }
           ],
           "default": "chalk"
         },
@@ -1379,10 +1497,22 @@
           "label": "Show for",
           "info": "\"Automatic\" reads the product's species metafield.",
           "options": [
-            { "value": "auto", "label": "Automatic" },
-            { "value": "always", "label": "Always" },
-            { "value": "dog", "label": "Dog selected" },
-            { "value": "cat", "label": "Cat selected" }
+            {
+              "value": "auto",
+              "label": "Automatic"
+            },
+            {
+              "value": "always",
+              "label": "Always"
+            },
+            {
+              "value": "dog",
+              "label": "Dog selected"
+            },
+            {
+              "value": "cat",
+              "label": "Cat selected"
+            }
           ],
           "default": "auto"
         },
@@ -1404,10 +1534,22 @@
           "label": "Label",
           "info": "Fixed list. No free-text badges.",
           "options": [
-            { "value": "none", "label": "None" },
-            { "value": "bestseller", "label": "Bestseller" },
-            { "value": "new", "label": "New" },
-            { "value": "back", "label": "Back in stock" }
+            {
+              "value": "none",
+              "label": "None"
+            },
+            {
+              "value": "bestseller",
+              "label": "Bestseller"
+            },
+            {
+              "value": "new",
+              "label": "New"
+            },
+            {
+              "value": "back",
+              "label": "Back in stock"
+            }
           ],
           "default": "none"
         },
@@ -1417,8 +1559,14 @@
           "label": "Benefits shown",
           "info": "Top items from the product's benefits metafield.",
           "options": [
-            { "value": "2", "label": "2" },
-            { "value": "3", "label": "3" }
+            {
+              "value": "2",
+              "label": "2"
+            },
+            {
+              "value": "3",
+              "label": "3"
+            }
           ],
           "default": "3"
         }
@@ -1429,8 +1577,23 @@
     {
       "name": "Vettofit product rows",
       "blocks": [
-        { "type": "product_row", "settings": { "display_name": "Salmon oil for dogs", "short_line": "One pump with dinner. That's the ritual.", "panel_color": "accent", "label": "bestseller" } },
-        { "type": "product_row", "settings": { "display_name": "Salmon oil for cats", "short_line": "Same ritual, sized for cats.", "panel_color": "chalk" } }
+        {
+          "type": "product_row",
+          "settings": {
+            "display_name": "Salmon oil for dogs",
+            "short_line": "One pump with dinner. That's the ritual.",
+            "panel_color": "accent",
+            "label": "bestseller"
+          }
+        },
+        {
+          "type": "product_row",
+          "settings": {
+            "display_name": "Salmon oil for cats",
+            "short_line": "Same ritual, sized for cats.",
+            "panel_color": "chalk"
+          }
+        }
       ]
     }
   ]

@@ -1,0 +1,703 @@
+{%- comment -%}
+  Vettofit final CTA ("Start the ritual tonight.") — sections/vf-final-cta.liquid
+  Built from "Vettofit Landing Page — Shopify Section Technical Guide", section 6 (Final CTA)
+  and the Landing Page Guidelines, section 9. Quirky, but inside the brand book:
+  flat shapes, tilted sticker chips, a polaroid pack card, and ONE playful line (the to-do list).
+  No doodles, no exclamation marks.
+
+  Buying:
+  - Dog product (section setting) + optional "Cat version" block (or the dog product's
+    vf.sibling_product). An in-section Dog / Cat switch also tells the rest of the page.
+  - MRP (compare-at) crossed out, selling price, % off. Cost per day from product data.
+  - One-time / Subscribe from Shopify selling plans. One-time is ALWAYS pre-selected.
+  - Add to cart via AJAX, opens the cart drawer if there is one. Works without JavaScript too.
+  Mobile: pack photo, heading, toggle, then a full-width button.
+{%- endcomment -%}
+
+{%- liquid
+  assign ss = section.settings
+  assign dog_product = ss.product
+  assign cat_block = section.blocks | where: 'type', 'cat_product' | first
+  assign cat_product = cat_block.settings.product
+  if cat_product == blank and dog_product != blank
+    assign cat_product = dog_product.metafields.vf.sibling_product.value
+  endif
+  assign has_cat = false
+  if cat_product != blank and dog_product != blank and cat_product.id != dog_product.id
+    assign has_cat = true
+  endif
+  assign heading_id = 'vf-final-h-' | append: section.id
+-%}
+
+<vf-final-cta
+  id="vf-final-{{ section.id }}"
+  class="vf-final vf-scheme--{{ ss.color_scheme }} vf-space-below--{{ ss.space_below }}"
+  data-has-cat="{{ has_cat }}"
+  data-cart-add="{{ routes.cart_add_url }}"
+  data-cart-url="{{ routes.cart_url }}"
+  data-added-text="{{ ss.added_note | escape }}"
+  data-view-cart="{{ ss.view_cart_label | escape }}"
+  data-atc-label="{{ ss.button_label | escape }}"
+  data-sold-out="{{ ss.sold_out_label | escape }}"
+  data-vf-final-cta
+>
+  <section class="vf-final__inner" aria-labelledby="{{ heading_id }}">
+
+    {%- comment -%} ---------- Copy (heading first in reading order) ---------- {%- endcomment -%}
+    <div class="vf-final__copy">
+      <h2 class="vf-final__heading" id="{{ heading_id }}">
+        {{ ss.heading_main }}
+        {%- if ss.heading_highlight != blank %} <span class="vf-final__mark"><span>{{ ss.heading_highlight }}</span></span>{%- endif -%}
+      </h2>
+      {%- if ss.supporting != blank -%}<p class="vf-final__sub">{{ ss.supporting }}</p>{%- endif -%}
+
+      {%- if has_cat and ss.show_species_toggle -%}
+        <fieldset class="vf-final__species">
+          <legend class="vf-vh">{{ ss.species_legend }}</legend>
+          <label class="vf-final__sp"><input type="radio" name="sp-{{ section.id }}" value="dog" checked data-sp><span><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="5 12.5 10 17 19 7"/></svg>{{ ss.dog_label }}</span></label>
+          <label class="vf-final__sp"><input type="radio" name="sp-{{ section.id }}" value="cat" data-sp><span><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="5 12.5 10 17 19 7"/></svg>{{ ss.cat_label }}</span></label>
+        </fieldset>
+      {%- endif -%}
+
+      {%- comment -%} ---------- One buy panel per species ---------- {%- endcomment -%}
+      {%- for n in (1..2) -%}
+        {%- liquid
+          if n == 1
+            assign product = dog_product
+            assign sp = 'dog'
+            assign disp = ss.display_name
+            assign img_override = ss.image
+            assign weight = ss.cost_weight_dog
+            assign pet_word = ss.pet_word_dog
+          else
+            if has_cat == false
+              break
+            endif
+            assign product = cat_product
+            assign sp = 'cat'
+            assign disp = cat_block.settings.display_name
+            assign img_override = cat_block.settings.image
+            assign weight = ss.cost_weight_cat
+            assign pet_word = ss.pet_word_cat
+          endif
+        -%}
+        {%- if product == blank -%}
+          {%- if request.design_mode -%}<p class="vf-final__note">Pick the dog product under "Product". (Only you see this note.)</p>{%- endif -%}
+          {%- continue -%}
+        {%- endif -%}
+        {%- liquid
+          assign variant = product.selected_or_first_available_variant
+          assign name = disp | default: product.title
+          assign uid = section.id | append: '-' | append: sp
+
+          assign pumps = 0
+          assign w = weight | times: 1.0
+          for r in product.metafields.vf.feeding_guide.value
+            assign mn = r.min_kg.value | times: 1.0
+            assign mx = r.max_kg.value | times: 1.0
+            if w >= mn and w <= mx and pumps == 0
+              assign pumps = r.pumps_per_day.value | default: r.pumps.value | default: 0 | times: 1.0
+            endif
+          endfor
+          assign ml_pp = product.metafields.vf.ml_per_pump.value | default: 0 | times: 1.0
+          assign daily_ml = ml_pp | times: pumps
+
+          assign has_plans = false
+          if ss.show_subscribe and product.selling_plan_groups.size > 0
+            assign has_plans = true
+          endif
+          assign first_group = product.selling_plan_groups.first
+          assign save_text = ''
+          if has_plans
+            assign adj = first_group.selling_plans.first.price_adjustments.first
+            if adj.value_type == 'percentage' and adj.value > 0
+              assign save_text = adj.value | append: '%'
+            endif
+          endif
+
+          assign vol0 = variant.metafields.vf.volume_ml.value | default: product.metafields.vf.volume_ml.value | default: 0 | times: 1.0
+          assign days0 = 0
+          if vol0 > 0 and daily_ml > 0
+            assign days0 = vol0 | divided_by: daily_ml | floor
+          endif
+          assign per_day0 = ''
+          if days0 > 0
+            assign per_day_cents = variant.price | divided_by: days0 | divided_by: 100.0 | round | times: 100
+            assign per_day0 = per_day_cents | money_without_trailing_zeros
+          endif
+          assign mrp0 = variant.compare_at_price | default: 0
+          assign off0 = 0
+          if mrp0 > variant.price
+            assign off0 = mrp0 | minus: variant.price | times: 100.0 | divided_by: mrp0 | round
+          endif
+        -%}
+        {%- capture row_json -%}
+          {"variants":[
+            {%- for v in product.variants -%}
+              {%- liquid
+                assign vol = v.metafields.vf.volume_ml.value | default: product.metafields.vf.volume_ml.value | default: 0 | times: 1.0
+                assign days = 0
+                if vol > 0 and daily_ml > 0
+                  assign days = vol | divided_by: daily_ml | floor
+                endif
+              -%}
+              {"id":{{ v.id }},"available":{{ v.available | json }},"price":{{ v.price }},"compare":{{ v.compare_at_price | default: 0 }},"days":{{ days }},"plans":{
+                {%- for a in v.selling_plan_allocations -%}"{{ a.selling_plan.id }}":{{ a.price }}{% unless forloop.last %},{% endunless %}{%- endfor -%}
+              }}{% unless forloop.last %},{% endunless %}
+            {%- endfor -%}
+          ]}
+        {%- endcapture -%}
+
+        <div class="vf-final__panel" data-panel data-species="{{ sp }}"{% if n == 2 %} hidden{% endif %}>
+          {%- comment -%} The polaroid pack card (moved beside the copy on desktop by CSS grid) {%- endcomment -%}
+          <div class="vf-final__stage" aria-hidden="true">
+            <span class="vf-final__moon"></span>
+            <div class="vf-final__polaroid">
+              <div class="vf-final__photo">
+                {%- assign pimg = img_override | default: product.featured_image -%}
+                {%- if pimg != blank -%}
+                  {{ pimg | image_url: width: 900 | image_tag: widths: '400, 600, 900', sizes: '(min-width: 990px) 34vw, 70vw', loading: 'lazy', class: 'vf-final__img', alt: '' }}
+                {%- else -%}
+                  {{ 'product-1' | placeholder_svg_tag: 'vf-final__img' }}
+                {%- endif -%}
+              </div>
+              {%- if ss.photo_caption != blank -%}<span class="vf-final__caption">{{ ss.photo_caption }}</span>{%- endif -%}
+            </div>
+            {%- if ss.show_stickers -%}
+              {%- if ss.sticker_1 != blank -%}<span class="vf-final__sticker vf-final__sticker--1">{{ ss.sticker_1 }}</span>{%- endif -%}
+              {%- if ss.sticker_2 != blank -%}<span class="vf-final__sticker vf-final__sticker--2">{{ ss.sticker_2 }}</span>{%- endif -%}
+              {%- if ss.sticker_3 != blank -%}<span class="vf-final__sticker vf-final__sticker--3">{{ ss.sticker_3 }}</span>{%- endif -%}
+            {%- endif -%}
+          </div>
+
+          <div class="vf-final__buy">
+            <p class="vf-final__name"><a href="{{ product.url }}" title="{{ product.title | escape }}">{{ name }}</a></p>
+
+            <form class="vf-final__form" action="{{ routes.cart_add_url }}" method="post" data-buy novalidate>
+              <input type="hidden" name="id" value="{{ variant.id }}" data-variant-input>
+              <input type="hidden" name="quantity" value="1">
+              {%- if has_plans -%}<input type="hidden" name="selling_plan" value="" data-plan-input>{%- endif -%}
+              <script type="application/json" data-row-json>{{ row_json | strip_newlines }}</script>
+
+              {%- unless product.has_only_default_variant -%}
+                <fieldset class="vf-final__sizes">
+                  <legend class="vf-vh">{{ product.options.first }}</legend>
+                  {%- for v in product.variants -%}
+                    <label class="vf-final__chip{% unless v.available %} is-soldout{% endunless %}">
+                      <input type="radio" name="size-{{ uid }}" value="{{ v.id }}"{% if v.id == variant.id %} checked{% endif %} data-size>
+                      <span>{{ v.title }}</span>
+                    </label>
+                  {%- endfor -%}
+                </fieldset>
+              {%- endunless -%}
+
+              {%- if has_plans -%}
+                <fieldset class="vf-final__po">
+                  <legend class="vf-vh">Purchase option</legend>
+                  <div class="vf-final__seg">
+                    <label class="vf-final__opt"><input type="radio" name="po-{{ uid }}" value="once" checked data-po><span>{{ ss.one_time_label }}</span></label>
+                    <label class="vf-final__opt"><input type="radio" name="po-{{ uid }}" value="sub" data-po><span>{{ ss.subscribe_label }}{% if save_text != '' %} <b class="vf-final__save">−{{ save_text }}</b>{% endif %}</span></label>
+                  </div>
+                  <div class="vf-final__freq" data-freq hidden>
+                    {%- if ss.subscribe_note != blank -%}<p class="vf-final__tiny">{{ ss.subscribe_note }}</p>{%- endif -%}
+                    <div class="vf-final__select">
+                      <select data-plan aria-label="{{ ss.frequency_label | escape }}">
+                        {%- for group in product.selling_plan_groups -%}{%- for plan in group.selling_plans -%}<option value="{{ plan.id }}">{{ plan.name }}</option>{%- endfor -%}{%- endfor -%}
+                      </select>
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                  </div>
+                </fieldset>
+              {%- endif -%}
+
+              <div class="vf-final__price" aria-live="polite">
+                <p class="vf-final__price-row">
+                  {%- if ss.show_mrp -%}
+                    <span class="vf-final__mrp" data-compare{% unless mrp0 > variant.price %} hidden{% endunless %}><span data-mrp-label>{{ ss.mrp_label }}</span> <s data-compare-amount>{{ mrp0 | money }}</s></span>
+                  {%- endif -%}
+                  <span class="vf-final__now" data-price>{{ variant.price | money }}</span>
+                  {%- if ss.show_mrp -%}<span class="vf-final__off" data-off{% unless off0 > 0 %} hidden{% endunless %}>−<span data-off-pct>{{ off0 }}</span>%</span>{%- endif -%}
+                </p>
+                {%- if ss.tax_note != blank -%}<p class="vf-final__tiny">{{ ss.tax_note }}</p>{%- endif -%}
+              </div>
+
+              <button class="vf-final__btn" type="submit" data-atc{% unless variant.available %} disabled{% endunless %}>
+                <span class="vf-final__btn-label" data-atc-label>{% if variant.available %}{{ ss.button_label }}{% else %}{{ ss.sold_out_label }}{% endif %}</span>
+                <span class="vf-final__btn-done" aria-hidden="true"><svg viewBox="0 0 24 24"><polyline points="5 12.5 10 17 19 7"/></svg>{{ ss.added_label }}</span>
+              </button>
+
+              {%- if ss.show_cost and ss.cost_text != blank -%}
+                {%- capture cost_html -%}{{ ss.cost_text | replace: '[price]', '<b data-per-day>PERDAY</b>' | replace: '[weight]', weight | replace: '[pet]', pet_word }}{%- endcapture -%}
+                <p class="vf-final__perday" data-perday-line{% if per_day0 == '' %} hidden{% endif %}>{{ cost_html | replace: 'PERDAY', per_day0 }}</p>
+              {%- endif -%}
+              {%- if ss.show_payment_note and ss.payment_note != blank -%}
+                <p class="vf-final__pay">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2.5"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  {{ ss.payment_note }}
+                </p>
+              {%- endif -%}
+              <p class="vf-final__status" role="status" aria-live="polite" data-status></p>
+            </form>
+          </div>
+        </div>
+      {%- endfor -%}
+
+      {%- comment -%} ---------- The one playful line: tonight's to-do ---------- {%- endcomment -%}
+      {%- if ss.show_todo -%}
+        <fieldset class="vf-final__todo">
+          <legend class="vf-final__todo-title">{{ ss.todo_title }}</legend>
+          {%- for i in (1..3) -%}
+            {%- liquid
+              case i
+                when 1
+                  assign t = ss.todo_1
+                when 2
+                  assign t = ss.todo_2
+                when 3
+                  assign t = ss.todo_3
+              endcase
+            -%}
+            {%- if t != blank -%}
+              <label class="vf-final__todo-item">
+                <input type="checkbox"{% if i < 3 %} checked{% endif %}>
+                <span class="vf-final__box" aria-hidden="true"><svg viewBox="0 0 24 24"><polyline points="5 12.5 10 17 19 7"/></svg></span>
+                <span class="vf-final__todo-text">{{ t }}</span>
+              </label>
+            {%- endif -%}
+          {%- endfor -%}
+        </fieldset>
+      {%- endif -%}
+    </div>
+  </section>
+
+  <script type="application/json" data-money>{{ shop.money_format | json }}</script>
+</vf-final-cta>
+
+{%- capture s -%}#vf-final-{{ section.id }}{%- endcapture -%}
+{% style %}
+  {{ s }}.vf-scheme--chalk  { --f-bg: var(--vf-chalk, #F7F5EF); --f-card: #FFFFFF; --f-fg: var(--vf-carbon, #111111); --f-muted: rgba(17,17,17,.66); --f-line: rgba(17,17,17,.16); --f-chip: #FFFFFF; --f-btn-bg: var(--vf-carbon, #111111); --f-btn-fg: #FFFFFF; --f-sel-bg: var(--vf-carbon, #111111); --f-sel-fg: #FFFFFF; }
+  {{ s }}.vf-scheme--white  { --f-bg: var(--vf-white, #FFFFFF); --f-card: #FFFFFF; --f-fg: var(--vf-carbon, #111111); --f-muted: rgba(17,17,17,.66); --f-line: rgba(17,17,17,.16); --f-chip: var(--vf-chalk, #F7F5EF); --f-btn-bg: var(--vf-carbon, #111111); --f-btn-fg: #FFFFFF; --f-sel-bg: var(--vf-carbon, #111111); --f-sel-fg: #FFFFFF; }
+  {{ s }}.vf-scheme--plum   { --f-bg: var(--vf-plum, #2B1B3A); --f-card: #FFFFFF; --f-fg: #FFFFFF; --f-muted: rgba(255,255,255,.76); --f-line: rgba(255,255,255,.24); --f-chip: rgba(255,255,255,.08); --f-btn-bg: var(--vf-chalk, #F7F5EF); --f-btn-fg: var(--vf-carbon, #111111); --f-sel-bg: var(--vf-chalk, #F7F5EF); --f-sel-fg: var(--vf-carbon, #111111); }
+  {{ s }}.vf-scheme--carbon { --f-bg: var(--vf-carbon, #111111); --f-card: #FFFFFF; --f-fg: var(--vf-chalk, #F7F5EF); --f-muted: rgba(247,245,239,.74); --f-line: rgba(247,245,239,.22); --f-chip: rgba(255,255,255,.07); --f-btn-bg: var(--vf-teal, #09D1C7); --f-btn-fg: var(--vf-carbon, #111111); --f-sel-bg: var(--vf-chalk, #F7F5EF); --f-sel-fg: var(--vf-carbon, #111111); }
+
+  {{ s }} {
+    --f-signal: var(--vf-teal, #09D1C7);
+    --f-accent: var(--vf-accent, #FF8A74);
+    --f-ink: var(--vf-carbon, #111111);
+    --f-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+    --f-gutter: 16px;
+    --f-font: var(--vf-font-body, "Inter", var(--font-body-family, system-ui, -apple-system, "Segoe UI", sans-serif));
+    --f-font-display: var(--vf-font-display, "Inter Display", "Inter", var(--font-heading-family, system-ui, sans-serif));
+    display: block; background: var(--f-bg); color: var(--f-fg);
+    font-family: var(--f-font); letter-spacing: 0; -webkit-font-smoothing: antialiased; overflow-x: clip;
+  }
+  {{ s }} *, {{ s }} *::before, {{ s }} *::after { box-sizing: border-box; }
+  {{ s }} h2, {{ s }} p, {{ s }} fieldset, {{ s }} legend { margin: 0; padding: 0; border: 0; letter-spacing: 0; text-transform: none; }
+  {{ s }} [hidden] { display: none !important; }
+  {{ s }}.vf-space-below--none   { padding-bottom: 0; }
+  {{ s }}.vf-space-below--small  { padding-bottom: 24px; }
+  {{ s }}.vf-space-below--medium { padding-bottom: 48px; }
+  {{ s }}.vf-space-below--large  { padding-bottom: 80px; }
+
+  {{ s }} .vf-final__inner { max-width: 1440px; margin: 0 auto; padding: 56px var(--f-gutter) 40px; }
+  {{ s }} .vf-final__copy { display: flex; flex-direction: column; }
+
+  /* ---------- Mobile order: pack photo, heading, toggle, button ---------- */
+  {{ s }} .vf-final__copy { display: grid; grid-template-columns: minmax(0, 1fr); }
+  {{ s }} .vf-final__panel { display: contents; }
+  {{ s }} .vf-final__stage { order: 1; }
+  {{ s }} .vf-final__heading { order: 2; }
+  {{ s }} .vf-final__sub { order: 3; }
+  {{ s }} .vf-final__species { order: 4; }
+  {{ s }} .vf-final__buy { order: 5; }
+  {{ s }} .vf-final__todo { order: 6; }
+  {{ s }} .vf-final__note { order: 0; }
+
+  /* ---------- Stage: moon + polaroid + stickers ---------- */
+  {{ s }} .vf-final__stage { position: relative; width: min(100%, 420px); margin: 8px auto 36px; aspect-ratio: 1 / 1.05; }
+  /* A full coral moon peeking out from behind the card ("tonight") */
+  {{ s }} .vf-final__moon {
+    position: absolute; right: 0; top: -3%; width: 44%; aspect-ratio: 1; border-radius: 50%;
+    background: var(--f-accent);
+  }
+  {{ s }} .vf-final__polaroid {
+    position: absolute; left: 10%; top: 8%; width: 76%;
+    padding: 4% 4% 14%; background: var(--f-card); border-radius: 14px;
+    box-shadow: 0 18px 40px -22px rgba(17,17,17,.45), 0 0 0 1px rgba(17,17,17,.06);
+    transform: rotate(-3deg);
+    transition: transform 260ms var(--f-ease);
+  }
+  {{ s }} .vf-final__photo { aspect-ratio: 1; overflow: hidden; border-radius: 8px; background: #FFFFFF; }
+  {{ s }} .vf-final__img { display: block; width: 100%; height: 100%; object-fit: contain; }
+  {{ s }} .vf-final__caption {
+    position: absolute; left: 0; right: 0; bottom: 4%; text-align: center;
+    font-family: var(--f-font-display); font-size: 15px; font-weight: 700; color: var(--f-ink); letter-spacing: -0.01em;
+  }
+  {{ s }} .vf-final__sticker {
+    position: absolute; z-index: 2;
+    padding: 9px 16px; border-radius: 999px;
+    font-family: var(--f-font-display); font-size: 15px; font-weight: 800; line-height: 1; white-space: nowrap;
+    box-shadow: 0 8px 18px -10px rgba(17,17,17,.4);
+    transition: transform 220ms var(--f-ease);
+  }
+  {{ s }} .vf-final__sticker--1 { left: 0; top: 4%; background: var(--f-ink); color: #FFFFFF; transform: rotate(-8deg); }
+  {{ s }} .vf-final__sticker--2 { right: 0; top: 46%; background: var(--f-signal); color: var(--f-ink); transform: rotate(7deg); }
+  {{ s }} .vf-final__sticker--3 { left: 4%; bottom: 2%; background: #FFFFFF; color: var(--f-ink); border: 1.5px solid var(--f-ink); transform: rotate(-4deg); }
+  /* Dark schemes: the black sticker becomes Chalk so it never disappears */
+  {{ s }}.vf-scheme--plum .vf-final__sticker--1, {{ s }}.vf-scheme--carbon .vf-final__sticker--1 { background: var(--vf-chalk, #F7F5EF); color: var(--f-ink); }
+  @media (hover: hover) {
+    {{ s }} .vf-final__stage:hover .vf-final__polaroid { transform: rotate(-1deg) translateY(-4px); }
+    {{ s }} .vf-final__stage:hover .vf-final__sticker--1 { transform: rotate(-12deg) translateY(-2px); }
+    {{ s }} .vf-final__stage:hover .vf-final__sticker--2 { transform: rotate(11deg) translateY(-2px); }
+    {{ s }} .vf-final__stage:hover .vf-final__sticker--3 { transform: rotate(-1deg) translateY(-2px); }
+  }
+
+  /* ---------- Copy ---------- */
+  {{ s }} .vf-final__heading {
+    font-family: var(--f-font-display); font-weight: 800;
+    font-size: 40px; line-height: 1.02; letter-spacing: -0.035em; color: var(--f-fg); text-wrap: balance;
+  }
+  {{ s }} .vf-final__mark { position: relative; display: inline-block; white-space: nowrap; }
+  {{ s }} .vf-final__mark span { position: relative; z-index: 1; }
+  {{ s }} .vf-final__mark::before {
+    content: ""; position: absolute; left: -0.12em; right: -0.12em; top: 52%; bottom: 0.02em;
+    background: var(--f-accent); border-radius: 4px; transform: rotate(-2deg) skewX(-8deg); z-index: 0;
+  }
+  {{ s }}.vf-scheme--plum .vf-final__mark span, {{ s }}.vf-scheme--carbon .vf-final__mark span { color: var(--f-ink); }
+  {{ s }}.vf-scheme--plum .vf-final__mark::before, {{ s }}.vf-scheme--carbon .vf-final__mark::before { top: 8%; }
+  {{ s }} .vf-final__sub { margin-top: 14px; font-size: 17px; line-height: 1.5; color: var(--f-muted); max-width: 40ch; }
+
+  /* Dog / Cat switch: check icon + bold, not colour alone */
+  {{ s }} .vf-final__species { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-top: 22px; padding: 4px; border-radius: 999px; border: 1px solid var(--f-line); background: var(--f-chip); }
+  {{ s }} .vf-final__sp { position: relative; }
+  {{ s }} .vf-final__sp input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; z-index: 1; }
+  {{ s }} .vf-final__sp span { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px; border-radius: 999px; font-size: 16px; font-weight: 500; color: var(--f-fg); transition: background-color 180ms ease, color 180ms ease; }
+  {{ s }} .vf-final__sp svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; display: none; }
+  {{ s }} .vf-final__sp input:checked + span { background: var(--f-signal); color: var(--f-ink); font-weight: 700; }
+  {{ s }} .vf-final__sp input:checked + span svg { display: block; }
+  {{ s }} .vf-final__sp input:focus-visible + span { outline: 2px solid var(--f-fg); outline-offset: 2px; }
+
+  /* ---------- Buy box ---------- */
+  {{ s }} .vf-final__buy { margin-top: 22px; }
+  {{ s }} .vf-final__name { font-family: var(--f-font-display); font-size: 18px; font-weight: 700; }
+  {{ s }} .vf-final__name a { color: var(--f-fg); text-decoration: none; }
+  {{ s }} .vf-final__name a:hover { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 5px; }
+  {{ s }} .vf-final__form { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; max-width: 460px; }
+  {{ s }} .vf-final__sizes { display: flex; flex-wrap: wrap; gap: 8px; }
+  {{ s }} .vf-final__chip { position: relative; }
+  {{ s }} .vf-final__chip input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+  {{ s }} .vf-final__chip span { display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--f-line); background: var(--f-chip); font-size: 15px; font-weight: 600; color: var(--f-fg); }
+  {{ s }} .vf-final__chip input:checked + span { background: var(--f-sel-bg); color: var(--f-sel-fg); border-color: var(--f-sel-bg); }
+  {{ s }} .vf-final__chip.is-soldout span { opacity: .5; text-decoration: line-through; }
+  {{ s }} .vf-final__seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; padding: 4px; border-radius: 999px; border: 1px solid var(--f-line); background: var(--f-chip); }
+  {{ s }} .vf-final__opt { position: relative; }
+  {{ s }} .vf-final__opt input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; z-index: 1; }
+  {{ s }} .vf-final__opt span { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border-radius: 999px; font-size: 14px; font-weight: 600; color: var(--f-fg); }
+  {{ s }} .vf-final__opt input:checked + span { background: var(--f-sel-bg); color: var(--f-sel-fg); }
+  {{ s }} .vf-final__opt input:focus-visible + span { outline: 2px solid var(--f-fg); outline-offset: 2px; }
+  {{ s }} .vf-final__save { padding: 2px 7px; border-radius: 999px; background: var(--f-signal); color: var(--f-ink); font-size: 12px; font-weight: 800; }
+  {{ s }} .vf-final__freq { display: grid; gap: 8px; margin-top: 8px; }
+  {{ s }} .vf-final__select { position: relative; }
+  {{ s }} .vf-final__select select { width: 100%; min-height: 48px; padding: 0 40px 0 16px; border: 1px solid var(--f-line); border-radius: 14px; background: var(--f-chip); color: var(--f-fg); font: inherit; font-size: 16px; -webkit-appearance: none; appearance: none; }
+  {{ s }} .vf-final__select select option { color: #111111; background: #FFFFFF; }
+  {{ s }} .vf-final__select svg { position: absolute; right: 14px; top: 50%; width: 18px; height: 18px; transform: translateY(-50%); fill: none; stroke: var(--f-fg); stroke-width: 1.75; pointer-events: none; }
+  {{ s }} .vf-final__tiny { font-size: 12px; color: var(--f-muted); }
+  {{ s }} .vf-final__price-row { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; font-variant-numeric: tabular-nums; }
+  {{ s }} .vf-final__mrp { font-size: 15px; color: var(--f-muted); white-space: nowrap; }
+  {{ s }} .vf-final__mrp s { text-decoration-thickness: 1.5px; }
+  {{ s }} .vf-final__now { font-family: var(--f-font-display); font-size: 30px; font-weight: 800; letter-spacing: -0.02em; color: var(--f-fg); }
+  {{ s }} .vf-final__off { align-self: center; padding: 3px 9px; border-radius: 999px; background: var(--f-signal); color: var(--f-ink); font-size: 13px; font-weight: 800; }
+
+  {{ s }} .vf-final__btn {
+    position: relative; display: inline-flex; align-items: center; justify-content: center; width: 100%;
+    min-height: 56px; padding: 0 24px; border: 0; border-radius: 14px;
+    background: var(--f-btn-bg); color: var(--f-btn-fg);
+    font-family: var(--f-font); font-size: 17px; font-weight: 700; cursor: pointer; overflow: hidden;
+    transition: transform 180ms var(--f-ease);
+  }
+  @media (hover: hover) { {{ s }} .vf-final__btn:hover { transform: translateY(-2px) rotate(-0.5deg); } }
+  {{ s }} .vf-final__btn:active { transform: translateY(1px); }
+  {{ s }} .vf-final__btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+  {{ s }} .vf-final__btn[aria-busy="true"] .vf-final__btn-label { opacity: .55; }
+  {{ s }} .vf-final__btn-label, {{ s }} .vf-final__btn-done { transition: opacity 200ms ease, transform 200ms var(--f-ease); }
+  {{ s }} .vf-final__btn-done { position: absolute; inset: 0; display: inline-flex; align-items: center; justify-content: center; gap: 8px; opacity: 0; transform: translateY(8px); }
+  {{ s }} .vf-final__btn-done svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+  {{ s }} .vf-final__btn.is-added .vf-final__btn-label { opacity: 0; transform: translateY(-8px); }
+  {{ s }} .vf-final__btn.is-added .vf-final__btn-done { opacity: 1; transform: none; }
+  {{ s }} .vf-final__perday { font-size: 14px; color: var(--f-muted); }
+  {{ s }} .vf-final__perday b { color: var(--f-fg); }
+  {{ s }} .vf-final__pay { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--f-fg); }
+  {{ s }} .vf-final__pay svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.75; flex-shrink: 0; }
+  {{ s }} .vf-final__status { font-size: 14px; }
+  {{ s }} .vf-final__status:empty { display: none; }
+  {{ s }} .vf-final__status a { color: inherit; font-weight: 700; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; }
+
+  /* ---------- Tonight's to-do (the one playful line) ---------- */
+  {{ s }} .vf-final__todo { margin-top: 28px; padding: 18px 20px; border: 1.5px dashed var(--f-line); border-radius: 14px; max-width: 460px; display: grid; gap: 4px; }
+  {{ s }} .vf-final__todo-title { padding: 0 6px; margin-left: -6px; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--f-muted); }
+  {{ s }} .vf-final__todo-item { position: relative; display: flex; align-items: center; gap: 12px; min-height: 40px; cursor: pointer; font-size: 16px; color: var(--f-fg); }
+  {{ s }} .vf-final__todo-item input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  {{ s }} .vf-final__box { flex: 0 0 24px; width: 24px; height: 24px; border-radius: 7px; border: 1.75px solid var(--f-fg); display: inline-flex; align-items: center; justify-content: center; transition: background-color 180ms ease, border-color 180ms ease, transform 180ms var(--f-ease); }
+  {{ s }} .vf-final__box svg { width: 15px; height: 15px; fill: none; stroke: var(--f-ink); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 24; stroke-dashoffset: 24; transition: stroke-dashoffset 220ms var(--f-ease); }
+  {{ s }} .vf-final__todo-item input:checked + .vf-final__box { background: var(--f-signal); border-color: var(--f-signal); transform: rotate(-6deg); }
+  {{ s }} .vf-final__todo-item input:checked + .vf-final__box svg { stroke-dashoffset: 0; }
+  {{ s }} .vf-final__todo-item input:checked ~ .vf-final__todo-text { text-decoration: line-through; text-decoration-color: var(--f-muted); color: var(--f-muted); }
+  {{ s }} .vf-final__todo-item input:focus-visible + .vf-final__box { outline: 2px solid var(--f-fg); outline-offset: 2px; }
+
+  {{ s }} a:focus-visible, {{ s }} button:focus-visible, {{ s }} select:focus-visible { outline: 2px solid var(--f-fg); outline-offset: 3px; }
+  {{ s }} .vf-vh { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  {{ s }} .vf-final__note { padding: 8px 12px; background: #FFF4B8; color: #111111; font-size: 13px; line-height: 1.4; border-radius: 10px; margin-bottom: 12px; }
+
+  /* ---------- Desktop: stage left, copy right ---------- */
+  @media (min-width: 990px) {
+    {{ s }} { --f-gutter: clamp(48px, 5vw, 80px); }
+    {{ s }} .vf-final__inner { padding-top: 96px; padding-bottom: 72px; }
+    {{ s }} .vf-final__copy { grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); column-gap: clamp(40px, 5vw, 96px); align-items: start; }
+    {{ s }} .vf-final__stage { grid-column: 1; grid-row: 1 / span 7; width: min(100%, 560px); margin: 0 auto; align-self: center; }
+    {{ s }} .vf-final__heading, {{ s }} .vf-final__sub, {{ s }} .vf-final__species,
+    {{ s }} .vf-final__buy, {{ s }} .vf-final__todo, {{ s }} .vf-final__note { grid-column: 2; }
+    {{ s }} .vf-final__heading { font-size: clamp(48px, 3vw + 14px, 72px); }
+    {{ s }} .vf-final__sticker { font-size: 17px; padding: 11px 18px; }
+    {{ s }} .vf-final__caption { font-size: 17px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    {{ s }} *, {{ s }} *::before, {{ s }} *::after { transition-duration: 0.01ms !important; }
+  }
+{% endstyle %}
+
+<script>
+  (function () {
+    if (customElements.get('vf-final-cta')) return;
+
+    function formatMoney(cents, format) {
+      var re = /\{\{\s*(\w+)\s*\}\}/, fmt = format || '₹{{amount}}';
+      function d(n, p, t, dec) { t = t || ','; dec = dec || '.'; var parts = (n / 100).toFixed(p).split('.'); return parts[0].replace(/(\d)(?=(\d\d\d)+(?!\d))/g, '$1' + t) + (parts[1] ? dec + parts[1] : ''); }
+      var m = fmt.match(re), v;
+      switch (m ? m[1] : 'amount') {
+        case 'amount_no_decimals': v = d(cents, 0); break;
+        case 'amount_with_comma_separator': v = d(cents, 2, '.', ','); break;
+        case 'amount_no_decimals_with_comma_separator': v = d(cents, 0, '.', ','); break;
+        case 'amount_with_apostrophe_separator': v = d(cents, 2, "'", '.'); break;
+        case 'amount_no_decimals_with_space_separator': v = d(cents, 0, ' '); break;
+        case 'amount_with_space_separator': v = d(cents, 2, ' ', ','); break;
+        case 'amount_with_period_and_space_separator': v = d(cents, 2, ' ', '.'); break;
+        default: v = d(cents, 2);
+      }
+      return fmt.replace(re, v).replace(/<[^>]*>/g, '');
+    }
+    function formatWhole(c, f) { return formatMoney(Math.round(c / 100) * 100, f).replace(/[.,]00(?!\d)/, ''); }
+
+    class VfFinalCta extends HTMLElement {
+      connectedCallback() {
+        var self = this;
+        try { this.moneyFormat = JSON.parse(this.querySelector('[data-money]').textContent); } catch (e) { this.moneyFormat = null; }
+        this.panels = Array.prototype.slice.call(this.querySelectorAll('[data-panel]'));
+        this.radios = Array.prototype.slice.call(this.querySelectorAll('[data-sp]'));
+        this.panels.forEach(function (p) { self.setupPanel(p); });
+
+        /* In-section Dog / Cat switch also tells the rest of the page */
+        this.radios.forEach(function (r) {
+          r.addEventListener('change', function () {
+            self.apply(r.value);
+            try { localStorage.setItem('vf_pet', r.value); } catch (e) {}
+            self._self = true;
+            document.dispatchEvent(new CustomEvent('vf:species-change', { detail: { species: r.value, source: 'final-cta' } }));
+            self._self = false;
+          });
+        });
+        this.onSpecies = function (e) { if (self._self) return; var d = (e && e.detail) || {}; self.apply(d.species || d.pet || d.value); };
+        document.addEventListener('vf:species-change', this.onSpecies);
+        var s = null;
+        try { s = new URLSearchParams(window.location.search).get('pet'); } catch (e) {}
+        if (s !== 'dog' && s !== 'cat') { try { s = localStorage.getItem('vf_pet'); } catch (e) {} }
+        this.apply(s === 'cat' ? 'cat' : 'dog');
+      }
+
+      disconnectedCallback() { document.removeEventListener('vf:species-change', this.onSpecies); }
+
+      apply(species) {
+        if (species !== 'dog' && species !== 'cat') return;
+        var want = this.dataset.hasCat === 'true' ? species : 'dog';
+        this.panels.forEach(function (p) { p.hidden = p.dataset.species !== want; });
+        this.radios.forEach(function (r) { r.checked = r.value === want; });
+      }
+
+      setupPanel(panel) {
+        var self = this, data = null;
+        try { data = JSON.parse(panel.querySelector('[data-row-json]').textContent); } catch (e) {}
+        var q = function (x) { return panel.querySelector(x); };
+        var form = q('[data-buy]'), vIn = q('[data-variant-input]'), pIn = q('[data-plan-input]'), planSel = q('[data-plan]');
+        var freq = q('[data-freq]'), priceEl = q('[data-price]'), cmp = q('[data-compare]'), cmpAmt = q('[data-compare-amount]'), mrpLabel = q('[data-mrp-label]');
+        var off = q('[data-off]'), offPct = q('[data-off-pct]'), pdLine = q('[data-perday-line]'), pd = q('[data-per-day]');
+        var atc = q('[data-atc]'), atcLabel = q('[data-atc-label]');
+        var state = { v: null };
+        function find(id) { if (!data) return null; for (var i = 0; i < data.variants.length; i++) if (String(data.variants[i].id) === String(id)) return data.variants[i]; return null; }
+        function refresh() {
+          var v = state.v; if (!v) return;
+          var subOn = panel.querySelector('[data-po][value="sub"]:checked');
+          var planId = subOn && planSel ? planSel.value : null;
+          var price = planId && v.plans && v.plans[planId] != null ? v.plans[planId] : v.price;
+          var struck = Math.max(v.compare || 0, planId ? v.price : 0);
+          var pct = struck > price ? Math.round((struck - price) * 100 / struck) : 0;
+          if (vIn) vIn.value = v.id;
+          if (pIn) pIn.value = planId || '';
+          if (freq) freq.hidden = !subOn;
+          if (priceEl) priceEl.textContent = formatMoney(price, self.moneyFormat);
+          if (cmp) { cmp.hidden = !(struck > price); if (cmpAmt) cmpAmt.textContent = formatMoney(struck, self.moneyFormat); }
+          if (mrpLabel) mrpLabel.hidden = !(v.compare > 0 && struck === v.compare);
+          if (off) { off.hidden = !(pct > 0); if (offPct) offPct.textContent = pct; }
+          if (pdLine) { pdLine.hidden = !(v.days > 0); if (v.days > 0 && pd) pd.textContent = formatWhole(price / v.days, self.moneyFormat); }
+          if (atc) { atc.disabled = !v.available; if (atcLabel) atcLabel.textContent = v.available ? self.dataset.atcLabel : self.dataset.soldOut; }
+        }
+        if (data && data.variants.length) state.v = find(vIn ? vIn.value : data.variants[0].id) || data.variants[0];
+        panel.querySelectorAll('[data-size]').forEach(function (r) { r.addEventListener('change', function () { state.v = find(r.value) || state.v; refresh(); }); });
+        panel.querySelectorAll('[data-po]').forEach(function (r) { r.addEventListener('change', refresh); });
+        if (planSel) planSel.addEventListener('change', refresh);
+        refresh();
+        if (form && atc) form.addEventListener('submit', function (e) { e.preventDefault(); self.add(panel, form, atc, state); });
+      }
+
+      add(panel, form, btn, state) {
+        var self = this;
+        if (btn.disabled || btn.getAttribute('aria-busy') === 'true') return;
+        var status = panel.querySelector('[data-status]'), pIn = panel.querySelector('[data-plan-input]');
+        var item = { id: Number(state.v ? state.v.id : form.querySelector('[name="id"]').value), quantity: 1 };
+        if (pIn && pIn.value) item.selling_plan = Number(pIn.value);
+        btn.setAttribute('aria-busy', 'true');
+        if (status) status.textContent = '';
+        fetch((this.dataset.cartAdd || '/cart/add') + '.js', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+          body: JSON.stringify({ items: [item], sections: 'cart-drawer,cart-icon-bubble', sections_url: window.location.pathname })
+        })
+          .then(function (res) { return res.json().then(function (j) { return { ok: res.ok, json: j }; }); })
+          .then(function (r) {
+            btn.removeAttribute('aria-busy');
+            if (!r.ok) throw new Error((r.json && (r.json.description || r.json.message)) || 'Could not add to cart.');
+            btn.classList.add('is-added');
+            setTimeout(function () { btn.classList.remove('is-added'); }, 2200);
+            var detail = { variant_id: item.id, selling_plan: item.selling_plan || null, species: panel.dataset.species, section: 'vf_final_cta' };
+            try { (window.dataLayer = window.dataLayer || []).push(Object.assign({ event: 'add_to_cart' }, detail)); } catch (e) {}
+            try { if (window.Shopify && Shopify.analytics && Shopify.analytics.publish) Shopify.analytics.publish('vf_add_to_cart', detail); } catch (e) {}
+            document.dispatchEvent(new CustomEvent('vf:cart:changed'));
+            document.dispatchEvent(new CustomEvent('cart:refresh'));
+            if (self.openDrawer(r.json, btn)) return;
+            if (status) {
+              status.textContent = (self.dataset.addedText || 'Added to your cart.') + ' ';
+              var a = document.createElement('a'); a.href = self.dataset.cartUrl || '/cart'; a.textContent = self.dataset.viewCart || 'View cart';
+              status.appendChild(a);
+            }
+          })
+          .catch(function (err) { btn.removeAttribute('aria-busy'); if (status) status.textContent = err.message || 'Could not add to cart.'; });
+      }
+
+      openDrawer(json, trigger) {
+        var evt = new CustomEvent('vf:cart:open', { cancelable: true, bubbles: true, detail: { trigger: trigger, response: json } });
+        document.dispatchEvent(evt);
+        if (evt.defaultPrevented) return true;
+        var dawn = document.querySelector('cart-drawer');
+        if (dawn && typeof dawn.renderContents === 'function' && json && json.sections && json.sections['cart-drawer']) {
+          try { dawn.classList.remove('is-empty'); dawn.renderContents(Object.assign({ id: json.items && json.items[0] ? json.items[0].key : '' }, json)); return true; } catch (e) {}
+        }
+        return false;
+      }
+    }
+    customElements.define('vf-final-cta', VfFinalCta);
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Vettofit final CTA",
+  "tag": "div",
+  "class": "vf-final-section",
+  "enabled_on": { "templates": ["page", "index", "product", "collection"] },
+  "max_blocks": 1,
+  "settings": [
+    {
+      "type": "select",
+      "id": "color_scheme",
+      "label": "Colour scheme",
+      "info": "Brand colours only. Chalk is the default.",
+      "options": [
+        { "value": "chalk", "label": "Chalk" },
+        { "value": "white", "label": "White" },
+        { "value": "plum", "label": "Night Plum" },
+        { "value": "carbon", "label": "Carbon" }
+      ],
+      "default": "chalk"
+    },
+    { "type": "text", "id": "heading_main", "label": "Heading", "default": "Start the ritual" },
+    { "type": "text", "id": "heading_highlight", "label": "Highlighted word(s)", "info": "Shown with the coral highlighter swipe. No exclamation marks.", "default": "tonight." },
+    { "type": "inline_richtext", "id": "supporting", "label": "Supporting line", "default": "Free prepaid shipping. Subscribe and change or skip anytime." },
+    { "type": "header", "content": "Product" },
+    { "type": "product", "id": "product", "label": "Dog product", "info": "Follows the Dog / Cat switch. For cats, add a \"Cat version\" block (not needed if the dog product links its cat version)." },
+    { "type": "text", "id": "display_name", "label": "Name on this page", "info": "Optional short name, e.g. \"Salmon oil for dogs\".", "default": "Salmon oil for dogs" },
+    { "type": "image_picker", "id": "image", "label": "Pack photo override", "info": "Optional. Otherwise the product's first photo. Square, on white." },
+    { "type": "checkbox", "id": "show_species_toggle", "label": "Show Dog / Cat switch in this section", "info": "Only appears when a cat product is available. It also switches the rest of the page.", "default": true },
+    { "type": "text", "id": "species_legend", "label": "Switch name (for screen readers)", "default": "Choose your pet" },
+    { "type": "text", "id": "dog_label", "label": "Dog option", "default": "Dog" },
+    { "type": "text", "id": "cat_label", "label": "Cat option", "default": "Cat" },
+    { "type": "header", "content": "Price and buying" },
+    { "type": "checkbox", "id": "show_mrp", "label": "Show MRP and % off", "info": "Uses the product's compare-at price.", "default": true },
+    { "type": "text", "id": "mrp_label", "label": "MRP label", "default": "MRP" },
+    { "type": "text", "id": "tax_note", "label": "Tax note", "default": "Inclusive of all taxes" },
+    { "type": "checkbox", "id": "show_subscribe", "label": "Show One-time / Subscribe choice", "info": "Needs your subscriptions app. One-time is always selected first.", "default": true },
+    { "type": "text", "id": "one_time_label", "label": "One-time option", "default": "One-time" },
+    { "type": "text", "id": "subscribe_label", "label": "Subscribe option", "default": "Subscribe" },
+    { "type": "text", "id": "subscribe_note", "label": "Subscribe explainer", "default": "Change or skip anytime." },
+    { "type": "text", "id": "frequency_label", "label": "Delivery frequency (for screen readers)", "default": "Deliver every" },
+    { "type": "checkbox", "id": "show_cost", "label": "Show cost per day", "info": "Hides itself if bottle size or feeding guide data is missing.", "default": true },
+    { "type": "range", "id": "cost_weight_dog", "label": "Example weight (dogs)", "min": 5, "max": 40, "step": 5, "unit": "kg", "default": 10 },
+    { "type": "range", "id": "cost_weight_cat", "label": "Example weight (cats)", "min": 2, "max": 8, "step": 1, "unit": "kg", "default": 4 },
+    { "type": "text", "id": "cost_text", "label": "Cost-per-day line", "info": "Keep [price], [weight] and [pet].", "default": "About [price] a day for a [weight] kg [pet]" },
+    { "type": "text", "id": "pet_word_dog", "label": "Word for dog", "default": "dog" },
+    { "type": "text", "id": "pet_word_cat", "label": "Word for cat", "default": "cat" },
+    { "type": "checkbox", "id": "show_payment_note", "label": "Show payment note", "default": true },
+    { "type": "text", "id": "payment_note", "label": "Payment note text", "default": "Cash on delivery and UPI available." },
+    { "type": "text", "id": "button_label", "label": "Button text", "default": "Add to cart" },
+    { "type": "text", "id": "added_label", "label": "After adding", "default": "Added" },
+    { "type": "text", "id": "added_note", "label": "Message after adding (when no cart drawer opens)", "default": "Added to your cart." },
+    { "type": "text", "id": "view_cart_label", "label": "View cart link", "default": "View cart" },
+    { "type": "text", "id": "sold_out_label", "label": "Sold out", "default": "Sold out" },
+    { "type": "header", "content": "Quirky bits" },
+    { "type": "checkbox", "id": "show_stickers", "label": "Show sticker chips", "default": true },
+    { "type": "text", "id": "sticker_1", "label": "Sticker 1 (black)", "default": "One pump." },
+    { "type": "text", "id": "sticker_2", "label": "Sticker 2 (teal)", "default": "Two seconds." },
+    { "type": "text", "id": "sticker_3", "label": "Sticker 3 (white)", "default": "Free prepaid shipping" },
+    { "type": "text", "id": "photo_caption", "label": "Polaroid caption", "info": "Optional. Leave empty to hide.", "default": "Dinner, 8:30 pm" },
+    { "type": "checkbox", "id": "show_todo", "label": "Show \"Tonight's to-do\"", "info": "The section's one playful line. Shoppers can tick the boxes.", "default": true },
+    { "type": "text", "id": "todo_title", "label": "To-do heading", "default": "Tonight's to-do" },
+    { "type": "text", "id": "todo_1", "label": "To-do 1 (ticked)", "default": "Serve dinner" },
+    { "type": "text", "id": "todo_2", "label": "To-do 2 (ticked)", "default": "One pump on top" },
+    { "type": "text", "id": "todo_3", "label": "To-do 3 (left for them to tick)", "default": "Watch the bowl get licked clean" },
+    { "type": "header", "content": "Spacing" },
+    {
+      "type": "select",
+      "id": "space_below",
+      "label": "Space below",
+      "options": [
+        { "value": "none", "label": "None" },
+        { "value": "small", "label": "Small" },
+        { "value": "medium", "label": "Medium" },
+        { "value": "large", "label": "Large" }
+      ],
+      "default": "none"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "cat_product",
+      "name": "Cat version",
+      "limit": 1,
+      "settings": [
+        { "type": "product", "id": "product", "label": "Cat product" },
+        { "type": "text", "id": "display_name", "label": "Name on this page", "default": "Salmon oil for cats" },
+        { "type": "image_picker", "id": "image", "label": "Pack photo override" }
+      ]
+    }
+  ],
+  "presets": [ { "name": "Vettofit final CTA" } ]
+}
+{% endschema %}

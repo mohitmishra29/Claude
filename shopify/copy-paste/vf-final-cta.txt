@@ -22,6 +22,13 @@
   if cat_product == blank and dog_product != blank
     assign cat_product = dog_product.metafields.vf.sibling_product.value
   endif
+  comment
+    Easiest option: find the cat product by its web address (handle). Accepts a full URL too.
+  endcomment
+  if cat_product == blank and ss.cat_handle != blank
+    assign cat_handle = ss.cat_handle | split: '/products/' | last | split: '?' | first | split: '#' | first | remove: '/' | strip
+    assign cat_product = all_products[cat_handle]
+  endif
   assign has_cat = false
   if cat_product != blank and dog_product != blank and cat_product.id != dog_product.id
     assign has_cat = true
@@ -51,6 +58,9 @@
       </h2>
       {%- if ss.supporting != blank -%}<p class="vf-final__sub">{{ ss.supporting }}</p>{%- endif -%}
 
+      {%- if has_cat == false and ss.show_species_toggle and request.design_mode -%}
+        <p class="vf-final__note">The Dog / Cat switch appears once a cat product is found. Check the "Cat product web address" setting (or add a "Cat version" block). (Only you see this note.)</p>
+      {%- endif -%}
       {%- if has_cat and ss.show_species_toggle -%}
         <fieldset class="vf-final__species">
           <legend class="vf-vh">{{ ss.species_legend }}</legend>
@@ -75,8 +85,8 @@
             endif
             assign product = cat_product
             assign sp = 'cat'
-            assign disp = cat_block.settings.display_name
-            assign img_override = cat_block.settings.image
+            assign disp = cat_block.settings.display_name | default: ss.cat_display_name
+            assign img_override = cat_block.settings.image | default: ss.cat_image
             assign weight = ss.cost_weight_cat
             assign pet_word = ss.pet_word_cat
           endif
@@ -179,7 +189,7 @@
               {%- if has_plans -%}<input type="hidden" name="selling_plan" value="" data-plan-input>{%- endif -%}
               <script type="application/json" data-row-json>{{ row_json | strip_newlines }}</script>
 
-              {%- unless product.has_only_default_variant -%}
+              {%- if product.variants.size > 1 -%}
                 <fieldset class="vf-final__sizes">
                   <legend class="vf-vh">{{ product.options.first }}</legend>
                   {%- for v in product.variants -%}
@@ -189,7 +199,7 @@
                     </label>
                   {%- endfor -%}
                 </fieldset>
-              {%- endunless -%}
+              {%- endif -%}
 
               {%- if has_plans -%}
                 <fieldset class="vf-final__po">
@@ -311,7 +321,7 @@
   {{ s }} .vf-final__species { order: 4; }
   {{ s }} .vf-final__buy { order: 5; }
   {{ s }} .vf-final__todo { order: 6; }
-  {{ s }} .vf-final__note { order: 0; }
+  {{ s }} .vf-final__note { order: 4; }
 
   /* ---------- Stage: moon + polaroid + stickers ---------- */
   {{ s }} .vf-final__stage { position: relative; width: min(100%, 420px); margin: 8px auto 36px; aspect-ratio: 1 / 1.05; }
@@ -612,7 +622,14 @@
   "name": "Vettofit final CTA",
   "tag": "div",
   "class": "vf-final-section",
-  "enabled_on": { "templates": ["page", "index", "product", "collection"] },
+  "enabled_on": {
+    "templates": [
+      "page",
+      "index",
+      "product",
+      "collection"
+    ]
+  },
   "max_blocks": 1,
   "settings": [
     {
@@ -621,67 +638,344 @@
       "label": "Colour scheme",
       "info": "Brand colours only. Chalk is the default.",
       "options": [
-        { "value": "chalk", "label": "Chalk" },
-        { "value": "white", "label": "White" },
-        { "value": "plum", "label": "Night Plum" },
-        { "value": "carbon", "label": "Carbon" }
+        {
+          "value": "chalk",
+          "label": "Chalk"
+        },
+        {
+          "value": "white",
+          "label": "White"
+        },
+        {
+          "value": "plum",
+          "label": "Night Plum"
+        },
+        {
+          "value": "carbon",
+          "label": "Carbon"
+        }
       ],
       "default": "chalk"
     },
-    { "type": "text", "id": "heading_main", "label": "Heading", "default": "Start the ritual" },
-    { "type": "text", "id": "heading_highlight", "label": "Highlighted word(s)", "info": "Shown with the coral highlighter swipe. No exclamation marks.", "default": "tonight." },
-    { "type": "inline_richtext", "id": "supporting", "label": "Supporting line", "default": "Free prepaid shipping. Subscribe and change or skip anytime." },
-    { "type": "header", "content": "Product" },
-    { "type": "product", "id": "product", "label": "Dog product", "info": "Follows the Dog / Cat switch. For cats, add a \"Cat version\" block (not needed if the dog product links its cat version)." },
-    { "type": "text", "id": "display_name", "label": "Name on this page", "info": "Optional short name, e.g. \"Salmon oil for dogs\".", "default": "Salmon oil for dogs" },
-    { "type": "image_picker", "id": "image", "label": "Pack photo override", "info": "Optional. Otherwise the product's first photo. Square, on white." },
-    { "type": "checkbox", "id": "show_species_toggle", "label": "Show Dog / Cat switch in this section", "info": "Only appears when a cat product is available. It also switches the rest of the page.", "default": true },
-    { "type": "text", "id": "species_legend", "label": "Switch name (for screen readers)", "default": "Choose your pet" },
-    { "type": "text", "id": "dog_label", "label": "Dog option", "default": "Dog" },
-    { "type": "text", "id": "cat_label", "label": "Cat option", "default": "Cat" },
-    { "type": "header", "content": "Price and buying" },
-    { "type": "checkbox", "id": "show_mrp", "label": "Show MRP and % off", "info": "Uses the product's compare-at price.", "default": true },
-    { "type": "text", "id": "mrp_label", "label": "MRP label", "default": "MRP" },
-    { "type": "text", "id": "tax_note", "label": "Tax note", "default": "Inclusive of all taxes" },
-    { "type": "checkbox", "id": "show_subscribe", "label": "Show One-time / Subscribe choice", "info": "Needs your subscriptions app. One-time is always selected first.", "default": true },
-    { "type": "text", "id": "one_time_label", "label": "One-time option", "default": "One-time" },
-    { "type": "text", "id": "subscribe_label", "label": "Subscribe option", "default": "Subscribe" },
-    { "type": "text", "id": "subscribe_note", "label": "Subscribe explainer", "default": "Change or skip anytime." },
-    { "type": "text", "id": "frequency_label", "label": "Delivery frequency (for screen readers)", "default": "Deliver every" },
-    { "type": "checkbox", "id": "show_cost", "label": "Show cost per day", "info": "Hides itself if bottle size or feeding guide data is missing.", "default": true },
-    { "type": "range", "id": "cost_weight_dog", "label": "Example weight (dogs)", "min": 5, "max": 40, "step": 5, "unit": "kg", "default": 10 },
-    { "type": "range", "id": "cost_weight_cat", "label": "Example weight (cats)", "min": 2, "max": 8, "step": 1, "unit": "kg", "default": 4 },
-    { "type": "text", "id": "cost_text", "label": "Cost-per-day line", "info": "Keep [price], [weight] and [pet].", "default": "About [price] a day for a [weight] kg [pet]" },
-    { "type": "text", "id": "pet_word_dog", "label": "Word for dog", "default": "dog" },
-    { "type": "text", "id": "pet_word_cat", "label": "Word for cat", "default": "cat" },
-    { "type": "checkbox", "id": "show_payment_note", "label": "Show payment note", "default": true },
-    { "type": "text", "id": "payment_note", "label": "Payment note text", "default": "Cash on delivery and UPI available." },
-    { "type": "text", "id": "button_label", "label": "Button text", "default": "Add to cart" },
-    { "type": "text", "id": "added_label", "label": "After adding", "default": "Added" },
-    { "type": "text", "id": "added_note", "label": "Message after adding (when no cart drawer opens)", "default": "Added to your cart." },
-    { "type": "text", "id": "view_cart_label", "label": "View cart link", "default": "View cart" },
-    { "type": "text", "id": "sold_out_label", "label": "Sold out", "default": "Sold out" },
-    { "type": "header", "content": "Quirky bits" },
-    { "type": "checkbox", "id": "show_stickers", "label": "Show sticker chips", "default": true },
-    { "type": "text", "id": "sticker_1", "label": "Sticker 1 (black)", "default": "One pump." },
-    { "type": "text", "id": "sticker_2", "label": "Sticker 2 (teal)", "default": "Two seconds." },
-    { "type": "text", "id": "sticker_3", "label": "Sticker 3 (white)", "default": "Free prepaid shipping" },
-    { "type": "text", "id": "photo_caption", "label": "Polaroid caption", "info": "Optional. Leave empty to hide.", "default": "Dinner, 8:30 pm" },
-    { "type": "checkbox", "id": "show_todo", "label": "Show \"Tonight's to-do\"", "info": "The section's one playful line. Shoppers can tick the boxes.", "default": true },
-    { "type": "text", "id": "todo_title", "label": "To-do heading", "default": "Tonight's to-do" },
-    { "type": "text", "id": "todo_1", "label": "To-do 1 (ticked)", "default": "Serve dinner" },
-    { "type": "text", "id": "todo_2", "label": "To-do 2 (ticked)", "default": "One pump on top" },
-    { "type": "text", "id": "todo_3", "label": "To-do 3 (left for them to tick)", "default": "Watch the bowl get licked clean" },
-    { "type": "header", "content": "Spacing" },
+    {
+      "type": "text",
+      "id": "heading_main",
+      "label": "Heading",
+      "default": "Start the ritual"
+    },
+    {
+      "type": "text",
+      "id": "heading_highlight",
+      "label": "Highlighted word(s)",
+      "info": "Shown with the coral highlighter swipe. No exclamation marks.",
+      "default": "tonight."
+    },
+    {
+      "type": "inline_richtext",
+      "id": "supporting",
+      "label": "Supporting line",
+      "default": "Free prepaid shipping. Subscribe and change or skip anytime."
+    },
+    {
+      "type": "header",
+      "content": "Product"
+    },
+    {
+      "type": "product",
+      "id": "product",
+      "label": "Dog product",
+      "info": "Follows the Dog / Cat switch. The cat product is found from the \"Cat product web address\" below."
+    },
+    {
+      "type": "text",
+      "id": "display_name",
+      "label": "Name on this page",
+      "info": "Optional short name, e.g. \"Salmon oil for dogs\".",
+      "default": "Salmon oil for dogs"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Pack photo override",
+      "info": "Optional. Otherwise the product's first photo. Square, on white."
+    },
+    {
+      "type": "text",
+      "id": "cat_handle",
+      "label": "Cat product web address",
+      "info": "The end of the cat product's link, e.g. wild-caught-alaskan-salmon-oil-for-cats (pasting the full link also works). This turns on the Dog / Cat switch.",
+      "default": "wild-caught-alaskan-salmon-oil-for-cats"
+    },
+    {
+      "type": "text",
+      "id": "cat_display_name",
+      "label": "Cat name on this page",
+      "default": "Salmon oil for cats"
+    },
+    {
+      "type": "image_picker",
+      "id": "cat_image",
+      "label": "Cat pack photo override",
+      "info": "Optional. Otherwise the cat product's first photo."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_species_toggle",
+      "label": "Show Dog / Cat switch in this section",
+      "info": "Appears when a cat product is found. It also switches the rest of the page.",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "species_legend",
+      "label": "Switch name (for screen readers)",
+      "default": "Choose your pet"
+    },
+    {
+      "type": "text",
+      "id": "dog_label",
+      "label": "Dog option",
+      "default": "Dog"
+    },
+    {
+      "type": "text",
+      "id": "cat_label",
+      "label": "Cat option",
+      "default": "Cat"
+    },
+    {
+      "type": "header",
+      "content": "Price and buying"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_mrp",
+      "label": "Show MRP and % off",
+      "info": "Uses the product's compare-at price.",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "mrp_label",
+      "label": "MRP label",
+      "default": "MRP"
+    },
+    {
+      "type": "text",
+      "id": "tax_note",
+      "label": "Tax note",
+      "default": "Inclusive of all taxes"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_subscribe",
+      "label": "Show One-time / Subscribe choice",
+      "info": "Needs your subscriptions app. One-time is always selected first.",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "one_time_label",
+      "label": "One-time option",
+      "default": "One-time"
+    },
+    {
+      "type": "text",
+      "id": "subscribe_label",
+      "label": "Subscribe option",
+      "default": "Subscribe"
+    },
+    {
+      "type": "text",
+      "id": "subscribe_note",
+      "label": "Subscribe explainer",
+      "default": "Change or skip anytime."
+    },
+    {
+      "type": "text",
+      "id": "frequency_label",
+      "label": "Delivery frequency (for screen readers)",
+      "default": "Deliver every"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_cost",
+      "label": "Show cost per day",
+      "info": "Hides itself if bottle size or feeding guide data is missing.",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "cost_weight_dog",
+      "label": "Example weight (dogs)",
+      "min": 5,
+      "max": 40,
+      "step": 5,
+      "unit": "kg",
+      "default": 10
+    },
+    {
+      "type": "range",
+      "id": "cost_weight_cat",
+      "label": "Example weight (cats)",
+      "min": 2,
+      "max": 8,
+      "step": 1,
+      "unit": "kg",
+      "default": 4
+    },
+    {
+      "type": "text",
+      "id": "cost_text",
+      "label": "Cost-per-day line",
+      "info": "Keep [price], [weight] and [pet].",
+      "default": "About [price] a day for a [weight] kg [pet]"
+    },
+    {
+      "type": "text",
+      "id": "pet_word_dog",
+      "label": "Word for dog",
+      "default": "dog"
+    },
+    {
+      "type": "text",
+      "id": "pet_word_cat",
+      "label": "Word for cat",
+      "default": "cat"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_payment_note",
+      "label": "Show payment note",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "payment_note",
+      "label": "Payment note text",
+      "default": "Cash on delivery and UPI available."
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Button text",
+      "default": "Add to cart"
+    },
+    {
+      "type": "text",
+      "id": "added_label",
+      "label": "After adding",
+      "default": "Added"
+    },
+    {
+      "type": "text",
+      "id": "added_note",
+      "label": "Message after adding (when no cart drawer opens)",
+      "default": "Added to your cart."
+    },
+    {
+      "type": "text",
+      "id": "view_cart_label",
+      "label": "View cart link",
+      "default": "View cart"
+    },
+    {
+      "type": "text",
+      "id": "sold_out_label",
+      "label": "Sold out",
+      "default": "Sold out"
+    },
+    {
+      "type": "header",
+      "content": "Quirky bits"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_stickers",
+      "label": "Show sticker chips",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "sticker_1",
+      "label": "Sticker 1 (black)",
+      "default": "One pump."
+    },
+    {
+      "type": "text",
+      "id": "sticker_2",
+      "label": "Sticker 2 (teal)",
+      "default": "Two seconds."
+    },
+    {
+      "type": "text",
+      "id": "sticker_3",
+      "label": "Sticker 3 (white)",
+      "default": "Free prepaid shipping"
+    },
+    {
+      "type": "text",
+      "id": "photo_caption",
+      "label": "Polaroid caption",
+      "info": "Optional. Leave empty to hide.",
+      "default": "Dinner, 8:30 pm"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_todo",
+      "label": "Show \"Tonight's to-do\"",
+      "info": "The section's one playful line. Shoppers can tick the boxes.",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "todo_title",
+      "label": "To-do heading",
+      "default": "Tonight's to-do"
+    },
+    {
+      "type": "text",
+      "id": "todo_1",
+      "label": "To-do 1 (ticked)",
+      "default": "Serve dinner"
+    },
+    {
+      "type": "text",
+      "id": "todo_2",
+      "label": "To-do 2 (ticked)",
+      "default": "One pump on top"
+    },
+    {
+      "type": "text",
+      "id": "todo_3",
+      "label": "To-do 3 (left for them to tick)",
+      "default": "Watch the bowl get licked clean"
+    },
+    {
+      "type": "header",
+      "content": "Spacing"
+    },
     {
       "type": "select",
       "id": "space_below",
       "label": "Space below",
       "options": [
-        { "value": "none", "label": "None" },
-        { "value": "small", "label": "Small" },
-        { "value": "medium", "label": "Medium" },
-        { "value": "large", "label": "Large" }
+        {
+          "value": "none",
+          "label": "None"
+        },
+        {
+          "value": "small",
+          "label": "Small"
+        },
+        {
+          "value": "medium",
+          "label": "Medium"
+        },
+        {
+          "value": "large",
+          "label": "Large"
+        }
       ],
       "default": "none"
     }
@@ -689,15 +983,32 @@
   "blocks": [
     {
       "type": "cat_product",
-      "name": "Cat version",
+      "name": "Cat version (optional)",
       "limit": 1,
       "settings": [
-        { "type": "product", "id": "product", "label": "Cat product" },
-        { "type": "text", "id": "display_name", "label": "Name on this page", "default": "Salmon oil for cats" },
-        { "type": "image_picker", "id": "image", "label": "Pack photo override" }
+        {
+          "type": "product",
+          "id": "product",
+          "label": "Cat product"
+        },
+        {
+          "type": "text",
+          "id": "display_name",
+          "label": "Name on this page",
+          "default": "Salmon oil for cats"
+        },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Pack photo override"
+        }
       ]
     }
   ],
-  "presets": [ { "name": "Vettofit final CTA" } ]
+  "presets": [
+    {
+      "name": "Vettofit final CTA"
+    }
+  ]
 }
 {% endschema %}

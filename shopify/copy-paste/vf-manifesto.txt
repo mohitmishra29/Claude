@@ -91,7 +91,7 @@
   {{ s }}.vf-space-below--large  { padding-bottom: 80px; }
 
   /* ---------- Frame: full-bleed, 4:5 on phones ---------- */
-  {{ s }} .vf-manifesto__figure { position: relative; display: grid; overflow: hidden; }
+  {{ s }} .vf-manifesto__figure { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); width: 100%; overflow: hidden; }
   {{ s }} .vf-manifesto__media,
   {{ s }} .vf-manifesto__words { grid-area: 1 / 1; }
   {{ s }} .vf-manifesto__media { position: relative; aspect-ratio: 4 / 5; background: #E9E4DA; }
@@ -155,8 +155,9 @@
   /* ---------- Tablet & desktop: 21:9 ---------- */
   @media (min-width: 750px) {
     {{ s }} { --m-pad: clamp(32px, 5vw, 80px); }
-    {{ s }} .vf-manifesto__media { aspect-ratio: 21 / 9; min-height: 420px; max-height: 88vh; }
-    {{ s }}.vf-manifesto--medium .vf-manifesto__media { aspect-ratio: 3 / 1; min-height: 340px; }
+    /* Always full width; only the height adapts (21:9, but never taller than the screen) */
+    {{ s }} .vf-manifesto__media { width: 100%; aspect-ratio: auto; height: max(420px, min(42.857vw, 88vh)); }
+    {{ s }}.vf-manifesto--medium .vf-manifesto__media { aspect-ratio: auto; height: max(340px, min(33.333vw, 72vh)); }
     {{ s }} .vf-manifesto__line { font-size: clamp(44px, 3.4vw + 16px, 80px); }
     {{ s }} .vf-manifesto__words-inner { max-width: min(52vw, 720px); }
     {{ s }} .vf-manifesto__caption { font-size: 13px; }

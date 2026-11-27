@@ -1,0 +1,509 @@
+{%- comment -%}
+  Vettofit footer — sections/vf-footer.liquid (footer group)
+  Built from "Vettofit Landing Page — Shopify Section Technical Guide", section 6 (Footer)
+  and the Landing Page Guidelines, section 10.
+
+  Quirky but on-brand: a teal Signal Line across the top with one coral drop, a slightly tilted
+  newsletter card, and ONE playful line: the giant sign-off "See you at dinner." No doodles,
+  no exclamation marks, and no trust-badge strip (proof sits next to its claim, never here).
+
+  Blocks: Link column (max 4), Support (WhatsApp, email, hours, help link), Newsletter
+  (Shopify customer form), Evidence and policies (menu), Social links (Theme settings → Social media).
+  Mobile: link columns become accordions; Support, Newsletter and the market selector stay open.
+  WhatsApp opens wa.me with a pre-filled message. No floating chat bubble.
+  Locked: the footer logo version and the legal line format.
+{%- endcomment -%}
+
+{%- liquid
+  assign ss = section.settings
+  assign year = 'now' | date: '%Y'
+  assign company = ss.company_line | replace: '[year]', year
+-%}
+
+{%- capture chevron -%}<svg class="vf-foot__chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>{%- endcapture -%}
+
+<vf-footer id="vf-footer-{{ section.id }}" class="vf-foot vf-scheme--{{ ss.color_scheme }}">
+  <footer class="vf-foot__inner" role="contentinfo">
+
+    {%- if ss.show_drop -%}
+      <div class="vf-foot__signal" aria-hidden="true"><span class="vf-foot__drop" data-drop></span></div>
+    {%- endif -%}
+
+    <div class="vf-foot__top">
+      <div class="vf-foot__brand">
+        <a class="vf-foot__logo" href="{{ routes.root_url }}" aria-label="{{ shop.name | escape }} home">
+          {%- if ss.logo != blank -%}
+            {%- assign logo_class = 'vf-foot__logo-img vf-foot__logo--' | append: ss.logo_size -%}
+            {{ ss.logo | image_url: width: 480 | image_tag: widths: '160, 240, 320, 480', sizes: '200px', class: logo_class, alt: shop.name, loading: 'lazy' }}
+          {%- else -%}
+            <span class="vf-foot__logo-text">{{ shop.name }}</span>
+          {%- endif -%}
+        </a>
+        {%- if ss.tagline != blank -%}<p class="vf-foot__tagline">{{ ss.tagline }}</p>{%- endif -%}
+      </div>
+
+      {%- for block in section.blocks -%}
+        {%- if block.type == 'newsletter' -%}
+          <div class="vf-foot__news" {{ block.shopify_attributes }}>
+            <p class="vf-foot__news-title">{{ block.settings.heading }}</p>
+            {%- if block.settings.text != blank -%}<p class="vf-foot__news-text">{{ block.settings.text }}</p>{%- endif -%}
+            {%- assign news_id = 'vf-foot-news-' | append: section.id -%}
+            {%- form 'customer', id: news_id, class: 'vf-foot__news-form' -%}
+              {%- if form.posted_successfully? -%}
+                <p class="vf-foot__news-done" role="status"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="5 12.5 10 17 19 7"/></svg>{{ block.settings.success_text }}</p>
+              {%- else -%}
+                <input type="hidden" name="contact[tags]" value="newsletter,vf-footer">
+                <label class="vf-vh" for="{{ news_id }}-email">{{ block.settings.placeholder }}</label>
+                <div class="vf-foot__news-field">
+                  <input id="{{ news_id }}-email" type="email" name="contact[email]" autocomplete="email" inputmode="email" placeholder="{{ block.settings.placeholder | escape }}" required{% if form.errors %} aria-invalid="true"{% endif %}>
+                  <button type="submit">{{ block.settings.button_label }}</button>
+                </div>
+                {%- if form.errors -%}<div class="vf-foot__news-error" role="alert">{{ form.errors | default_errors }}</div>{%- endif -%}
+                {%- if block.settings.consent != blank -%}<p class="vf-foot__tiny">{{ block.settings.consent }}</p>{%- endif -%}
+              {%- endif -%}
+            {%- endform -%}
+          </div>
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+
+    <div class="vf-foot__grid">
+      {%- for block in section.blocks -%}
+        {%- case block.type -%}
+
+          {%- when 'link_column', 'policies' -%}
+            {%- assign menu = linklists[block.settings.menu] -%}
+            <details class="vf-foot__col vf-foot__col--acc" open data-acc {{ block.shopify_attributes }}>
+              <summary class="vf-foot__col-title">{{ block.settings.heading | default: menu.title }}{{ chevron }}</summary>
+              {%- if menu.links.size > 0 -%}
+                <ul class="vf-foot__links" role="list">
+                  {%- for link in menu.links -%}
+                    <li><a href="{{ link.url }}"{% if link.active %} aria-current="page"{% endif %}>{{ link.title }}</a></li>
+                  {%- endfor -%}
+                </ul>
+              {%- elsif request.design_mode -%}
+                <p class="vf-foot__note">Pick a menu for this column. Edit menus in Content → Menus. (Only you see this note.)</p>
+              {%- endif -%}
+            </details>
+
+          {%- when 'support' -%}
+            {%- assign wa = block.settings.whatsapp_number | remove: '+' | remove: ' ' | remove: '-' | remove: '(' | remove: ')' -%}
+            <div class="vf-foot__col vf-foot__col--support" {{ block.shopify_attributes }}>
+              <p class="vf-foot__col-title">{{ block.settings.heading }}</p>
+              <div class="vf-foot__support">
+                {%- if wa != blank -%}
+                  <a class="vf-foot__wa" href="https://wa.me/{{ wa }}?text={{ block.settings.whatsapp_message | url_encode }}" target="_blank" rel="noopener">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5a8 8 0 0 1-11.8 7L4 20l1.5-4.1A8 8 0 1 1 20 11.5z"/></svg>
+                    <span>{{ block.settings.whatsapp_label }}</span>
+                  </a>
+                {%- endif -%}
+                {%- if block.settings.email != blank -%}<a class="vf-foot__line" href="mailto:{{ block.settings.email }}">{{ block.settings.email }}</a>{%- endif -%}
+                {%- if block.settings.hours != blank -%}<p class="vf-foot__muted">{{ block.settings.hours }}</p>{%- endif -%}
+                {%- if block.settings.help_label != blank and block.settings.help_link != blank -%}<a class="vf-foot__line" href="{{ block.settings.help_link }}">{{ block.settings.help_label }}</a>{%- endif -%}
+              </div>
+            </div>
+
+          {%- when 'social' -%}
+            <div class="vf-foot__col vf-foot__col--social" {{ block.shopify_attributes }}>
+              <p class="vf-foot__col-title">{{ block.settings.heading }}</p>
+              <ul class="vf-foot__social" role="list">
+                {%- if settings.social_instagram_link != blank -%}<li><a href="{{ settings.social_instagram_link }}" target="_blank" rel="noopener" aria-label="Instagram"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r="0.6" class="fill"/></svg></a></li>{%- endif -%}
+                {%- if settings.social_facebook_link != blank -%}<li><a href="{{ settings.social_facebook_link }}" target="_blank" rel="noopener" aria-label="Facebook"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8.5h2.5V5H14a3.5 3.5 0 0 0-3.5 3.5V11H8v3.5h2.5V21H14v-6.5h2.5L17 11h-3V9a.5.5 0 0 1 .5-.5z"/></svg></a></li>{%- endif -%}
+                {%- if settings.social_youtube_link != blank -%}<li><a href="{{ settings.social_youtube_link }}" target="_blank" rel="noopener" aria-label="YouTube"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5.5" width="19" height="13" rx="4"/><path d="M10.5 9.5v5l4.3-2.5z" class="fill"/></svg></a></li>{%- endif -%}
+                {%- if settings.social_twitter_link != blank -%}<li><a href="{{ settings.social_twitter_link }}" target="_blank" rel="noopener" aria-label="X"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5l14 15M19 4.5l-14 15"/></svg></a></li>{%- endif -%}
+                {%- if settings.social_pinterest_link != blank -%}<li><a href="{{ settings.social_pinterest_link }}" target="_blank" rel="noopener" aria-label="Pinterest"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M11 21l2.2-9.4M10.2 14.6c3.6 1.2 5.8-1.3 5.3-4-.5-2.6-4.4-3.3-6.3-1.3-1 1-.9 2.6-.2 3.2"/></svg></a></li>{%- endif -%}
+                {%- if settings.social_linkedin_link != blank -%}<li><a href="{{ settings.social_linkedin_link }}" target="_blank" rel="noopener" aria-label="LinkedIn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="3"/><path d="M8 10.5v6M8 7.6v.01M11.5 16.5v-3.5a2 2 0 0 1 4 0v3.5M11.5 10.5v6"/></svg></a></li>{%- endif -%}
+              </ul>
+              {%- if request.design_mode -%}<p class="vf-foot__note">Social links come from Theme settings → Social media. (Only you see this note.)</p>{%- endif -%}
+            </div>
+        {%- endcase -%}
+      {%- endfor -%}
+    </div>
+
+    {%- comment -%} ---------- Bottom bar: market selector, payment icons, legal line ---------- {%- endcomment -%}
+    <div class="vf-foot__bottom">
+      {%- if ss.show_market_selector and localization.available_countries.size > 1 -%}
+        {%- assign loc_id = 'vf-foot-loc-' | append: section.id -%}
+        {%- form 'localization', id: loc_id, class: 'vf-foot__market' -%}
+          <label class="vf-foot__market-label" for="{{ loc_id }}-country">{{ ss.market_label }}</label>
+          <div class="vf-foot__select">
+            <select id="{{ loc_id }}-country" name="country_code" data-autosubmit>
+              {%- for c in localization.available_countries -%}
+                <option value="{{ c.iso_code }}"{% if c.iso_code == localization.country.iso_code %} selected{% endif %}>{{ c.name }} ({{ c.currency.iso_code }} {{ c.currency.symbol }})</option>
+              {%- endfor -%}
+            </select>
+            {{ chevron }}
+          </div>
+          <noscript><button type="submit">{{ ss.market_button }}</button></noscript>
+        {%- endform -%}
+      {%- endif -%}
+
+      {%- if ss.show_payment_icons and shop.enabled_payment_types.size > 0 -%}
+        <ul class="vf-foot__pay" role="list" aria-label="Payment methods">
+          {%- for type in shop.enabled_payment_types -%}
+            <li>{{ type | payment_type_svg_tag: class: 'vf-foot__pay-icon' }}</li>
+          {%- endfor -%}
+        </ul>
+      {%- endif -%}
+
+      <p class="vf-foot__legal">© {{ company }}</p>
+      {%- if ss.back_to_top != blank -%}
+        <a class="vf-foot__top-link" href="#">{{ ss.back_to_top }} <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="6 11 12 5 18 11"/></svg></a>
+      {%- endif -%}
+    </div>
+
+    {%- comment -%} ---------- The one playful line: a giant sign-off ---------- {%- endcomment -%}
+    {%- if ss.show_signoff and ss.signoff != blank -%}
+      {%- liquid
+        assign so = ss.signoff | strip
+        assign last_char = so | slice: -1
+        if last_char == '.'
+          assign so_text = so | slice: 0, so.size | remove_last: '.'
+          assign so_dot = '.'
+        else
+          assign so_text = so
+          assign so_dot = ''
+        endif
+      -%}
+      <p class="vf-foot__signoff" aria-hidden="true" data-fit><span>{{ so_text }}</span>{% if so_dot != '' %}<span class="vf-foot__dot">.</span>{% endif %}</p>
+    {%- endif -%}
+  </footer>
+</vf-footer>
+
+{%- capture s -%}#vf-footer-{{ section.id }}{%- endcapture -%}
+{% style %}
+  {{ s }}.vf-scheme--carbon { --ft-bg: var(--vf-carbon, #111111); --ft-fg: var(--vf-chalk, #F7F5EF); --ft-muted: rgba(247,245,239,.66); --ft-line: rgba(247,245,239,.16); --ft-card: var(--vf-chalk, #F7F5EF); --ft-card-fg: var(--vf-carbon, #111111); --ft-field: #FFFFFF; --ft-signoff: rgba(247,245,239,.92); }
+  {{ s }}.vf-scheme--plum   { --ft-bg: var(--vf-plum, #2B1B3A); --ft-fg: #FFFFFF; --ft-muted: rgba(255,255,255,.7); --ft-line: rgba(255,255,255,.18); --ft-card: var(--vf-chalk, #F7F5EF); --ft-card-fg: var(--vf-carbon, #111111); --ft-field: #FFFFFF; --ft-signoff: rgba(255,255,255,.92); }
+  {{ s }}.vf-scheme--chalk  { --ft-bg: var(--vf-chalk, #F7F5EF); --ft-fg: var(--vf-carbon, #111111); --ft-muted: rgba(17,17,17,.62); --ft-line: rgba(17,17,17,.14); --ft-card: var(--vf-carbon, #111111); --ft-card-fg: var(--vf-chalk, #F7F5EF); --ft-field: #FFFFFF; --ft-signoff: var(--vf-carbon, #111111); }
+  {{ s }}.vf-scheme--white  { --ft-bg: var(--vf-white, #FFFFFF); --ft-fg: var(--vf-carbon, #111111); --ft-muted: rgba(17,17,17,.62); --ft-line: rgba(17,17,17,.14); --ft-card: var(--vf-carbon, #111111); --ft-card-fg: var(--vf-chalk, #F7F5EF); --ft-field: #FFFFFF; --ft-signoff: var(--vf-carbon, #111111); }
+
+  {{ s }} {
+    --ft-signal: var(--vf-teal, #09D1C7);
+    --ft-accent: var(--vf-accent, #FF8A74);
+    --ft-ink: var(--vf-carbon, #111111);
+    --ft-gutter: 20px;
+    --ft-font: var(--vf-font-body, "Inter", var(--font-body-family, system-ui, -apple-system, "Segoe UI", sans-serif));
+    --ft-font-display: var(--vf-font-display, "Inter Display", "Inter", var(--font-heading-family, system-ui, sans-serif));
+    display: block; background: var(--ft-bg); color: var(--ft-fg);
+    font-family: var(--ft-font); letter-spacing: 0; -webkit-font-smoothing: antialiased; overflow: hidden;
+  }
+  {{ s }} *, {{ s }} *::before, {{ s }} *::after { box-sizing: border-box; }
+  {{ s }} p, {{ s }} ul, {{ s }} li { margin: 0; padding: 0; list-style: none; letter-spacing: 0; text-transform: none; }
+  {{ s }} li::marker { content: none; }
+  {{ s }} a { color: inherit; }
+
+  {{ s }} .vf-foot__inner { position: relative; max-width: 1440px; margin: 0 auto; padding: 0 var(--ft-gutter); padding-bottom: env(safe-area-inset-bottom); }
+
+  /* ---------- Signal Line with one coral drop ---------- */
+  {{ s }} .vf-foot__signal { position: relative; height: 2px; margin: 0 calc(-1 * var(--ft-gutter)); background: var(--ft-signal); }
+  {{ s }} .vf-foot__drop {
+    position: absolute; right: 18%; top: 2px; width: 14px; height: 14px;
+    background: var(--ft-accent); border-radius: 50% 0 50% 50%; transform: rotate(-45deg) translate(-2px, 2px);
+    transform-origin: center;
+  }
+  {{ s }} .vf-foot__drop.is-dripping { animation: vf-drip-{{ section.id | replace: '-', '' }} 1600ms cubic-bezier(0.55, 0, 0.8, 0.4) 1 both; }
+  @keyframes vf-drip-{{ section.id | replace: '-', '' }} {
+    0%   { transform: rotate(-45deg) translate(-2px, 2px) scale(.3); opacity: 0; }
+    25%  { transform: rotate(-45deg) translate(-2px, 2px) scale(1); opacity: 1; }
+    100% { transform: rotate(-45deg) translate(-26px, 26px) scale(1); opacity: 1; }
+  }
+
+  /* ---------- Top: logo + newsletter card ---------- */
+  {{ s }} .vf-foot__top { display: grid; gap: 32px; padding: 48px 0 40px; border-bottom: 1px solid var(--ft-line); }
+  {{ s }} .vf-foot__logo { display: inline-flex; text-decoration: none; }
+  {{ s }} .vf-foot__logo-img { display: block; height: auto; width: 140px; }
+  {{ s }} .vf-foot__logo--medium { width: 180px; }
+  {{ s }} .vf-foot__logo-text { font-family: var(--ft-font-display); font-size: 28px; font-weight: 800; letter-spacing: -0.03em; }
+  {{ s }} .vf-foot__tagline { margin-top: 12px; max-width: 32ch; font-size: 15px; line-height: 1.5; color: var(--ft-muted); }
+
+  {{ s }} .vf-foot__news {
+    background: var(--ft-card); color: var(--ft-card-fg);
+    border-radius: 24px; padding: 24px 22px;
+    transform: rotate(-1.2deg);
+    box-shadow: 0 18px 40px -26px rgba(0,0,0,.6);
+  }
+  {{ s }} .vf-foot__news-title { font-family: var(--ft-font-display); font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+  {{ s }} .vf-foot__news-text { margin-top: 6px; font-size: 15px; line-height: 1.5; opacity: .75; }
+  {{ s }} .vf-foot__news-form { margin: 16px 0 0; }
+  {{ s }} .vf-foot__news-field { display: flex; flex-direction: column; gap: 10px; }
+  {{ s }} .vf-foot__news-field input {
+    width: 100%; min-height: 52px; padding: 0 16px; border: 1px solid rgba(17,17,17,.18); border-radius: 14px;
+    background: var(--ft-field); color: #111111; font: inherit; font-size: 16px; -webkit-appearance: none; appearance: none;
+  }
+  {{ s }} .vf-foot__news-field input[aria-invalid="true"] { border-color: #B42318; }
+  {{ s }} .vf-foot__news-field button {
+    min-height: 52px; padding: 0 22px; border: 0; border-radius: 14px; cursor: pointer;
+    background: var(--ft-ink); color: #FFFFFF; font: inherit; font-size: 16px; font-weight: 700; white-space: nowrap;
+  }
+  {{ s }}.vf-scheme--chalk .vf-foot__news-field button, {{ s }}.vf-scheme--white .vf-foot__news-field button { background: var(--ft-signal); color: var(--ft-ink); }
+  {{ s }} .vf-foot__news-done { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+  {{ s }} .vf-foot__news-done svg { width: 24px; height: 24px; padding: 3px; border-radius: 999px; background: var(--ft-signal); fill: none; stroke: var(--ft-ink); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+  {{ s }} .vf-foot__news-error { margin-top: 8px; font-size: 14px; color: #B42318; }
+  {{ s }} .vf-foot__tiny { margin-top: 10px; font-size: 12px; line-height: 1.45; opacity: .65; }
+
+  /* ---------- Columns ---------- */
+  {{ s }} .vf-foot__grid { display: grid; }
+  {{ s }} .vf-foot__col { border-bottom: 1px solid var(--ft-line); }
+  {{ s }} .vf-foot__col-title {
+    display: flex; align-items: center; justify-content: space-between; min-height: 56px;
+    font-family: var(--ft-font-display); font-size: 17px; font-weight: 700; letter-spacing: -0.01em;
+    list-style: none; cursor: pointer;
+  }
+  {{ s }} .vf-foot__col-title::-webkit-details-marker { display: none; }
+  {{ s }} .vf-foot__chev { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.75; transition: transform 200ms ease; }
+  {{ s }} details[open] > .vf-foot__col-title .vf-foot__chev { transform: rotate(180deg); }
+  {{ s }} .vf-foot__col--support .vf-foot__col-title,
+  {{ s }} .vf-foot__col--social .vf-foot__col-title { cursor: default; }
+  {{ s }} .vf-foot__links { display: grid; gap: 2px; padding-bottom: 16px; }
+  {{ s }} .vf-foot__links a { display: inline-flex; align-items: center; min-height: 40px; font-size: 15px; color: var(--ft-muted); text-decoration: none; transition: color 180ms ease; }
+  {{ s }} .vf-foot__links a:hover, {{ s }} .vf-foot__links a[aria-current="page"] { color: var(--ft-fg); text-decoration: underline; text-decoration-color: var(--ft-signal); text-decoration-thickness: 2px; text-underline-offset: 5px; }
+
+  {{ s }} .vf-foot__support { display: grid; gap: 10px; padding-bottom: 20px; justify-items: start; }
+  {{ s }} .vf-foot__wa {
+    display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 20px; border-radius: 999px;
+    background: var(--ft-signal); color: var(--ft-ink); font-size: 15px; font-weight: 700; text-decoration: none;
+    transform: rotate(-2deg); transition: transform 200ms ease;
+  }
+  {{ s }} .vf-foot__wa svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linejoin: round; }
+  @media (hover: hover) { {{ s }} .vf-foot__wa:hover { transform: rotate(0deg) translateY(-2px); } }
+  {{ s }} .vf-foot__line { display: inline-flex; min-height: 36px; align-items: center; font-size: 15px; text-decoration: underline; text-decoration-color: var(--ft-line); text-underline-offset: 4px; }
+  {{ s }} .vf-foot__line:hover { text-decoration-color: var(--ft-signal); }
+  {{ s }} .vf-foot__muted { font-size: 14px; color: var(--ft-muted); }
+
+  {{ s }} .vf-foot__social { display: flex; gap: 8px; padding-bottom: 20px; }
+  {{ s }} .vf-foot__social a { width: 44px; height: 44px; border-radius: 999px; border: 1px solid var(--ft-line); display: inline-flex; align-items: center; justify-content: center; transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease; }
+  {{ s }} .vf-foot__social svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  {{ s }} .vf-foot__social svg .fill { fill: currentColor; stroke: none; }
+  @media (hover: hover) { {{ s }} .vf-foot__social a:hover { background: var(--ft-fg); color: var(--ft-bg); border-color: var(--ft-fg); } }
+
+  /* ---------- Bottom bar ---------- */
+  {{ s }} .vf-foot__bottom { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; padding: 28px 0 8px; font-size: 13px; color: var(--ft-muted); }
+  {{ s }} .vf-foot__market { display: flex; align-items: center; gap: 10px; margin: 0; }
+  {{ s }} .vf-foot__market-label { font-size: 13px; }
+  {{ s }} .vf-foot__select { position: relative; }
+  {{ s }} .vf-foot__select select { min-height: 44px; padding: 0 38px 0 14px; border: 1px solid var(--ft-line); border-radius: 999px; background: transparent; color: var(--ft-fg); font: inherit; font-size: 14px; -webkit-appearance: none; appearance: none; cursor: pointer; }
+  {{ s }} .vf-foot__select select option { color: #111111; background: #FFFFFF; }
+  {{ s }} .vf-foot__select .vf-foot__chev { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; width: 16px; height: 16px; }
+  {{ s }} .vf-foot__pay { display: flex; flex-wrap: wrap; gap: 6px; }
+  {{ s }} .vf-foot__pay-icon { display: block; width: 38px; height: 24px; }
+  {{ s }} .vf-foot__legal { flex: 1 1 260px; font-size: 13px; line-height: 1.5; }
+  {{ s }} .vf-foot__top-link { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-weight: 600; color: var(--ft-fg); text-decoration: none; }
+  {{ s }} .vf-foot__top-link svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform 200ms ease; }
+  {{ s }} .vf-foot__top-link:hover svg { transform: translateY(-3px); }
+
+  /* ---------- Giant sign-off (the one playful line) ---------- */
+  {{ s }} .vf-foot__signoff {
+    margin: 12px calc(-0.02em) 0; padding: 0;
+    font-family: var(--ft-font-display); font-weight: 800;
+    font-size: 9vw; line-height: .8; letter-spacing: -0.055em; white-space: nowrap;
+    width: max-content; max-width: none;
+    color: var(--ft-signoff);
+    transform: translateY(6%);
+    user-select: none;
+  }
+  {{ s }} .vf-foot__dot { color: var(--ft-accent); }
+
+  {{ s }} a:focus-visible, {{ s }} button:focus-visible, {{ s }} select:focus-visible, {{ s }} summary:focus-visible, {{ s }} input:focus-visible { outline: 2px solid var(--ft-signal); outline-offset: 3px; }
+  {{ s }} .vf-vh { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  {{ s }} .vf-foot__note { margin: 4px 0 16px; padding: 8px 12px; background: #FFF4B8; color: #111111; font-size: 13px; line-height: 1.4; border-radius: 10px; }
+
+  /* ---------- Desktop ---------- */
+  @media (min-width: 750px) {
+    {{ s }} { --ft-gutter: clamp(32px, 5vw, 80px); }
+    {{ s }} .vf-foot__top { grid-template-columns: minmax(0, 1fr) minmax(0, 460px); align-items: center; padding: 72px 0 56px; }
+    {{ s }} .vf-foot__news { padding: 28px 28px; }
+    {{ s }} .vf-foot__news-field { flex-direction: row; }
+    {{ s }} .vf-foot__grid { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); column-gap: 32px; padding: 40px 0 8px; border-bottom: 1px solid var(--ft-line); }
+    {{ s }} .vf-foot__col { border-bottom: 0; }
+    {{ s }} .vf-foot__col-title { min-height: 0; margin-bottom: 14px; cursor: default; }
+    {{ s }} .vf-foot__col-title .vf-foot__chev { display: none; }
+    {{ s }} .vf-foot__links a { min-height: 32px; }
+
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    {{ s }} .vf-foot__drop.is-dripping { animation: none; }
+    {{ s }} *, {{ s }} *::before, {{ s }} *::after { transition-duration: 0.01ms !important; }
+  }
+{% endstyle %}
+
+<script>
+  (function () {
+    if (customElements.get('vf-footer')) return;
+    class VfFooter extends HTMLElement {
+      connectedCallback() {
+        var self = this;
+        this.desk = window.matchMedia('(min-width: 750px)');
+        this.accs = Array.prototype.slice.call(this.querySelectorAll('[data-acc]'));
+
+        /* Accordions on phones; always open (and not clickable) on desktop */
+        this.sync = function () {
+          self.accs.forEach(function (d) { d.open = self.desk.matches; });
+        };
+        this.accs.forEach(function (d) {
+          d.querySelector('summary').addEventListener('click', function (e) { if (self.desk.matches) e.preventDefault(); });
+        });
+        this.sync();
+        if (this.desk.addEventListener) this.desk.addEventListener('change', this.sync);
+
+        /* Country selector submits on change */
+        this.querySelectorAll('[data-autosubmit]').forEach(function (sel) {
+          sel.addEventListener('change', function () { if (sel.form) sel.form.submit(); });
+        });
+
+        /* One coral drop drips from the Signal Line, once */
+        var drop = this.querySelector('[data-drop]');
+        if (drop && 'IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          this.io = new IntersectionObserver(function (en) {
+            if (en[0].isIntersecting) { drop.classList.add('is-dripping'); self.io.disconnect(); }
+          }, { threshold: 0.2 });
+          this.io.observe(this);
+        }
+
+        /* Giant sign-off: always fits the footer width exactly */
+        this.fitEl = this.querySelector('[data-fit]');
+        this.fit = function () {
+          var el = self.fitEl; if (!el) return;
+          var box = el.parentElement;
+          var cs = getComputedStyle(box);
+          var avail = box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+          el.style.fontSize = '100px';
+          var w = el.scrollWidth;
+          if (w > 0) el.style.fontSize = Math.min(100 * avail / w, 320).toFixed(2) + 'px';
+        };
+        this.fit();
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(this.fit);
+        this.onResize = function () { clearTimeout(self._ft); self._ft = setTimeout(self.fit, 80); };
+        window.addEventListener('resize', this.onResize);
+
+        /* Back to top */
+        var top = this.querySelector('.vf-foot__top-link');
+        if (top) top.addEventListener('click', function (e) {
+          e.preventDefault();
+          window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+        });
+      }
+      disconnectedCallback() {
+        if (this.desk && this.desk.removeEventListener) this.desk.removeEventListener('change', this.sync);
+        if (this.io) this.io.disconnect();
+        window.removeEventListener('resize', this.onResize);
+      }
+    }
+    customElements.define('vf-footer', VfFooter);
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Vettofit footer",
+  "tag": "div",
+  "class": "vf-footer-section",
+  "enabled_on": { "groups": ["footer"] },
+  "max_blocks": 8,
+  "settings": [
+    {
+      "type": "select",
+      "id": "color_scheme",
+      "label": "Colour scheme",
+      "info": "Brand colours only. Carbon is the default for the footer.",
+      "options": [
+        { "value": "carbon", "label": "Carbon" },
+        { "value": "plum", "label": "Night Plum" },
+        { "value": "chalk", "label": "Chalk" },
+        { "value": "white", "label": "White" }
+      ],
+      "default": "carbon"
+    },
+    { "type": "image_picker", "id": "logo", "label": "Footer logo", "info": "Use the approved light (white) version of the logo for dark backgrounds." },
+    {
+      "type": "select",
+      "id": "logo_size",
+      "label": "Logo size",
+      "options": [ { "value": "small", "label": "Small" }, { "value": "medium", "label": "Medium" } ],
+      "default": "small"
+    },
+    { "type": "text", "id": "tagline", "label": "Line under the logo", "info": "Optional.", "default": "Care, designed for life." },
+    { "type": "header", "content": "Quirky bits" },
+    { "type": "checkbox", "id": "show_drop", "label": "Show Signal Line with the coral drop", "default": true },
+    { "type": "checkbox", "id": "show_signoff", "label": "Show giant sign-off", "info": "The footer's one playful line.", "default": true },
+    { "type": "text", "id": "signoff", "label": "Sign-off text", "info": "Short, 2–4 words. A full stop at the end turns coral. No exclamation marks.", "default": "See you at dinner." },
+    { "type": "text", "id": "back_to_top", "label": "Back to top link", "info": "Leave empty to hide.", "default": "Back to the top" },
+    { "type": "header", "content": "Bottom bar" },
+    { "type": "checkbox", "id": "show_market_selector", "label": "Show country / market selector", "info": "Appears when you sell to more than one country (Settings → Markets).", "default": true },
+    { "type": "text", "id": "market_label", "label": "Selector label", "default": "Country / region" },
+    { "type": "text", "id": "market_button", "label": "Selector button (only without JavaScript)", "default": "Update" },
+    { "type": "checkbox", "id": "show_payment_icons", "label": "Show payment icons", "default": true },
+    { "type": "text", "id": "company_line", "label": "Company line", "info": "Keep [year]. Add your registered company name.", "default": "[year] Pettofit. Vettofit is a brand of Pettofit." }
+  ],
+  "blocks": [
+    {
+      "type": "link_column",
+      "name": "Link column",
+      "limit": 4,
+      "settings": [
+        { "type": "text", "id": "heading", "label": "Heading", "default": "Shop" },
+        { "type": "link_list", "id": "menu", "label": "Menu", "default": "footer", "info": "Edit menus in Content → Menus." }
+      ]
+    },
+    {
+      "type": "support",
+      "name": "Support",
+      "limit": 1,
+      "settings": [
+        { "type": "text", "id": "heading", "label": "Heading", "default": "Support" },
+        { "type": "text", "id": "whatsapp_number", "label": "WhatsApp number", "info": "With country code, e.g. 91 98765 43210." },
+        { "type": "text", "id": "whatsapp_label", "label": "WhatsApp button text", "default": "Chat on WhatsApp" },
+        { "type": "text", "id": "whatsapp_message", "label": "WhatsApp first message", "default": "Hi Vettofit" },
+        { "type": "text", "id": "email", "label": "Support email" },
+        { "type": "text", "id": "hours", "label": "Hours", "default": "Mon–Sat, 10 am – 7 pm IST" },
+        { "type": "text", "id": "help_label", "label": "Help centre link text", "default": "Help centre" },
+        { "type": "url", "id": "help_link", "label": "Help centre link" }
+      ]
+    },
+    {
+      "type": "newsletter",
+      "name": "Newsletter",
+      "limit": 1,
+      "settings": [
+        { "type": "text", "id": "heading", "label": "Heading", "default": "Ritual notes" },
+        { "type": "text", "id": "text", "label": "One line", "default": "Pet-care tips and new rituals, about once a month." },
+        { "type": "text", "id": "placeholder", "label": "Email box hint", "default": "Your email" },
+        { "type": "text", "id": "button_label", "label": "Button text", "default": "Sign up" },
+        { "type": "text", "id": "consent", "label": "Small print", "default": "Unsubscribe anytime." },
+        { "type": "text", "id": "success_text", "label": "Thank-you message", "default": "You're on the list." }
+      ]
+    },
+    {
+      "type": "policies",
+      "name": "Evidence and policies",
+      "limit": 1,
+      "settings": [
+        { "type": "text", "id": "heading", "label": "Heading", "default": "Evidence and policies" },
+        { "type": "link_list", "id": "menu", "label": "Menu", "info": "Evidence page, privacy, shipping, returns, accessibility." }
+      ]
+    },
+    {
+      "type": "social",
+      "name": "Social links",
+      "limit": 1,
+      "settings": [
+        { "type": "text", "id": "heading", "label": "Heading", "default": "Follow along" },
+        { "type": "paragraph", "content": "Links come from Theme settings → Social media." }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Vettofit footer",
+      "blocks": [
+        { "type": "newsletter" },
+        { "type": "link_column", "settings": { "heading": "Shop" } },
+        { "type": "link_column", "settings": { "heading": "Learn" } },
+        { "type": "support" },
+        { "type": "policies" },
+        { "type": "social" }
+      ]
+    }
+  ]
+}
+{% endschema %}

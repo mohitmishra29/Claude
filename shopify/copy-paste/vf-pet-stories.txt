@@ -455,14 +455,14 @@
           if (self.dataset.follow !== 'true') return;
           var d = (e && e.detail) || {};
           var sp = d.species || d.pet || d.value;
-          if (sp === 'dog' || sp === 'cat') self.select(sp);
+          if (sp === 'dog' || sp === 'cat') self.follow(sp);
         };
         document.addEventListener('vf:species-change', this.onSpecies);
         if (this.dataset.follow === 'true') {
           var s = null;
           try { s = new URLSearchParams(window.location.search).get('pet'); } catch (e) {}
           if (s !== 'dog' && s !== 'cat') { try { s = localStorage.getItem('vf_pet'); } catch (e) {} }
-          if (s === 'dog' || s === 'cat') this.select(s);
+          if (s === 'dog' || s === 'cat') this.follow(s);
         }
 
         /* Videos: tap to play, pause when scrolled away */
@@ -523,6 +523,13 @@
         window.removeEventListener('resize', this.onResize);
         document.removeEventListener('vf:species-change', this.onSpecies);
         document.removeEventListener('shopify:block:select', this.onBlockSelect);
+      }
+
+      /* Following the page's Dog / Cat switch must never empty the wall:
+         if no story matches that pet yet, keep showing every story. */
+      follow(value) {
+        var any = this.cards.some(function (c) { var sp = c.dataset.species; return sp === value || sp === 'any'; });
+        this.select(any ? value : 'all');
       }
 
       select(value) {

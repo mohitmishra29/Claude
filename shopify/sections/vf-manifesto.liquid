@@ -1,0 +1,307 @@
+{%- comment -%}
+  Vettofit manifesto — sections/vf-manifesto.liquid
+  Built from "Vettofit Landing Page — Shopify Section Technical Guide", section 5 (Manifesto)
+  and the Landing Page Guidelines, moment 8 (The manifesto beat).
+
+  One full-bleed editorial photo (21:9 desktop, 4:5 mobile) with a single EB Garamond
+  Italic line: "Care, designed for life." A breathing space before the final CTA.
+
+  Locked by design: the only place the serif is used at large size; the font can't be changed;
+  no button or claim can be added. It's a pause, not a pitch.
+  Speed: lazy-loaded, image sizes 750 / 1500 / 2400px.
+{%- endcomment -%}
+
+{%- liquid
+  assign ss = section.settings
+  assign line = ss.line | default: 'Care, designed for life.'
+  assign heading_id = 'vf-manifesto-h-' | append: section.id
+  assign alt = ''
+  if ss.image != blank
+    assign alt = ss.image.alt
+  endif
+  if alt == blank
+    assign alt = ss.image_description
+  endif
+-%}
+
+{%- if ss.load_font -%}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@1,400;1,500&display=swap">
+{%- endif -%}
+
+<vf-manifesto
+  id="vf-manifesto-{{ section.id }}"
+  class="vf-manifesto vf-manifesto--{{ ss.height }} vf-manifesto--h-{{ ss.position_h }} vf-manifesto--v-{{ ss.position_v }} vf-manifesto--{{ ss.words_colour }} vf-space-below--{{ ss.space_below }}"
+>
+  <figure class="vf-manifesto__figure" aria-labelledby="{{ heading_id }}">
+    <div class="vf-manifesto__media">
+      {%- if ss.image != blank -%}
+        <picture>
+          {%- if ss.image_mobile != blank -%}
+            <source
+              media="(max-width: 749px)"
+              srcset="{{ ss.image_mobile | image_url: width: 750 }} 750w, {{ ss.image_mobile | image_url: width: 1500 }} 1500w"
+              sizes="100vw"
+            >
+          {%- endif -%}
+          {{ ss.image | image_url: width: 2400 | image_tag: widths: '750, 1500, 2400', sizes: '100vw', loading: 'lazy', class: 'vf-manifesto__img', alt: alt }}
+        </picture>
+      {%- else -%}
+        {{ 'lifestyle-1' | placeholder_svg_tag: 'vf-manifesto__img vf-manifesto__ph' }}
+      {%- endif -%}
+      <span class="vf-manifesto__shade" aria-hidden="true"></span>
+    </div>
+
+    <figcaption class="vf-manifesto__words">
+      <div class="vf-manifesto__words-inner" data-reveal>
+        <span class="vf-manifesto__signal" aria-hidden="true"></span>
+        <h2 class="vf-manifesto__line" id="{{ heading_id }}">{{ line }}</h2>
+        {%- if ss.caption != blank -%}
+          <p class="vf-manifesto__caption">{{ ss.caption }}</p>
+        {%- endif -%}
+      </div>
+    </figcaption>
+
+    {%- if request.design_mode and ss.image == blank -%}
+      <p class="vf-manifesto__note">Add a calm photo with empty space for the words: a pet asleep in a sunlit corner of a real home. Desktop 21:9, mobile 4:5. (Only you see this note.)</p>
+    {%- endif -%}
+  </figure>
+</vf-manifesto>
+
+{%- capture s -%}#vf-manifesto-{{ section.id }}{%- endcapture -%}
+{% style %}
+  {{ s }} {
+    --m-signal: var(--vf-teal, #09D1C7);
+    --m-ink: var(--vf-carbon, #111111);
+    --m-chalk: var(--vf-chalk, #F7F5EF);
+    --m-serif: var(--vf-font-accent, "EB Garamond", "Iowan Old Style", "Palatino Linotype", Georgia, serif);
+    --m-pad: 20px;
+    display: block;
+    background: var(--m-chalk);
+    letter-spacing: 0;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: clip;
+  }
+  {{ s }} *, {{ s }} *::before, {{ s }} *::after { box-sizing: border-box; }
+  {{ s }} h2, {{ s }} p, {{ s }} figure { margin: 0; padding: 0; letter-spacing: 0; text-transform: none; }
+  {{ s }}.vf-space-below--none   { padding-bottom: 0; }
+  {{ s }}.vf-space-below--small  { padding-bottom: 24px; }
+  {{ s }}.vf-space-below--medium { padding-bottom: 48px; }
+  {{ s }}.vf-space-below--large  { padding-bottom: 80px; }
+
+  /* ---------- Frame: full-bleed, 4:5 on phones ---------- */
+  {{ s }} .vf-manifesto__figure { position: relative; display: grid; overflow: hidden; }
+  {{ s }} .vf-manifesto__media,
+  {{ s }} .vf-manifesto__words { grid-area: 1 / 1; }
+  {{ s }} .vf-manifesto__media { position: relative; aspect-ratio: 4 / 5; background: #E9E4DA; }
+  {{ s }}.vf-manifesto--medium .vf-manifesto__media { aspect-ratio: 1 / 1; }
+  {{ s }} .vf-manifesto__media picture { display: block; width: 100%; height: 100%; }
+  {{ s }} .vf-manifesto__img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  {{ s }} .vf-manifesto__ph { fill: rgba(17,17,17,.25); background: #E9E4DA; }
+
+  /* Soft shade behind the words so they're always readable (not a depth effect) */
+  {{ s }} .vf-manifesto__shade { position: absolute; inset: 0; pointer-events: none; }
+  {{ s }}.vf-manifesto--light.vf-manifesto--v-bottom .vf-manifesto__shade { background: linear-gradient(to top, rgba(17,17,17,.55) 0%, rgba(17,17,17,.25) 32%, rgba(17,17,17,0) 60%); }
+  {{ s }}.vf-manifesto--light.vf-manifesto--v-top .vf-manifesto__shade    { background: linear-gradient(to bottom, rgba(17,17,17,.55) 0%, rgba(17,17,17,.25) 32%, rgba(17,17,17,0) 60%); }
+  {{ s }}.vf-manifesto--dark.vf-manifesto--v-bottom .vf-manifesto__shade  { background: linear-gradient(to top, rgba(247,245,239,.7) 0%, rgba(247,245,239,.3) 32%, rgba(247,245,239,0) 60%); }
+  {{ s }}.vf-manifesto--dark.vf-manifesto--v-top .vf-manifesto__shade     { background: linear-gradient(to bottom, rgba(247,245,239,.7) 0%, rgba(247,245,239,.3) 32%, rgba(247,245,239,0) 60%); }
+
+  /* ---------- Words ---------- */
+  {{ s }} .vf-manifesto__words {
+    position: relative; z-index: 1;
+    display: flex; padding: var(--m-pad);
+    padding-left: max(var(--m-pad), env(safe-area-inset-left));
+    padding-right: max(var(--m-pad), env(safe-area-inset-right));
+  }
+  {{ s }}.vf-manifesto--v-bottom .vf-manifesto__words { align-items: flex-end; }
+  {{ s }}.vf-manifesto--v-top .vf-manifesto__words    { align-items: flex-start; }
+  {{ s }}.vf-manifesto--h-left .vf-manifesto__words   { justify-content: flex-start; text-align: left; }
+  {{ s }}.vf-manifesto--h-center .vf-manifesto__words { justify-content: center; text-align: center; }
+  {{ s }}.vf-manifesto--h-right .vf-manifesto__words  { justify-content: flex-end; text-align: right; }
+
+  {{ s }} .vf-manifesto__words-inner { max-width: min(100%, 340px); display: flex; flex-direction: column; gap: 14px; }
+  {{ s }}.vf-manifesto--h-center .vf-manifesto__words-inner { align-items: center; }
+  {{ s }}.vf-manifesto--h-right .vf-manifesto__words-inner  { align-items: flex-end; }
+
+  {{ s }} .vf-manifesto__signal { display: block; width: 48px; height: 2px; border-radius: 2px; background: var(--m-signal); }
+  {{ s }} .vf-manifesto__line {
+    font-family: var(--m-serif);
+    font-style: italic;
+    font-weight: 400;
+    font-size: 34px;
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  {{ s }} .vf-manifesto__caption {
+    font-family: var(--vf-font-body, "Inter", var(--font-body-family, system-ui, -apple-system, "Segoe UI", sans-serif));
+    font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+  }
+  {{ s }}.vf-manifesto--light .vf-manifesto__line,
+  {{ s }}.vf-manifesto--light .vf-manifesto__caption { color: #FFFFFF; }
+  {{ s }}.vf-manifesto--light .vf-manifesto__line { text-shadow: 0 1px 24px rgba(17,17,17,.25); }
+  {{ s }}.vf-manifesto--light .vf-manifesto__caption { opacity: .88; }
+  {{ s }}.vf-manifesto--dark .vf-manifesto__line,
+  {{ s }}.vf-manifesto--dark .vf-manifesto__caption { color: var(--m-ink); }
+  {{ s }}.vf-manifesto--dark .vf-manifesto__caption { opacity: .72; }
+
+  /* Gentle rise and fade, once */
+  {{ s }} [data-reveal].is-pending { opacity: 0; transform: translateY(12px); }
+  {{ s }} [data-reveal] { transition: opacity 320ms ease, transform 320ms cubic-bezier(0.2, 0.7, 0.2, 1); }
+
+  {{ s }} .vf-manifesto__note { position: absolute; left: 16px; top: 16px; z-index: 2; max-width: 420px; padding: 8px 12px; background: #FFF4B8; color: #111111; font-size: 13px; line-height: 1.4; border-radius: 10px; font-family: system-ui, sans-serif; }
+
+  /* ---------- Tablet & desktop: 21:9 ---------- */
+  @media (min-width: 750px) {
+    {{ s }} { --m-pad: clamp(32px, 5vw, 80px); }
+    {{ s }} .vf-manifesto__media { aspect-ratio: 21 / 9; min-height: 420px; max-height: 88vh; }
+    {{ s }}.vf-manifesto--medium .vf-manifesto__media { aspect-ratio: 3 / 1; min-height: 340px; }
+    {{ s }} .vf-manifesto__line { font-size: clamp(44px, 3.4vw + 16px, 80px); }
+    {{ s }} .vf-manifesto__words-inner { max-width: min(52vw, 720px); }
+    {{ s }} .vf-manifesto__caption { font-size: 13px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    {{ s }} [data-reveal] { transition: none !important; }
+    {{ s }} [data-reveal].is-pending { opacity: 1; transform: none; }
+  }
+{% endstyle %}
+
+<script>
+  (function () {
+    if (customElements.get('vf-manifesto')) return;
+    class VfManifesto extends HTMLElement {
+      connectedCallback() {
+        var el = this.querySelector('[data-reveal]');
+        if (!el || !('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        if (window.Shopify && window.Shopify.designMode) return;
+        var r = el.getBoundingClientRect();
+        if (r.top < window.innerHeight) return; /* already on screen: no animation */
+        el.classList.add('is-pending');
+        var io = new IntersectionObserver(function (entries) {
+          if (entries[0].isIntersecting) { el.classList.remove('is-pending'); io.disconnect(); }
+        }, { threshold: 0.4 });
+        io.observe(el);
+        this._io = io;
+      }
+      disconnectedCallback() { if (this._io) this._io.disconnect(); }
+    }
+    customElements.define('vf-manifesto', VfManifesto);
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Vettofit manifesto",
+  "tag": "section",
+  "class": "vf-manifesto-section",
+  "enabled_on": {
+    "templates": ["page", "index", "product", "collection"]
+  },
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Photo",
+      "info": "A calm photo with empty space for the words, e.g. a pet asleep in a sunlit corner of a real home. Desktop 21:9."
+    },
+    {
+      "type": "image_picker",
+      "id": "image_mobile",
+      "label": "Mobile photo (optional)",
+      "info": "4:5 portrait. Use it if the wide photo doesn't crop well on phones."
+    },
+    {
+      "type": "text",
+      "id": "image_description",
+      "label": "Photo description (for screen readers)",
+      "info": "Used if the photo has no alt text in Files.",
+      "default": "A dog asleep in a sunlit corner of a home"
+    },
+    {
+      "type": "text",
+      "id": "line",
+      "label": "Line",
+      "info": "Under 8 words. Shown in the editorial serif.",
+      "default": "Care, designed for life."
+    },
+    {
+      "type": "text",
+      "id": "caption",
+      "label": "Small caption",
+      "info": "Optional, e.g. the pet's name."
+    },
+    {
+      "type": "header",
+      "content": "Layout"
+    },
+    {
+      "type": "select",
+      "id": "position_h",
+      "label": "Words position (across)",
+      "options": [
+        { "value": "left", "label": "Left" },
+        { "value": "center", "label": "Centre" },
+        { "value": "right", "label": "Right" }
+      ],
+      "default": "left"
+    },
+    {
+      "type": "select",
+      "id": "position_v",
+      "label": "Words position (up / down)",
+      "options": [
+        { "value": "top", "label": "Top" },
+        { "value": "bottom", "label": "Bottom" }
+      ],
+      "default": "bottom"
+    },
+    {
+      "type": "select",
+      "id": "words_colour",
+      "label": "Words colour",
+      "info": "Light words get a soft shade behind them so they're always readable.",
+      "options": [
+        { "value": "light", "label": "Light" },
+        { "value": "dark", "label": "Dark" }
+      ],
+      "default": "light"
+    },
+    {
+      "type": "select",
+      "id": "height",
+      "label": "Height",
+      "options": [
+        { "value": "medium", "label": "Medium" },
+        { "value": "tall", "label": "Tall" }
+      ],
+      "default": "tall"
+    },
+    {
+      "type": "select",
+      "id": "space_below",
+      "label": "Space below",
+      "options": [
+        { "value": "none", "label": "None" },
+        { "value": "small", "label": "Small" },
+        { "value": "medium", "label": "Medium" },
+        { "value": "large", "label": "Large" }
+      ],
+      "default": "none"
+    },
+    {
+      "type": "checkbox",
+      "id": "load_font",
+      "label": "Load the EB Garamond font",
+      "info": "Leave on unless your theme already loads EB Garamond.",
+      "default": true
+    }
+  ],
+  "presets": [
+    {
+      "name": "Vettofit manifesto"
+    }
+  ]
+}
+{% endschema %}
